@@ -1,3 +1,27 @@
+/*
+  MIT License
+
+  Copyright (c) 2025 Tellcode
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+*/
+
 #ifndef __NOVA_STR_H__
 #define __NOVA_STR_H__
 
@@ -188,8 +212,14 @@ extern char* nv_strpbrk(const char* s1, const char* s2);
  *  while (ptr != null) {
  *    ptr = strtok(null, '-'); * this will first return care, and in second iteration, return gaming
  *  }
+ *  context must be declared typically on the stack that the string is declared, as a char *
+ *  You must pass the address of the char * to this function.
+ *  INFO: This is more in line with strtok_r. We use it because it comes at literally no cost to the user.
  */
-extern char* nv_strtok(char* s, const char* delim);
+extern char* nv_strtok(char* s, const char* delim, char** context);
+
+/* As nv_strtok is functionally equivalent to strtok_r, we just define to allow for idiots who don't want to open this header to use it. */
+#define nv_strtok_r(...) (nv_strtok(__VA_ARGS__))
 
 /*
  *  returns the name of the file

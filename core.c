@@ -1,3 +1,27 @@
+/*
+  MIT License
+
+  Copyright (c) 2025 Tellcode
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+*/
+
 #include <SDL2/SDL_mutex.h>
 #include <ctype.h>
 #include <errno.h>
@@ -1193,37 +1217,11 @@ nv_memcpy(void* NV_RESTRICT dst, const void* NV_RESTRICT src, size_t sz)
   return __builtin_memcpy(dst, src, sz);
 #  endif
 
-  // I saw this optimization trick a long time ago in some big codebase
-  // and it has sticken to me
-  // do you know how much I just get an ITCH to write memcpy myself?
-  if (((uintptr_t)src & 0x3) == 0 && ((uintptr_t)dst & 0x3) == 0)
+  const uchar* read   = (const uchar*)src;
+  uchar*       writep = (uchar*)dst;
+  for (size_t i = 0; i < sz; i++)
   {
-    const int* read   = (const int*)src;
-    int*       writep = (int*)dst;
-
-    const size_t int_count = sz / sizeof(int);
-    for (size_t i = 0; i < int_count; i++)
-    {
-      writep[i] = read[i];
-    }
-
-    const uchar* byte_read  = (uchar*)(read + int_count);
-    uchar*       byte_write = (uchar*)(writep + int_count);
-
-    sz %= sizeof(int);
-    for (size_t i = 0; i < sz; i++)
-    {
-      byte_write[i] = byte_read[i];
-    }
-  }
-  else
-  {
-    const uchar* read   = (const uchar*)src;
-    uchar*       writep = (uchar*)dst;
-    for (size_t i = 0; i < sz; i++)
-    {
-      writep[i] = read[i];
-    }
+    writep[i] = read[i];
   }
 
   return dst;
@@ -1475,7 +1473,9 @@ nv_strncpy2(char* dest, const char* src, size_t max)
 
   while (*src && max)
   {
-    *dest++ = *src++;
+    *dest = *src;
+    dest++;
+    src++;
     max--;
   }
 
@@ -1496,12 +1496,12 @@ nv_strcpy(char* dest, const char* src)
     return NULL;
   }
   size_t i = 0;
-  // clang-format off
   while (src[i])
   {
-    dest[i] = src[i]; i++;
+    dest[i] = src[i];
+    i++;
   }
-  // clang-format on
+
   dest[i] = 0;
 }
 
@@ -1527,12 +1527,13 @@ nv_strncpy(char* dest, const char* src, size_t max)
   }
   max--; // -1 so we can fit the NULL terminator
   size_t i = 0;
-  // clang-format off
+
   while (i < max && src[i])
   {
-    dest[i] = src[i]; i++;
+    dest[i] = src[i];
+    i++;
   }
-  // clang-format on
+
   dest[i] = 0;
 }
 
@@ -1725,19 +1726,6 @@ nv_strcasecmp(const char* s1, const char* s2)
     return -1;
   }
 
-  while ((uintptr_t)*s1 & (sizeof(size_t) - 1))
-  {
-    unsigned char c1 = tolower(*(unsigned char*)s1);
-    unsigned char c2 = tolower(*(unsigned char*)s2);
-    if (c1 != c2)
-    {
-      return c1 - c2;
-    }
-    s1++;
-    s2++;
-  }
-
-  // FIXME: Implement
   while (*s1 && *s2)
   {
     unsigned char c1 = tolower(*(unsigned char*)s1);
@@ -1933,20 +1921,21 @@ nv_strpbrk(const char* s1, const char* s2)
   return NULL;
 }
 
-char* strtoks = NULL;
 char*
-nv_strtok(char* s, const char* delim)
+nv_strtok(char* s, const char* delim, char** context)
 {
+  nv_assert_and_ret(context != NULL, NULL);
+
   if (!s)
   {
-    s = strtoks;
+    s = *context;
   }
   char* p;
 
   s += nv_strspn(s, delim);
   if (!s || *s == 0)
   {
-    strtoks = s;
+    *context = s;
     return NULL;
   }
 
@@ -1955,11 +1944,11 @@ nv_strtok(char* s, const char* delim)
 
   if (!s)
   {
-    strtoks = nv_strchr(s, 0); // get pointer to last char
+    *context = nv_strchr(s, 0); // get pointer to last char
     return p;
   }
-  *s      = 0;
-  strtoks = s + 1;
+  *s       = 0;
+  *context = s + 1;
   return p;
 }
 
