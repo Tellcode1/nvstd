@@ -22,38 +22,39 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_ERROR_QUEUE_H__
-#define __NOVA_ERROR_QUEUE_H__
+#ifndef __NOVA_TYPES__
+#define __NOVA_TYPES__
 
-#include "print.h"
-#include "stdafx.h"
-#include "string.h"
-
-NOVA_HEADER_START
-
-#ifndef NV_MAX_ERRORS
-#  define NV_MAX_ERRORS 16
-#endif
-
-#ifndef NV_ERROR_LENGTH
-#  define NV_ERROR_LENGTH 256
-#endif
-
-typedef char nv_error_t[NV_ERROR_LENGTH];
-
-typedef struct nv_error_queue_t
+#ifdef __cplusplus
+extern "C"
 {
-  int m_front;
-  int m_back;
-  /* These must be stored on the stack, what if nv_malloc has an error? */
-  nv_error_t m_errors[NV_MAX_ERRORS];
-} nv_error_queue_t;
+#endif
 
-extern void        nv_error_queue_init(nv_error_queue_t* dst);
-extern void        nv_error_queue_destroy(nv_error_queue_t* dst);
-extern char*       nv_error_queue_push(nv_error_queue_t* queue);
-extern const char* nv_error_queue_pop(nv_error_queue_t* queue);
+#include <stdint.h>
 
-NOVA_HEADER_END
+  typedef uint64_t nv_word_t;
 
-#endif //__NOVA_ERROR_QUEUE_H__
+  typedef uint64_t u64;
+  typedef uint32_t u32;
+  typedef uint16_t u16;
+  typedef uint8_t  u8;
+  typedef int8_t   sbyte;
+  typedef uint8_t  ubyte;
+
+  typedef unsigned char uchar;
+
+  typedef int64_t i64;
+  typedef int32_t i32;
+  typedef int16_t i16;
+  typedef int8_t  i8;
+
+  // They ARE 32 and 64 bits by IEEE-754 but aren't set by the standard
+  // But there is a 99.9% chance that they will be
+  typedef float  f32;
+  typedef double f64;
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif //__NOVA_TYPES__

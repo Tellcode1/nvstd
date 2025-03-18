@@ -26,8 +26,13 @@
 #define __NOVA_STRING_CONV_H__
 
 #include "stdafx.h"
+#include <limits.h>
 
 NOVA_HEADER_START
+
+#ifndef NOVA_MAX_IGNORE
+#  define NOVA_MAX_IGNORE __SIZE_MAX__
+#endif
 
 /**
  * @brief Converts an integer to ASCII.
@@ -61,7 +66,7 @@ extern size_t nv_ptoa2(void* p, char* buf, size_t max);
  *
  * Supports upgrade modes (e.g. converting 1000 bytes to "1KB", etc.).
  * Up to 1 petabyte is supported. It can go farther but it is undefined behaviour
- * Writes the bytes (using itoa_u) and writes the suffix ( B/KB/MB/GB/PB )
+ * Writes the bytes (using utoa) and writes the suffix ( B/KB/MB/GB/PB )
  * @return The number of characters written.
  */
 extern size_t nv_btoa2(size_t x, bool upgrade, char* buf, size_t max);
@@ -69,17 +74,17 @@ extern size_t nv_btoa2(size_t x, bool upgrade, char* buf, size_t max);
 /**
  * @brief Converts a string to an integer.
  */
-extern intmax_t nv_atoi(const char s[]);
+extern intmax_t nv_atoi(const char s[], size_t max);
 
 /**
  * @brief Converts a string to a real_t.
  */
-extern real_t nv_atof(const char s[]);
+extern real_t nv_atof(const char s[], size_t max);
 
 /**
  * @brief Converts a string to a boolean.
  */
-extern bool nv_atobool(const char s[]);
+extern bool nv_atobool(const char s[], size_t max);
 
 static inline char*
 nv_itoa(intmax_t x, char out[], int base, size_t max)

@@ -29,7 +29,7 @@
 
 #define __NOVA_STD_VERSION_MAJOR__ 0
 #define __NOVA_STD_VERSION_MINOR__ 1
-#define __NOVA_STD_VERSION_PATCH__ 0
+#define __NOVA_STD_VERSION_PATCH__ 1
 
 #include <SDL2/SDL_mutex.h>
 #include <errno.h>
@@ -39,15 +39,13 @@
 #include <stdio.h>
 #include <time.h>
 
+#include "types.h"
+
 #ifdef __cplusplus
 #  define NOVA_HEADER_START                                                                                                                                                   \
     extern "C"                                                                                                                                                                \
     {
 #  define NOVA_HEADER_END }
-/*
-  extern "C" {
-  }
-*/
 #else
 #  define NOVA_HEADER_START
 #  define NOVA_HEADER_END
@@ -71,6 +69,7 @@ NOVA_HEADER_START
 #  elif defined(_MSC_VER)
 #    define NV_TYPEOF(x) decltype(x)
 #  else
+/* As Typeof is typically used in casts, we can not compile without typeof */
 #    error "no typeof"
 #  endif
 #endif
@@ -104,6 +103,16 @@ NOVA_HEADER_START
 #  define NV_FALLTHROUGH /* fallthrough */
 #endif
 
+#if defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_expect)
+#  define NV_LIKELY(expr) (__builtin_expect(!!(expr), 1))
+#  define NV_UNLIKELY(expr) (__builtin_expect(!!(expr), 0))
+#  define NV_EXPECT_EQUALS(expr, equals) (__builtin_expect(!!(expr), equals))
+#else
+#  define NV_LIKELY(expr) (expr)
+#  define NV_UNLIKELY(expr) (expr)
+#  define NV_EXPECT_EQUALS(expr, equals) (expr)
+#endif
+
 #ifndef real_t
 #  define real_t double
 #endif
@@ -130,7 +139,12 @@ NOVA_HEADER_START
 #endif
 
 #ifndef nv_zero_init
-#  define nv_zero_init(TYPE) (TYPE){ 0 }
+#  ifndef __cplusplus
+#    define nv_zero_init(TYPE) (TYPE){ 0 }
+#  else
+#    define nv_zero_init(TYPE)                                                                                                                                                \
+      (TYPE) {}
+#  endif
 #endif
 
 /* https://stackoverflow.com/a/11172679 */
@@ -144,7 +158,7 @@ NOVA_HEADER_START
 /*
  * if there's only one argument, expands to nothing.  if there is more
  * than one argument, expands to a comma followed by everything but
- * the first argument.  only supports up to 9 arguments but can be
+ * the first argument.  only supports up to 10 arguments but can be
  * trivially expanded.
  */
 #define _GNUC_HELP_ME_PLEASE_REST(...) _GNUC_HELP_ME_PLEASE_REST_HELPER(_GNUC_HELP_ME_PLEASE_NUM(__VA_ARGS__), __VA_ARGS__)
@@ -156,7 +170,7 @@ NOVA_HEADER_START
   _GNUC_HELP_ME_PLEASE_SELECT_10TH(__VA_ARGS__, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, ONE, throwaway)
 #define _GNUC_HELP_ME_PLEASE_SELECT_10TH(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, ...) a10
 
-#define nv_push_error(...) _nv_push_error(__func__, (_nv_get_time()), _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
+#define nv_push_error(...) _nv_push_error(__FILE__, __LINE__, __func__, (_nv_get_time()), _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
 
 extern const char* nv_pop_error(void);
 
@@ -165,13 +179,16 @@ extern void nv_flush_errors(void);
 
 #ifndef NDEBUG
 #  define nv_assert_and_ret(expr, retval)                                                                                                                                     \
-    if (!((bool)(expr)))                                                                                                                                                      \
+    do                                                                                                                                                                        \
     {                                                                                                                                                                         \
-      nv_push_error("Assertion failed -> %s", #expr);                                                                                                                         \
-      return retval;                                                                                                                                                          \
-    }
+      if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                       \
+      {                                                                                                                                                                       \
+        nv_push_error("Assertion failed -> %s", #expr);                                                                                                                       \
+        return retval;                                                                                                                                                        \
+      }                                                                                                                                                                       \
+    } while (0);
 #  define nv_assert(expr)                                                                                                                                                     \
-    if (!((bool)(expr)))                                                                                                                                                      \
+    if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                         \
     {                                                                                                                                                                         \
       nv_log_and_abort("Assertion failed -> %s", #expr);                                                                                                                      \
     }
@@ -183,49 +200,32 @@ extern void nv_flush_errors(void);
 #  pragma message "Assertions disabled"
 #endif
 
-// puts but with formatting and with the preceder "error". does not stop
-// execution of program if you want that, use nv_log_and_abort instead.
-#define nv_log_error(...) _nv_log_error(__func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-
-// formats the string, puts() it with the preceder "fatal error" and then aborts
-// the program
-#define nv_log_and_abort(...) _nv_log_and_abort(__func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-
+// puts but with formatting and with the preceder "error". does not stop execution of program if you want that, use nv_log_and_abort instead.
+#define nv_log_error(...) _nv_log_error(__FILE__, __LINE__, __func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
+// formats the string, puts() it with the preceder "fatal error" and then aborts the program
+#define nv_log_and_abort(...) _nv_log_and_abort(__FILE__, __LINE__, __func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
 // puts but with formatting and with the preceder "warning"
-#define nv_log_warning(...) _nv_log_warning(__func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-
+#define nv_log_warning(...) _nv_log_warning(__FILE__, __LINE__, __func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
 // puts but with formatting and with the preceder "info"
-#define nv_log_info(...) _nv_log_info(__func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-
+#define nv_log_info(...) _nv_log_info(__FILE__, __LINE__, __func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
 // puts but with formatting and with the preceder "debug"
-#define nv_log_debug(...) _nv_log_debug(__func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-
+#define nv_log_debug(...) _nv_log_debug(__FILE__, __LINE__, __func__, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
 // puts but with formatting and with a custom preceder
 #define nv_log_custom(preceder, ...) _nv_log_custom(__func__, preceder, _GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) _GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
 
-extern void _nv_log_error(const char* func, const char* fmt, ...);
-extern void _nv_log_and_abort(const char* func, const char* fmt, ...);
-extern void _nv_log_warning(const char* func, const char* fmt, ...);
-extern void _nv_log_info(const char* func, const char* fmt, ...);
-extern void _nv_log_debug(const char* func, const char* fmt, ...);
-extern void _nv_log_custom(const char* func, const char* preceder, const char* fmt, ...);
+extern void _nv_log_error(const char* file, size_t line, const char* func, const char* fmt, ...);
+extern void _nv_log_and_abort(const char* file, size_t line, const char* func, const char* fmt, ...);
+extern void _nv_log_warning(const char* file, size_t line, const char* func, const char* fmt, ...);
+extern void _nv_log_info(const char* file, size_t line, const char* func, const char* fmt, ...);
+extern void _nv_log_debug(const char* file, size_t line, const char* func, const char* fmt, ...);
+extern void _nv_log_custom(const char* file, size_t line, const char* func, const char* preceder, const char* fmt, ...);
 
-extern void _nv_log(va_list args, const char* fn, const char* succeeder, const char* preceder, const char* str, unsigned char err);
+extern void _nv_log(va_list args, const char* file, size_t line, const char* fn, const char* succeeder, const char* preceder, const char* str, unsigned char err);
 
 /* printf's the time to stdout. yep. [hour:minute:second]*/
 extern void nv_print_time_as_string(FILE* stream);
 
-extern void _nv_push_error(const char* func, struct tm* time, const char* fmt, ...);
-
-#define _nv_time_wrapper1(x, y) NV_CONCAT(x, y)
-
-// May god never have a look at this define. I will not be spared.
-/* And I thought this was bad. How innocent I was. */
-#define _nv_time_function(func, LINE)                                                                                                                                         \
-  const size_t _nv_time_wrapper1(__COUNTER_BEGIN__, __LINE__) = SDL_GetTicks64();                                                                                             \
-  func; /* Call the function*/                                                                                                                                                \
-  nv_log_debug("[Line %d] Function %s took %ldms", LINE, #func, SDL_GetTicks64() - _nv_time_wrapper1(__COUNTER_BEGIN__, __LINE__), LINE);
-#define nv_time_function(func) _nv_time_function(func, __LINE__)
+extern void _nv_push_error(const char* file, size_t line, const char* func, struct tm* time, const char* fmt, ...);
 
 static inline struct tm*
 _nv_get_time(void)
@@ -243,29 +243,11 @@ _nv_get_time(void)
   return tm;
 }
 
-#define nv_safecall_c_fn(fn)                                                                                                                                                  \
-  if ((fn) != 0)                                                                                                                                                              \
+#define NOVA_CALL_FILE_FN(fn)                                                                                                                                                  \
+  if (NV_UNLIKELY((fn) != 0))                                                                                                                                                 \
   {                                                                                                                                                                           \
     nv_push_error("%s() => %i", #fn, errno);                                                                                                                                  \
   }
-
-typedef uint64_t u64;
-typedef uint32_t u32;
-typedef uint16_t u16;
-typedef uint8_t  u8;
-typedef uint8_t  uchar;
-typedef int8_t   sbyte;
-typedef uint8_t  ubyte;
-
-typedef int64_t i64;
-typedef int32_t i32;
-typedef int16_t i16;
-typedef int8_t  i8;
-
-// They ARE 32 and 64 bits by IEEE-754 but aren't set by the standard
-// But there is a 99.9% chance that they will be
-typedef float  f32;
-typedef real_t f64;
 
 NOVA_HEADER_END
 
