@@ -17,3 +17,4 @@
 *   Fixed using s in ftoa loop instead of c
 *   Renamed or deleted some stdafx.h defines.
 *   Replaced gettimeofday() with a more friendly and cross platform SDL timer alternative.
+*   Added error checking to all string.h functions.

@@ -40,12 +40,12 @@ NOVA_HEADER_START
  * @param max Maximum number of characters to write.
  * @return The number of characters written (excluding null terminator).
  */
-extern size_t nv_itoa2(intmax_t x, char out[], int base, size_t max);
+extern size_t nv_itoa2(intmax_t num, char out[], int base, size_t max);
 
 /**
  * @brief Converts an unsigned integer to ASCII.
  */
-extern size_t nv_utoa2(uintmax_t x, char out[], int base, size_t max);
+extern size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max);
 
 /**
  * @brief Converts a real_t to ASCII.
@@ -54,12 +54,12 @@ extern size_t nv_utoa2(uintmax_t x, char out[], int base, size_t max);
  * @param remove_zeroes If true, trailing zeroes are removed.
  * @return number of characters written. (excluding null terminator)
  */
-extern size_t nv_ftoa2(real_t x, char out[], int precision, size_t max, bool remove_zeroes);
+extern size_t nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros);
 
 /**
  * @brief Converts a pointer to ASCII.
  */
-extern size_t nv_ptoa2(void* p, char* buf, size_t max);
+extern size_t nv_ptoa2(void* ptr, char out[], size_t max);
 
 /**
  * @brief Converts a byte count to ASCII.
@@ -69,22 +69,22 @@ extern size_t nv_ptoa2(void* p, char* buf, size_t max);
  * Writes the bytes (using utoa) and writes the suffix ( B/KB/MB/GB/PB )
  * @return The number of characters written.
  */
-extern size_t nv_btoa2(size_t x, bool upgrade, char* buf, size_t max);
+extern size_t nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max);
 
 /**
  * @brief Converts a string to an integer.
  */
-extern intmax_t nv_atoi(const char s[], size_t max);
+extern intmax_t nv_atoi(const char in_string[], size_t max);
 
 /**
  * @brief Converts a string to a real_t.
  */
-extern real_t nv_atof(const char s[], size_t max);
+extern real_t nv_atof(const char in_string[], size_t max);
 
 /**
  * @brief Converts a string to a boolean.
  */
-extern bool nv_atobool(const char s[], size_t max);
+extern bool nv_atobool(const char in_string[], size_t max);
 
 static inline char*
 nv_itoa(intmax_t x, char out[], int base, size_t max)

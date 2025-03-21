@@ -121,7 +121,7 @@ nv_compare_string(const void* key1, const void* key2, size_t size, void* user_da
 {
   (void)user_data;
   (void)size;
-  return nv_strcmp((const char *)key1, (const char *)key2);
+  return nv_strcmp((const char*)key1, (const char*)key2);
 }
 
 NOVA_HEADER_END

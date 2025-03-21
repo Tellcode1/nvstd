@@ -22,6 +22,9 @@
   SOFTWARE.
 */
 
+/* An overlayer of standard string.h */
+/* This library though, contains many differences than the standard. Like memcpy has been abolished in favour of memmove. */
+
 #ifndef __NOVA_STRING_H__
 #define __NOVA_STRING_H__
 
@@ -57,13 +60,12 @@ NOVA_HEADER_START
  *  @brief sets 'sz' bytes of 'dst' to 'to'
  *  @return null on error and dst for success
  */
-extern void* nv_memset(void* dst, char to, size_t sz);
+extern void* nv_memset(void* dst, char to, size_t dst_size);
 
 #define nv_bzero(dst, sz) nv_memset((dst), 0, (sz))
 
 /**
  *  @brief copy memory from src to dst
- *  INFO: Use of this function is more recommended than memcpy
  */
 extern void* nv_memmove(void* dst, const void* src, size_t sz);
 
@@ -73,12 +75,12 @@ extern void* nv_memmove(void* dst, const void* src, size_t sz);
  *  @return a pointer to the first occurance of chr in p
  *  searches at most psize bytes of p
  */
-extern void* nv_memchr(const void* p, int chr, size_t psize);
+extern void* nv_memchr(const void* ptr, int chr, size_t psize);
 
 /**
  *  @return non zero if p1 is not equal to p2
  */
-extern int nv_memcmp(const void* p1, const void* p2, size_t max);
+extern int nv_memcmp(const void* ptr1, const void* ptr2, size_t max);
 
 // god is dead and i killed him
 extern void* nv_malloc(size_t sz);
@@ -118,7 +120,7 @@ extern size_t nv_strnlen(const char* s, size_t max);
  * Copy from src to dst ensuring NULL termination using the length of the dst buffer.
  *  Will copy not more than dst_size - 1 characters from source.
  */
-extern char* nv_strlcpy(char* dst, char* src, size_t dst_size);
+extern char* nv_strlcpy(char* dst, const char* src, size_t dst_size);
 
 /**
  *  copy from src to dst, stopping once it hits the null terminator in src
@@ -175,7 +177,7 @@ extern char* nv_strtrim(char* s);
  * @brief A constant version of strtrim. begin will contain the first non whitespace character and end will contain the last non space char.
  * @return s if success, NULL if not.
  */
-extern char* nv_strtrim_c(const char* s, char** begin, char** end);
+extern const char* nv_strtrim_c(const char* s, const char** begin, const char** end);
 
 /**
  *  @brief compare two strings, stopping at either s1 or s2's null terminator or at max.
@@ -208,7 +210,7 @@ extern char* nv_strchr_n(const char* s, int chr, int n);
 
 /**
  *  @brief find the last occurence of a character in a string
- *  use nv_strstr if you want to find earliest occurence of a string in a string
+ *  @sa use nv_strstr if you want to find earliest occurence of a string in a string
  */
 extern char* nv_strrchr(const char* s, int chr);
 
