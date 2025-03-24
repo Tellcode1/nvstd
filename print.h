@@ -121,10 +121,10 @@ extern size_t nv_vsnprintf(va_list args, char* src, size_t max_chars, const char
  * all nv_printf* funcs call this in the end.
  * stops formatting when max_chars is hit.
  *
- * @param src destination buffer or FILE ptr
- * @return number of characters written
+ * @param dst destination buffer or FILE ptr. It is safe to pass NULL.
+ * @return The number of characters that WOULD be written, even if dst is NULL, but truncated to max_chars.
  */
-extern size_t _nv_vsfnprintf(va_list args, void* src, bool is_file, size_t max_chars, const char* fmt);
+extern size_t _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt);
 
 NOVA_HEADER_END
 

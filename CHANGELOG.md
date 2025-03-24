@@ -2,7 +2,6 @@
 *   Optimize every string function.
 *   Check for unhandled edge cases in strconv's functions.
 *   Add more hash functions and features to hash.h, it's pretty empty rn.
-*   Clean up nv_printf. Add error reporting too.
 
 ## \[VERSION 0.1.1\]
 ### Changes
@@ -18,3 +17,6 @@
 *   Renamed or deleted some stdafx.h defines.
 *   Replaced gettimeofday() with a more friendly and cross platform SDL timer alternative.
 *   Added error checking to all string.h functions.
+*   Removed 'Optimized' verisons of string.h functions. The compiler would be far better at optimization than us.
+*   Added basic checking in nv_printf, and cleaned the functiosn quite a lot.
+*   Added new rover.h for a rover style allocator.

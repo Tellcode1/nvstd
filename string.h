@@ -83,7 +83,9 @@ extern void* nv_memchr(const void* ptr, int chr, size_t psize);
 extern int nv_memcmp(const void* ptr1, const void* ptr2, size_t max);
 
 // god is dead and i killed him
-extern void* nv_malloc(size_t sz);
+
+/* Dude, if using calloc is really slowing down your program, your program is the fault. */
+#define nv_malloc(...) (nv_calloc(__VA_ARGS__))
 
 extern void* nv_calloc(size_t sz);
 

@@ -43,18 +43,14 @@
 #include "string.h"
 #include "types.h"
 
-/* https://graphics.stanford.edu/~seander/bithacks.html */
-#define WORD_HAS_NULL_TERMINATOR(v) (((v) - 0x01010101UL) & ~(v) & 0x80808080UL)
-
-#define WORD_HAS_CHARACTER(word, chr) (WORD_HAS_NULL_TERMINATOR((word) ^ (~0UL / 255 * (chr))))
-
-#define IS_NOT_ALIGNED_TO_WORD_SIZE(ptr) (((uintptr_t)ptr & (sizeof(nv_word_t) - 1)) != 0)
-
+#if !(NV_UNBUFFERED_ERRORS)
 static nv_error_queue_t g_error_queue = { .m_front = -1, .m_back = -1 };
+#endif
 
 void
 _nv_push_error(const char* file, size_t line, const char* func, struct tm* time, const char* fmt, ...)
 {
+#if !(NV_UNBUFFERED_ERRORS)
   char* write = nv_error_queue_push(&g_error_queue);
 
   va_list args;
@@ -66,12 +62,29 @@ _nv_push_error(const char* file, size_t line, const char* func, struct tm* time,
   nv_vsnprintf(args, write, NV_ERROR_LENGTH - 1 - written, fmt);
 
   va_end(args);
+
+#else
+
+  va_list args;
+  va_start(args, fmt);
+
+  nv_printf("[%d:%d:%d] [%s:%zu] err: %s(): ", time->tm_hour % 12, time->tm_min, time->tm_sec, nv_basename(file), line, func);
+  nv_vprintf(args, fmt);
+  // Add a newline, as we aren't outputting to a string.
+  putc('\n', stdout);
+
+  va_end(args);
+#endif
 }
 
 const char*
 nv_pop_error(void)
 {
+#if !(NV_UNBUFFERED_ERRORS)
   return nv_error_queue_pop(&g_error_queue);
+#else
+  return NULL;
+#endif
 }
 
 void
@@ -677,10 +690,37 @@ nv_vsnprintf(va_list src, char* dst, size_t max_chars, const char* fmt)
   return _nv_vsfnprintf(src, dst, 0, max_chars, fmt);
 }
 
+#  define NV_PRINTF_PEEK_FMT() ((info->m_iter < info->m_fmt_str_end) ? *info->m_iter : 0)
+#  define NV_PRINTF_PEEK_NEXT_FMT() (((info->m_iter + 1) < info->m_fmt_str_end) ? *(info->m_iter + 1) : 0)
+#  define NV_PRINTF_ADVANCE_FMT()                                                                                                                                             \
+    do                                                                                                                                                                        \
+    {                                                                                                                                                                         \
+      if ((info->m_iter + 1) < info->m_fmt_str_end)                                                                                                                           \
+      {                                                                                                                                                                       \
+        info->m_iter++;                                                                                                                                                       \
+      }                                                                                                                                                                       \
+      else                                                                                                                                                                    \
+      {                                                                                                                                                                       \
+        info->m_iter = info->m_fmt_str_end;                                                                                                                                   \
+      }                                                                                                                                                                       \
+    } while (0);
+#  define NV_PRINTF_ADVANCE_NUM_CHARACTERS_FMT(num_chars)                                                                                                                     \
+    do                                                                                                                                                                        \
+    {                                                                                                                                                                         \
+      if ((info->m_iter + (num_chars)) < info->m_fmt_str_end)                                                                                                                 \
+      {                                                                                                                                                                       \
+        info->m_iter += (num_chars);                                                                                                                                          \
+      }                                                                                                                                                                       \
+      else                                                                                                                                                                    \
+      {                                                                                                                                                                       \
+        info->m_iter = info->m_fmt_str_end;                                                                                                                                   \
+      }                                                                                                                                                                       \
+    } while (0);
+
 typedef struct nv_format_info_t
 {
   va_list*    m_args;
-  void*       m_raw_writeptr;
+  void*       m_write_file;
   char*       m_write_string;
   char*       m_wbuf;
   const char* m_fmt_str_end;
@@ -710,6 +750,8 @@ nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written
   size_t remaining = info->m_max_chars - info->m_chars_written;
   size_t to_write  = (written > remaining) ? remaining : written;
   info->m_chars_written += to_write;
+
+  /* As we need to return the number of characters printf would have returned, we can't exit before here. */
   if (!write_buffer)
   {
     return;
@@ -717,16 +759,15 @@ nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written
 
   if (info->m_file)
   {
-    FILE* file = (FILE*)info->m_raw_writeptr;
+    FILE* file = (FILE*)info->m_write_file;
     fwrite(write_buffer, 1, to_write, file);
   }
-  else
+  else if (info->m_write_string)
   {
-    char** write = (char**)info->m_raw_writeptr;
-    if (*write && to_write > 0)
+    if (to_write > 0)
     {
-      nv_memcpy(*write, write_buffer, to_write);
-      (*write) += to_write;
+      nv_memcpy(info->m_write_string, write_buffer, to_write);
+      info->m_write_string += to_write;
     }
   }
 }
@@ -734,56 +775,62 @@ nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written
 static inline void
 nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
 {
-  if (*info->m_iter == '-')
+  if (NV_PRINTF_PEEK_FMT() == '-')
   {
     info->m_left_align = true;
-    info->m_iter++;
+    NV_PRINTF_ADVANCE_FMT();
   }
-  if (*info->m_iter == '0')
+  if (NV_PRINTF_PEEK_FMT() == '0')
   {
     info->m_pad_zero = true;
-    info->m_iter++;
+    NV_PRINTF_ADVANCE_FMT();
   }
 
-  if (*info->m_iter == '*')
+  if (NV_PRINTF_PEEK_FMT() == '*')
   {
     info->m_padding_w = va_arg(*info->m_args, int);
     if (info->m_padding_w < 0)
-    { // negative width means left align
+    {
+      // negative width means left align
       info->m_left_align = true;
       info->m_padding_w  = -info->m_padding_w;
     }
-    info->m_iter++;
+    else
+    {
+      /* Positive padding width means right padded */
+      info->m_left_align = false;
+    }
+    NV_PRINTF_ADVANCE_FMT();
   }
   else
   {
-    while (nv_chr_isdigit((unsigned char)*info->m_iter))
+    while (nv_chr_isdigit(NV_PRINTF_PEEK_FMT()))
     {
-      info->m_padding_w = info->m_padding_w * 10 + (*info->m_iter - '0');
-      info->m_iter++;
+      info->m_padding_w = info->m_padding_w * 10 + (NV_PRINTF_PEEK_FMT() - '0');
+      NV_PRINTF_ADVANCE_FMT();
     }
   }
 
-  if (*info->m_iter == '.')
+  if (NV_PRINTF_PEEK_FMT() == '.')
   {
-    info->m_iter++;
+    NV_PRINTF_ADVANCE_FMT();
     info->m_precision_specified = 1;
-    if (*info->m_iter == '*')
+    if (NV_PRINTF_PEEK_FMT() == '*')
     {
       info->m_precision = va_arg(*info->m_args, int);
       if (info->m_precision < 0)
       {
         info->m_precision = 6;
       }
-      info->m_iter++;
+      NV_PRINTF_ADVANCE_FMT();
     }
     else
     {
       info->m_precision = 0;
-      while (nv_chr_isdigit((unsigned char)*info->m_iter))
+      while (nv_chr_isdigit(NV_PRINTF_PEEK_FMT()))
       {
-        info->m_precision = info->m_precision * 10 + (*info->m_iter - '0');
-        info->m_iter++;
+        info->m_precision = info->m_precision * 10 + (NV_PRINTF_PEEK_FMT() - '0');
+        NV_PRINTF_ADVANCE_FMT();
       }
     }
   }
@@ -798,10 +845,10 @@ nv_printf_format_process_char(nv_format_info_t* info)
   }
 
   // if user is asking for literal % sign, *iter will be the percent sign!!
-  int chr = (*info->m_iter == 'c') ? va_arg(*info->m_args, int) : *info->m_iter;
+  int chr = (nv_chr_tolower(NV_PRINTF_PEEK_FMT()) == 'c') ? va_arg(*info->m_args, int) : NV_PRINTF_PEEK_FMT();
   if (info->m_file)
   {
-    fputc(chr, (FILE*)info->m_raw_writeptr);
+    fputc(chr, (FILE*)info->m_write_file);
   }
   else if (info->m_write_string)
   {
@@ -813,18 +860,105 @@ nv_printf_format_process_char(nv_format_info_t* info)
 }
 
 static inline void
+_nv_printf_handle_long_type(nv_format_info_t* info)
+{
+  if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != 'l')
+  {
+    return;
+  }
+
+  const bool type_is_long_long_integer = nv_chr_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'l';
+  if (type_is_long_long_integer)
+  {
+    /* Move past the extra l */
+    NV_PRINTF_ADVANCE_FMT();
+
+    /* long long integers */
+    switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
+    {
+      case 'd':
+      case 'i': info->m_written = nv_itoa2(va_arg(*info->m_args, long long), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
+      case 'u': info->m_written = nv_utoa2(va_arg(*info->m_args, unsigned long long), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
+    }
+  }
+  else
+  {
+    /* standard long integers */
+    /* %lF\f is non standard behaviour */
+    switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
+    {
+      case 'd':
+      case 'i': info->m_written = nv_itoa2(va_arg(*info->m_args, long), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
+      case 'u': info->m_written = nv_utoa2(va_arg(*info->m_args, unsigned long), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
+    }
+  }
+}
+
+static inline void
+_nv_printf_handle_size_type(nv_format_info_t* info)
+{
+  if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != 'z')
+  {
+    return;
+  }
+
+  if ((nv_chr_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'i' || nv_chr_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'u'))
+  {
+    NV_PRINTF_ADVANCE_FMT();
+  }
+
+  if (nv_chr_tolower(NV_PRINTF_PEEK_FMT()) == 'i')
+  {
+    info->m_written = nv_itoa2(va_arg(*info->m_args, ssize_t), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written);
+  }
+  else
+  {
+    info->m_written = nv_utoa2(va_arg(*info->m_args, size_t), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written);
+  }
+}
+
+static inline void
+_nv_printf_handle_hash_prefix_and_children(nv_format_info_t* info)
+{
+  if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != '#')
+  {
+    return;
+  }
+
+  info->m_wbuf[0] = '0';
+
+  /* If the character is X, then the prefix needs to have X. If it is x, then teh prefix needs to have x */
+  info->m_wbuf[1] = NV_PRINTF_PEEK_NEXT_FMT();
+
+  /* Move past x\X */
+  NV_PRINTF_ADVANCE_FMT();
+
+  /* The 0x\0X prefix */
+  info->m_written = 2;
+  info->m_written += nv_utoa2(va_arg(*info->m_args, unsigned), info->m_wbuf + 2, 16, info->m_max_chars - info->m_chars_written);
+}
+
+static inline void
 nv_printf_format_parse_string(nv_format_info_t* info)
 {
-  const char* string        = va_arg(*info->m_args, const char*);
-  size_t      string_length = nv_strlen(string);
+  if (!NV_PRINTF_PEEK_FMT() || NV_PRINTF_PEEK_FMT() != 's')
+  {
+    return;
+  }
+
+  const char* string = va_arg(*info->m_args, const char*);
+  /* strlen(NULL) is not ok */
   if (!string)
   {
     string = "(null)";
   }
+
+  size_t string_length = nv_strlen(string);
   if (info->m_precision_specified)
   {
     string_length = NV_MIN(string_length, info->m_precision);
   }
+
   nv_printf_write(info, string, string_length);
   info->m_wbuffer_used = false;
 }
@@ -832,59 +966,62 @@ nv_printf_format_parse_string(nv_format_info_t* info)
 static inline void
 nv_printf_format_parse_format(nv_format_info_t* info)
 {
-  switch (*info->m_iter)
+  if (!NV_PRINTF_PEEK_NEXT_FMT())
   {
-    case 'F':
-    case 'f': info->m_written = nv_ftoa2(va_arg(*info->m_args, real_t), info->m_wbuf, info->m_precision, info->m_max_chars - info->m_chars_written, 0); break;
+    return;
+  }
 
-    case 'l':
-      if ((info->m_iter + 1) < info->m_fmt_str_end)
-      {
-        info->m_iter++;
-      }
+  size_t remaining = info->m_max_chars - info->m_chars_written;
 
-      /* %lF\f is non standard behaviour */
-      switch (*info->m_iter)
-      {
-        case 'd':
-        case 'i': info->m_written = nv_itoa2(va_arg(*info->m_args, long), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
-        case 'u': info->m_written = nv_utoa2(va_arg(*info->m_args, unsigned long), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
-      }
-      break;
+  switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
+  {
+    /* By default, ftoa should not trim trailing zeroes. */
+    case 'f': info->m_written = nv_ftoa2(va_arg(*info->m_args, real_t), info->m_wbuf, info->m_precision, remaining, false); break;
+    case 'l': _nv_printf_handle_long_type(info); break;
     case 'd':
-    case 'i': info->m_written = nv_itoa2(va_arg(*info->m_args, int), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
-    case 'z':
-      if ((info->m_iter + 1) < info->m_fmt_str_end)
-      {
-        info->m_iter++;
-      }
-      if (*info->m_iter == 'i')
-      {
-        info->m_written = nv_itoa2(va_arg(*info->m_args, ssize_t), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written);
-      }
-      else
-      {
-        info->m_written = nv_utoa2(va_arg(*info->m_args, size_t), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written);
-      }
-      break;
-    case 'u': info->m_written = nv_utoa2(va_arg(*info->m_args, unsigned), info->m_wbuf, 10, info->m_max_chars - info->m_chars_written); break;
-    case '#':
-      if ((info->m_iter + 1) < info->m_fmt_str_end && (*(info->m_iter + 1) == 'x'))
-      {
-        info->m_iter++;
-        info->m_wbuf[0] = '0';
-        info->m_wbuf[1] = 'x';
-        info->m_written = 2 + nv_utoa2(va_arg(*info->m_args, unsigned), info->m_wbuf + 2, 16, info->m_max_chars - info->m_chars_written);
-      }
-      break;
+    case 'i': info->m_written = nv_itoa2(va_arg(*info->m_args, int), info->m_wbuf, 10, remaining); break;
+    case 'u': info->m_written = nv_utoa2(va_arg(*info->m_args, unsigned), info->m_wbuf, 10, remaining); break;
+
+    /* size_t based formats. This is standard. */
+    case 'z': _nv_printf_handle_size_type(info); break;
+
+    /* hash tells us that we need to have the 0x prefix (or the 0X prefix) */
+    case '#': _nv_printf_handle_hash_prefix_and_children(info); break;
+
+    /* hex integer */
     case 'x': info->m_written = nv_utoa2(va_arg(*info->m_args, unsigned), info->m_wbuf, 16, info->m_max_chars - info->m_chars_written); break;
-    case 'p': info->m_written = nv_ptoa2(va_arg(*info->m_args, void*), info->m_wbuf, info->m_max_chars - info->m_chars_written); break;
+
+    /* pointer */
+    case 'p': info->m_written = nv_ptoa2(va_arg(*info->m_args, void*), info->m_wbuf, remaining); break;
+
     /* bytes, custom */
-    case 'b': info->m_written = nv_btoa2(va_arg(*info->m_args, size_t), 1, info->m_wbuf, info->m_max_chars - info->m_chars_written); break;
+    case 'b': info->m_written = nv_btoa2(va_arg(*info->m_args, size_t), 1, info->m_wbuf, remaining); break;
+
     case 's': nv_printf_format_parse_string(info); break;
+
     case 'c':
+    /* If there are two % symbols in a row */
     case '%':
     default: nv_printf_format_process_char(info); break;
+  }
+}
+
+static inline void
+nv_printf_write_padding(nv_format_info_t* info)
+{
+  info->m_padding = info->m_padding_w - (int)info->m_written;
+  char pad_char   = info->m_pad_zero ? '0' : ' ';
+  if (info->m_left_align && info->m_padding <= 0)
+  {
+    return;
+  }
+
+  nv_memset(info->m_pad_buf, pad_char, sizeof(info->m_pad_buf));
+  while (info->m_padding > 0)
+  {
+    int chunk = (info->m_padding > (int)sizeof(info->m_pad_buf)) ? (int)sizeof(info->m_pad_buf) : info->m_padding;
+    nv_printf_write(info, info->m_pad_buf, chunk);
+    info->m_padding -= chunk;
   }
 }
 
@@ -896,36 +1033,11 @@ nv_printf_format_upload_to_destination(nv_format_info_t* info)
     return;
   }
 
-  info->m_padding = info->m_padding_w - (int)info->m_written;
-  char pad_char   = info->m_pad_zero ? '0' : ' ';
-  if (info->m_padding < 0)
-  {
-    info->m_padding = 0;
-  }
-
-  if (!info->m_left_align && info->m_padding > 0)
-  {
-    nv_memset(info->m_pad_buf, pad_char, sizeof(info->m_pad_buf));
-    while (info->m_padding)
-    {
-      int chunk = (info->m_padding > (int)sizeof(info->m_pad_buf)) ? (int)sizeof(info->m_pad_buf) : info->m_padding;
-      nv_printf_write(info, info->m_pad_buf, chunk);
-      info->m_padding -= chunk;
-    }
-  }
+  nv_printf_write_padding(info);
 
   nv_printf_write(info, info->m_wbuf, info->m_written);
 
-  if (info->m_left_align && info->m_padding > 0)
-  {
-    nv_memset(info->m_pad_buf, pad_char, sizeof(info->m_pad_buf));
-    while (info->m_padding)
-    {
-      int chunk = (info->m_padding > (int)sizeof(info->m_pad_buf)) ? (int)sizeof(info->m_pad_buf) : info->m_padding;
-      nv_printf_write(info, info->m_pad_buf, chunk);
-      info->m_padding -= chunk;
-    }
-  }
+  nv_printf_write_padding(info);
 }
 
 static inline void
@@ -951,7 +1063,7 @@ nv_printf_write_iterated_char(nv_format_info_t* info)
     return;
   }
 
-  if (*info->m_iter == '\b')
+  if (NV_PRINTF_PEEK_FMT() == '\b')
   {
     if (info->m_chars_written == 0)
     {
@@ -960,7 +1072,7 @@ nv_printf_write_iterated_char(nv_format_info_t* info)
 
     if (info->m_file)
     {
-      fputc('\b', (FILE*)info->m_raw_writeptr);
+      fputc('\b', (FILE*)info->m_write_file);
     }
     else if (info->m_write_string)
     {
@@ -970,7 +1082,7 @@ nv_printf_write_iterated_char(nv_format_info_t* info)
   }
   else if (info->m_file)
   {
-    if (fputc(*info->m_iter, (FILE*)info->m_raw_writeptr) != *info->m_iter)
+    if (fputc(NV_PRINTF_PEEK_FMT(), (FILE*)info->m_write_file) != NV_PRINTF_PEEK_FMT())
     {
       /* we can't use nv_printf here to avoid recursion */
       puts(strerror(errno));
@@ -978,7 +1090,7 @@ nv_printf_write_iterated_char(nv_format_info_t* info)
   }
   else if (info->m_write_string)
   {
-    *info->m_write_string = *info->m_iter;
+    *info->m_write_string = NV_PRINTF_PEEK_FMT();
     info->m_write_string++;
   }
   info->m_chars_written++;
@@ -987,11 +1099,11 @@ nv_printf_write_iterated_char(nv_format_info_t* info)
 static inline void
 nv_printf_loop(nv_format_info_t* info)
 {
-  for (; *info->m_iter && info->m_chars_written < info->m_max_chars; info->m_iter++)
+  for (; NV_PRINTF_PEEK_FMT() && info->m_chars_written < info->m_max_chars; info->m_iter++)
   {
-    if (*info->m_iter == '%')
+    if (NV_PRINTF_PEEK_FMT() == '%')
     {
-      info->m_iter++;
+      NV_PRINTF_ADVANCE_FMT();
       nv_printf_format_parse_format_specifier(info);
     }
     else
@@ -1002,9 +1114,9 @@ nv_printf_loop(nv_format_info_t* info)
 }
 
 size_t
-_nv_vsfnprintf(va_list src, void* dst, bool is_file, size_t max_chars, const char* fmt)
+_nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt)
 {
-  nv_assert_and_ret(src != NULL, 0);
+  nv_assert_and_ret(args != NULL, 0);
   nv_assert_and_ret(fmt != NULL, 0);
 
   if (max_chars == 0)
@@ -1014,36 +1126,24 @@ _nv_vsfnprintf(va_list src, void* dst, bool is_file, size_t max_chars, const cha
 
   nv_format_info_t info = nv_zero_init(nv_format_info_t);
 
-  va_list args;
-  va_copy(args, src);
+  va_list args_copy;
+  va_copy(args_copy, args);
 
   /* Aligned to 64 bytes for fast writing and reading access */
   NV_ALIGN_TO(64) char pad_buf[64];
 
   char wbuf[NOVA_WBUF_SIZE];
 
-  char* writep = (char*)dst;
-
-  info.m_args         = &args;
-  info.m_raw_writeptr = is_file ? dst : (void*)&writep;
+  info.m_args         = &args_copy;
+  info.m_write_file   = is_file ? (FILE*)dst : NULL;
+  info.m_write_string = is_file ? NULL : (char*)dst;
   info.m_max_chars    = max_chars;
   info.m_precision    = 6;
-  info.m_write_string = (char*)dst;
   info.m_fmt_str_end  = fmt + nv_strlen(fmt);
   info.m_iter         = fmt;
   info.m_file         = is_file;
   info.m_pad_buf      = pad_buf;
   info.m_wbuf         = wbuf;
-
-  if (is_file)
-  {
-    info.m_raw_writeptr = dst; // attach file
-  }
-  else
-  {
-    // attach POINTER to the write string so we can iterate over it
-    info.m_raw_writeptr = (void*)&info.m_write_string;
-  }
 
   nv_printf_loop(&info);
 
@@ -1053,7 +1153,7 @@ _nv_vsfnprintf(va_list src, void* dst, bool is_file, size_t max_chars, const cha
     ((char*)dst)[width] = 0;
   }
 
-  va_end(args);
+  va_end(args_copy);
 
   return info.m_chars_written;
 }
@@ -1185,41 +1285,7 @@ nv_memset(void* dst, char to, size_t sz)
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memset, dst, to, sz);
 
-  uintptr_t d            = (uintptr_t)dst;
-  nv_word_t align_offset = d & (sizeof(nv_word_t) - 1);
-
-  // do not ask what the fuck this is.
-  // basically, it's used to project a character to a word
-  nv_word_t word_to = 0x0101010101010101ULL * (unsigned char)to;
-
   unsigned char* byte_write = (unsigned char*)dst;
-  while (align_offset && sz)
-  {
-    *byte_write++ = to;
-    sz--;
-    align_offset = (uintptr_t)byte_write & (sizeof(nv_word_t) - 1);
-  }
-
-  nv_word_t* word_write = (nv_word_t*)byte_write;
-
-  // quad word copy
-  while (sz >= sizeof(nv_word_t) * 4)
-  {
-    word_write[0] = word_to;
-    word_write[1] = word_to;
-    word_write[2] = word_to;
-    word_write[3] = word_to;
-    word_write += 4;
-    sz -= sizeof(nv_word_t) * 4;
-  }
-
-  while (sz >= sizeof(nv_word_t))
-  {
-    *word_write++ = word_to;
-    sz -= sizeof(nv_word_t);
-  }
-
-  byte_write = (unsigned char*)word_write;
   while ((sz--) > 0)
   {
     *byte_write = to;
@@ -1263,16 +1329,6 @@ nv_memmove(void* dst, const void* src, size_t sz)
   }
 
   return dst;
-}
-
-void*
-nv_malloc(size_t sz)
-{
-  nv_assert_and_ret(sz > 0, NULL);
-
-  void* ptr = malloc(sz);
-  nv_assert(ptr != NULL);
-  return ptr;
 }
 
 void*
@@ -1335,36 +1391,6 @@ nv_memcmp(const void* _p1, const void* _p2, size_t max)
   const uchar* p1 = (const uchar*)_p1;
   const uchar* p2 = (const uchar*)_p2;
 
-  // move && compare the pointer p1 until we reach alignment
-  while (max > 0 && IS_NOT_ALIGNED_TO_WORD_SIZE(p1) && IS_NOT_ALIGNED_TO_WORD_SIZE(p2))
-  {
-    if (*p1 != *p2)
-    {
-      return *p1 - *p2;
-    }
-    p1++;
-    p2++;
-    max--;
-  }
-
-  const nv_word_t* w1         = (const nv_word_t*)p1;
-  const nv_word_t* w2         = (const nv_word_t*)p2;
-  nv_word_t        word_count = max / sizeof(nv_word_t);
-
-  for (nv_word_t i = 0; i < word_count; i++)
-  {
-    if (w1[i] != w2[i])
-    {
-      p1 = (const uchar*)&w1[i];
-      p2 = (const uchar*)&w2[i];
-      break;
-    }
-  }
-
-  max %= sizeof(nv_word_t);
-  p1 += word_count * sizeof(nv_word_t);
-  p2 += word_count * sizeof(nv_word_t);
-
   while ((max--) != 0)
   {
     if (*p1 != *p2)
@@ -1397,27 +1423,6 @@ nv_strncpy2(char* dst, const char* src, size_t max)
   return NV_MIN(slen, max);
 #  endif
 
-  while (*src && max > 0 && IS_NOT_ALIGNED_TO_WORD_SIZE(src))
-  {
-    *dst = *src;
-    dst++;
-    src++;
-    max--;
-  }
-
-  nv_word_t*       destp = (nv_word_t*)dst;
-  const nv_word_t* srcp  = (const nv_word_t*)src;
-  size_t           words = max / sizeof(nv_word_t);
-
-  for (size_t i = 0; i < words; i++)
-  {
-    destp[i] = srcp[i];
-  }
-
-  dst += words * sizeof(nv_word_t);
-  src += words * sizeof(nv_word_t);
-  max %= sizeof(nv_word_t);
-
   while (*src && max > 0)
   {
     *dst = *src;
@@ -1440,26 +1445,6 @@ nv_strcpy(char* dst, const char* src)
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strcpy, dst, src); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
 
   char* const dst_orig = dst;
-
-  while (*src && IS_NOT_ALIGNED_TO_WORD_SIZE(src) && IS_NOT_ALIGNED_TO_WORD_SIZE(dst))
-  {
-    *dst = *src;
-    dst++;
-    src++;
-  }
-
-  while (1)
-  {
-    const nv_word_t word = *(const nv_word_t*)src;
-    if (WORD_HAS_NULL_TERMINATOR(word))
-    {
-      break;
-    }
-
-    *(nv_word_t*)dst = word;
-    dst += sizeof(nv_word_t);
-    src += sizeof(nv_word_t);
-  }
 
   while (*src)
   {
@@ -1515,7 +1500,9 @@ nv_strcat(char* dst, const char* src)
 
   while (*src)
   {
-    *end++ = *src++;
+    *end = *src;
+    end++;
+    src++;
   }
   *end = 0;
 
@@ -1635,30 +1622,6 @@ nv_strcmp(const char* s1, const char* s2)
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strcmp, s1, s2);
 
-  while (*s1 && *s2 && IS_NOT_ALIGNED_TO_WORD_SIZE(s1) && IS_NOT_ALIGNED_TO_WORD_SIZE(s2))
-  {
-    if (*s1 != *s2)
-    {
-      return (unsigned char)*s1 - (unsigned char)*s2;
-    }
-    s1++;
-    s2++;
-  }
-
-  while (1)
-  {
-    const nv_word_t word_s1 = *(const nv_word_t*)s1;
-    const nv_word_t word_s2 = *(const nv_word_t*)s2;
-
-    if (word_s1 != word_s2 || WORD_HAS_NULL_TERMINATOR(word_s1) || WORD_HAS_NULL_TERMINATOR(word_s2))
-    {
-      break;
-    }
-
-    s1 += sizeof(nv_word_t);
-    s2 += sizeof(nv_word_t);
-  }
-
   while (*s1 && *s2 && (*s1 == *s2))
   {
     s1++;
@@ -1674,25 +1637,6 @@ nv_strchr(const char* s, int chr)
   nv_assert_and_ret(s != NULL, NULL);
 
   unsigned char c = (unsigned char)chr;
-
-  while (*s && IS_NOT_ALIGNED_TO_WORD_SIZE(s))
-  {
-    if (*s == c)
-    {
-      return (char*)s;
-    }
-    s++;
-  }
-
-  while (1)
-  {
-    const nv_word_t word = *(const nv_word_t*)s;
-    if (WORD_HAS_NULL_TERMINATOR(word) || WORD_HAS_CHARACTER(word, c))
-    {
-      break;
-    }
-    s += sizeof(nv_word_t);
-  }
 
   while (*s)
   {
@@ -1820,27 +1764,6 @@ nv_strlen(const char* s)
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strlen, s);
 
   const char* start = s;
-
-  while ((uintptr_t)s & (sizeof(nv_word_t) - 1)) // align s to 8 byte boundary so we can check sizeof(size_t) bytes at once
-  {
-    if (!*s)
-    {
-      return s - start;
-    }
-    s++;
-  }
-
-  const nv_word_t mask = 0x0101010101010101ULL;
-  while (1)
-  {
-    nv_word_t word = *(nv_word_t*)s;
-    if (((word - mask) & ~word) & (mask << 7))
-    {
-      break;
-    }
-    s += sizeof(nv_word_t);
-  }
-
   while (*s)
   {
     s++;
@@ -1875,16 +1798,17 @@ nv_strstr(const char* s, const char* sub)
 
   for (; *s; s++)
   {
-    const char* _s = s;
-    const char* p  = sub;
+    const char* str_it = s;
+    const char* sub_it = sub;
 
-    while (*_s && *p && *_s == *p)
+    while (*str_it && *sub_it && *str_it == *sub_it)
     {
-      _s++;
-      p++;
+      str_it++;
+      sub_it++;
     }
 
-    if (!*p)
+    /* If we reach the NULL terminator of the substring, it exists in str. */
+    if (!*sub_it)
     {
       return (char*)s;
     }

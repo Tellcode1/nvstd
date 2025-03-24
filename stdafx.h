@@ -114,6 +114,11 @@ NOVA_HEADER_START
 #  define NV_EXPECT_EQUALS(expr, equals) (expr)
 #endif
 
+/* If enabled, error messages are instantaneously printed, otherwise, they are added to a queue */
+#ifndef NV_UNBUFFERED_ERRORS
+#  define NV_UNBUFFERED_ERRORS true
+#endif
+
 #ifndef real_t
 #  define real_t double
 #endif
@@ -189,10 +194,13 @@ extern void nv_flush_errors(void);
       }                                                                                                                                                                       \
     } while (0);
 #  define nv_assert(expr)                                                                                                                                                     \
-    if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                         \
+    do                                                                                                                                                                        \
     {                                                                                                                                                                         \
-      nv_log_and_abort("Assertion failed -> %s", #expr);                                                                                                                      \
-    }
+      if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                       \
+      {                                                                                                                                                                       \
+        nv_push_error("Assertion failed -> %s", #expr);                                                                                                                       \
+      }                                                                                                                                                                       \
+    } while (0);
 #else
 // These are typecasted to void because they give warnings because result (its
 // like expr != NULL) is not used
