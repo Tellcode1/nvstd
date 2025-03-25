@@ -25,9 +25,7 @@
 #ifndef __NOVA_ERROR_QUEUE_H__
 #define __NOVA_ERROR_QUEUE_H__
 
-#include "print.h"
 #include "stdafx.h"
-#include "string.h"
 
 NOVA_HEADER_START
 
@@ -43,10 +41,10 @@ typedef char nv_error_t[NV_ERROR_LENGTH];
 
 typedef struct nv_error_queue_t
 {
-  int m_front;
-  int m_back;
+  int front;
+  int back;
   /* These must be stored on the stack, what if nv_malloc has an error? */
-  nv_error_t m_errors[NV_MAX_ERRORS];
+  nv_error_t errors[NV_MAX_ERRORS];
 } nv_error_queue_t;
 
 extern void        nv_error_queue_init(nv_error_queue_t* dst);

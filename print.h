@@ -38,6 +38,11 @@ NOVA_HEADER_START
 #  define NOVA_WBUF_SIZE 1024
 #endif
 
+/* Add commas to integers when printing. */
+#ifndef NOVA_PRINTF_ADD_COMMAS
+#  define NOVA_PRINTF_ADD_COMMAS true
+#endif
+
 /**
  * set the write buffer for printf
  *

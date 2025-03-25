@@ -69,8 +69,7 @@ NOVA_HEADER_START
 #  elif defined(_MSC_VER)
 #    define NV_TYPEOF(x) decltype(x)
 #  else
-/* As Typeof is typically used in casts, we can not compile without typeof */
-#    error "no typeof"
+#    pragma message("NV_TYPEOF not available")
 #  endif
 #endif
 
@@ -84,7 +83,8 @@ NOVA_HEADER_START
 #  elif defined(__INTEL_COMPILER)
 #    define NV_ALIGN_TO(N) __declspec(align(N))
 #  else
-#    error "no align"
+#    pragma message("NV_ALIGN_TO() not available")
+#    define NV_ALIGN_TO(N)
 #  endif
 #endif
 
@@ -129,16 +129,22 @@ NOVA_HEADER_START
 
 #define DEBUG
 
-#define NV_MAX(a, b) ((a) > (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))
-#define NV_MIN(a, b) ((a) < (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))
+#if defined NV_TYPEOF
+#  define NV_MAX(a, b) ((a) > (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))
+#  define NV_MIN(a, b) ((a) < (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))
+#else
+#  define NV_MAX(a, b) ((a) > (b) ? (a) : (b))
+#  define NV_MIN(a, b) ((a) < (b) ? (a) : (b))
+#endif
+
 #define NV_CONCAT(x, y) x##y
 
 /*
  * GNUC and builtin have protection from accidentally passing in pointers instead of stack arrays
  */
-#if defined(___GNUC__) && (__STDC_VERSION__ >= 201112L)
+#if defined(___GNUC__) && (__STDC_VERSION__ >= 201112L) && defined(NV_TYPEOF)
 #  define nv_arrlen(arr) _Generic(&(arr), NV_TYPEOF(*(arr))(*): 0, default: (sizeof(arr) / sizeof((arr)[0])))
-#elif defined(__has_builtin) && __has_builtin(__builtin_choose_expr) && __has_builtin(__builtin_types_compatible_p)
+#elif defined(__has_builtin) && __has_builtin(__builtin_choose_expr) && __has_builtin(__builtin_types_compatible_p) && defined(NV_TYPEOF)
 #  define nv_arrlen(arr) __builtin_choose_expr(__builtin_types_compatible_p(NV_TYPEOF(arr), NV_TYPEOF(&(arr)[0])), 0, (sizeof(arr) / sizeof((arr)[0])))
 #else
 #  define nv_arrlen(arr) ((size_t)(sizeof(arr) / sizeof((arr)[0])))
@@ -189,7 +195,7 @@ extern void nv_flush_errors(void);
     {                                                                                                                                                                         \
       if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                       \
       {                                                                                                                                                                       \
-        nv_push_error("Assertion failed -> %s", #expr);                                                                                                                       \
+        nv_log_error("Assertion failed -> %s\n", #expr);                                                                                                                      \
         return retval;                                                                                                                                                        \
       }                                                                                                                                                                       \
     } while (0);
@@ -198,7 +204,7 @@ extern void nv_flush_errors(void);
     {                                                                                                                                                                         \
       if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                       \
       {                                                                                                                                                                       \
-        nv_push_error("Assertion failed -> %s", #expr);                                                                                                                       \
+        nv_log_error("Assertion failed -> %s\n", #expr);                                                                                                                      \
       }                                                                                                                                                                       \
     } while (0);
 #else
@@ -206,7 +212,7 @@ extern void nv_flush_errors(void);
 // like expr != NULL) is not used
 #  define nv_assert_and_ret(expr, retval) (void)(expr)
 #  define nv_assert(expr) (void)(expr)
-#  pragma message "Assertions disabled"
+#  pragma message("Assertions disabled")
 #endif
 
 // puts but with formatting and with the preceder "error". does not stop execution of program if you want that, use nv_log_and_abort instead.

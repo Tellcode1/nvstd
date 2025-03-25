@@ -34,18 +34,22 @@ NOVA_HEADER_START
 #  define NOVA_MAX_IGNORE __SIZE_MAX__
 #endif
 
+#ifndef NOVA_SEPERATOR_CHAR
+#  define NOVA_SEPERATOR_CHAR ','
+#endif
+
 /**
  * @brief Converts an integer to ASCII.
  *
  * @param max Maximum number of characters to write.
  * @return The number of characters written (excluding null terminator).
  */
-extern size_t nv_itoa2(intmax_t num, char out[], int base, size_t max);
+extern size_t nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas);
 
 /**
  * @brief Converts an unsigned integer to ASCII.
  */
-extern size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max);
+extern size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas);
 
 /**
  * @brief Converts a real_t to ASCII.
@@ -87,16 +91,16 @@ extern real_t nv_atof(const char in_string[], size_t max);
 extern bool nv_atobool(const char in_string[], size_t max);
 
 static inline char*
-nv_itoa(intmax_t x, char out[], int base, size_t max)
+nv_itoa(intmax_t x, char out[], int base, size_t max, bool add_commas)
 {
-  nv_itoa2(x, out, base, max);
+  nv_itoa2(x, out, base, max, add_commas);
   return out;
 }
 
 static inline char*
-nv_itoa_u(uintmax_t x, char out[], int base, size_t max)
+nv_utoa(uintmax_t x, char out[], int base, size_t max, bool add_commas)
 {
-  nv_utoa2(x, out, base, max);
+  nv_utoa2(x, out, base, max, add_commas);
   return out;
 }
 

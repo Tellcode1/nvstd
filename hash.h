@@ -89,16 +89,22 @@ nv_hash_murmur3(const void* input, size_t input_size, void* user_data)
 
   const u8* tail = data + (nblocks * 4);
   u32       k1   = 0;
-  switch (input_size & 3U)
+
+  if ((input_size & 3U) == 3)
   {
-    case 3: k1 ^= tail[2] << 16U; NV_FALLTHROUGH;
-    case 2: k1 ^= tail[1] << 8U; NV_FALLTHROUGH;
-    case 1:
-      k1 ^= tail[0];
-      k1 *= constant1;
-      k1 = (k1 << 15U) | (k1 >> 17U);
-      k1 *= constant2;
-      hash ^= k1;
+    k1 ^= tail[2] << 16U;
+  }
+  if ((input_size & 3U) == 2)
+  {
+    k1 ^= tail[1] << 8U;
+  }
+  if ((input_size & 3U) == 1)
+  {
+    k1 ^= tail[0];
+    k1 *= constant1;
+    k1 = (k1 << 15U) | (k1 >> 17U);
+    k1 *= constant2;
+    hash ^= k1;
   }
 
   hash ^= input_size;

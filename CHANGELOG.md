@@ -20,3 +20,5 @@
 *   Removed 'Optimized' verisons of string.h functions. The compiler would be far better at optimization than us.
 *   Added basic checking in nv_printf, and cleaned the functiosn quite a lot.
 *   Added new rover.h for a rover style allocator.
+*   Fixed assertations not printing the expression for some reason. I don't know what I did but it works now.
+*   Added seperators for integer printing.

@@ -44,19 +44,19 @@ typedef enum nv_option_type
 
 struct nv_option_t
 {
-  nv_option_type m_type;
-  const char*    m_short_name;
-  const char*    m_long_name;
+  nv_option_type type;
+  const char*    short_name;
+  const char*    long_name;
 
   /*
     Pointer to where the value will be stored
     For strings, pass the buffer instead.
     This CAN be NULL.
   */
-  void* m_value;
+  void* value;
 
   // The size of the char buffer when option type is string
-  size_t m_buffer_size;
+  size_t buffer_size;
 };
 
 /**

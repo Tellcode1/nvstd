@@ -39,8 +39,8 @@ NOVA_HEADER_START
 
 typedef struct nv_timer_t
 {
-  NV_TIMER_TIME_TYPE m_start;
-  NV_TIMER_TIME_TYPE m_end;
+  NV_TIMER_TIME_TYPE start;
+  NV_TIMER_TIME_TYPE end;
 } nv_timer_t;
 
 static inline NV_TIMER_TIME_TYPE
@@ -61,8 +61,8 @@ nv_timer_begin(NV_TIMER_TIME_TYPE duration_seconds)
     return (nv_timer_t){ -1, -1 };
   }
   nv_timer_t tmr;
-  tmr.m_start = _nv_timer_get_currtime();
-  tmr.m_end   = tmr.m_start + duration_seconds;
+  tmr.start = _nv_timer_get_currtime();
+  tmr.end   = tmr.start + duration_seconds;
   return tmr;
 }
 
@@ -72,33 +72,33 @@ nv_timer_begin(NV_TIMER_TIME_TYPE duration_seconds)
 static inline void
 nv_timer_reset(nv_timer_t* tmr)
 {
-  tmr->m_start = -1;
-  tmr->m_end   = -1;
+  tmr->start = -1;
+  tmr->end   = -1;
 }
 
 static inline bool
 nv_timer_is_done(const nv_timer_t* tmr)
 {
-  if (tmr->m_end == -1 || tmr->m_start == -1)
+  if (tmr->end == -1 || tmr->start == -1)
   {
     nv_log_warning("Timer end is invalid (it has been reset or was not created "
                    "correctly). The timer needs to be restarted using nv_timer_begin()");
     return false;
   }
 
-  return _nv_timer_get_currtime() >= tmr->m_end;
+  return _nv_timer_get_currtime() >= tmr->end;
 }
 
 static inline NV_TIMER_TIME_TYPE
 nv_timer_time_since_start(const nv_timer_t* tmr)
 {
-  return (_nv_timer_get_currtime() - tmr->m_start);
+  return (_nv_timer_get_currtime() - tmr->start);
 }
 
 static inline NV_TIMER_TIME_TYPE
 nv_timer_time_since_done(const nv_timer_t* tmr)
 {
-  return (_nv_timer_get_currtime() - tmr->m_end);
+  return (_nv_timer_get_currtime() - tmr->end);
 }
 
 NOVA_HEADER_END
