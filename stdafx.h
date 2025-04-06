@@ -28,8 +28,8 @@
 // implementation: core.c
 
 #define __NOVA_STD_VERSION_MAJOR__ 0
-#define __NOVA_STD_VERSION_MINOR__ 1
-#define __NOVA_STD_VERSION_PATCH__ 1
+#define __NOVA_STD_VERSION_MINOR__ 2
+#define __NOVA_STD_VERSION_PATCH__ 0
 
 #include <SDL2/SDL_mutex.h>
 #include <errno.h>
@@ -56,7 +56,7 @@ NOVA_HEADER_START
 #if !defined(NV_RESTRICT)
 #  if defined(_MSC_VER)
 #    define NV_RESTRICT __restrict
-#  elif defined(___GNUC__) || defined(__clang__)
+#  elif defined(__GNUC__) || defined(__clang__)
 #    define NV_RESTRICT __restrict__
 #  else
 #    define NV_RESTRICT
@@ -64,7 +64,7 @@ NOVA_HEADER_START
 #endif
 
 #ifndef NV_TYPEOF
-#  if defined(___GNUC__) || defined(__clang__)
+#  if defined(__GNUC__) || defined(__clang__)
 #    define NV_TYPEOF(x) __typeof__(x)
 #  elif defined(_MSC_VER)
 #    define NV_TYPEOF(x) decltype(x)
@@ -76,7 +76,7 @@ NOVA_HEADER_START
 #ifndef NV_ALIGN_TO
 #  if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 201112L // C11+
 #    define NV_ALIGN_TO(N) _Alignas(N)
-#  elif defined(___GNUC__) || defined(__clang__)
+#  elif defined(__GNUC__) || defined(__clang__)
 #    define NV_ALIGN_TO(N) __attribute__((aligned(N)))
 #  elif defined(_MSC_VER) // MSVC
 #    define NV_ALIGN_TO(N) __declspec(align(N))
@@ -89,7 +89,7 @@ NOVA_HEADER_START
 #endif
 
 #ifndef NV_USED
-#  if defined(___GNUC__) || defined(__clang__)
+#  if defined(__GNUC__) || defined(__clang__)
 #    define NV_USED __attribute__((__used__))
 #  else
 #    define NV_USED
@@ -97,13 +97,13 @@ NOVA_HEADER_START
 #endif
 
 /* [fallthrough] is a C23 extension. I get it now. Shut up please. */
-#if defined(___GNUC__) && ___GNUC__ >= 7 || defined(__clang__) && __clang_major__ >= 12
+#if defined(__GNUC__) && __GNUC__ >= 7 || defined(__clang__) && __clang_major__ >= 12
 #  define NV_FALLTHROUGH __attribute__((fallthrough))
 #else
 #  define NV_FALLTHROUGH /* fallthrough */
 #endif
 
-#if defined(___GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_expect)
+#if defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_expect)
 #  define NV_LIKELY(expr) (__builtin_expect(!!(expr), 1))
 #  define NV_UNLIKELY(expr) (__builtin_expect(!!(expr), 0))
 /* Note that equals must be a long (or convertible to a long) */
@@ -114,9 +114,10 @@ NOVA_HEADER_START
 #  define NV_EXPECT_EQUALS(expr, equals) (expr)
 #endif
 
-/* If enabled, error messages are instantaneously printed, otherwise, they are added to a queue */
-#ifndef NV_UNBUFFERED_ERRORS
-#  define NV_UNBUFFERED_ERRORS true
+#define NV_CONCAT(x, y) x##y
+
+#ifndef NV_STATIC_ASSERT
+#  define NV_STATIC_ASSERT(expr, errmsg) typedef char static_assert_failed__##errmsg[!(expr) ? -1 : 1]
 #endif
 
 #ifndef real_t
@@ -137,12 +138,10 @@ NOVA_HEADER_START
 #  define NV_MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
-#define NV_CONCAT(x, y) x##y
-
 /*
  * GNUC and builtin have protection from accidentally passing in pointers instead of stack arrays
  */
-#if defined(___GNUC__) && (__STDC_VERSION__ >= 201112L) && defined(NV_TYPEOF)
+#if defined(__GNUC__) && (__STDC_VERSION__ >= 201112L) && defined(NV_TYPEOF)
 #  define nv_arrlen(arr) _Generic(&(arr), NV_TYPEOF(*(arr))(*): 0, default: (sizeof(arr) / sizeof((arr)[0])))
 #elif defined(__has_builtin) && __has_builtin(__builtin_choose_expr) && __has_builtin(__builtin_types_compatible_p) && defined(NV_TYPEOF)
 #  define nv_arrlen(arr) __builtin_choose_expr(__builtin_types_compatible_p(NV_TYPEOF(arr), NV_TYPEOF(&(arr)[0])), 0, (sizeof(arr) / sizeof((arr)[0])))
@@ -181,13 +180,6 @@ NOVA_HEADER_START
 #define __GNUC_HELP_ME_PLEASE_NUM(...)                                                                                                                                        \
   __GNUC_HELP_ME_PLEASE_SELECT_10TH(__VA_ARGS__, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, TWOORMORE, ONE, throwaway)
 #define __GNUC_HELP_ME_PLEASE_SELECT_10TH(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, ...) a10
-
-#define nv_push_error(...) _nv_push_error(__FILE__, __LINE__, __func__, (_nv_get_time()), __GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) __GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-
-extern const char* nv_pop_error(void);
-
-/* Print all error messages in the queue and clean it */
-extern void nv_flush_errors(void);
 
 #ifndef NDEBUG
 #  define nv_assert_and_ret(expr, retval)                                                                                                                                     \
@@ -240,18 +232,16 @@ extern void _nv_log(va_list args, const char* file, size_t line, const char* fn,
 /* printf's the time to stdout. yep. [hour:minute:second]*/
 extern void nv_print_time_as_string(FILE* stream);
 
-extern void _nv_push_error(const char* file, size_t line, const char* func, struct tm* time, const char* fmt, ...);
-
 static inline struct tm*
 _nv_get_time(void)
 {
   time_t     now;
   struct tm* tm;
 
-  now = time(0);
+  now = time(NULL);
   if ((tm = localtime(&now)) == NULL)
   {
-    nv_push_error("Error extracting time stuff");
+    nv_log_error("Error extracting time stuff\n");
     return NULL;
   }
 
@@ -261,8 +251,11 @@ _nv_get_time(void)
 #define NOVA_CALL_FILE_FN(fn)                                                                                                                                                 \
   if (NV_UNLIKELY((fn) != 0))                                                                                                                                                 \
   {                                                                                                                                                                           \
-    nv_push_error("%s() => %i", #fn, errno);                                                                                                                                  \
+    nv_log_error("%s() => %i\n", #fn, errno);                                                                                                                                 \
   }
+
+NV_STATIC_ASSERT(sizeof(float) == 4, sizeof_float_must_be_32_bits);
+NV_STATIC_ASSERT(sizeof(double) == 8, sizeof_float_must_be_64_bits);
 
 NOVA_HEADER_END
 

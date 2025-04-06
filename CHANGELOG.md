@@ -1,7 +1,13 @@
 ## \[TODO\]
-*   Optimize every string function.
 *   Check for unhandled edge cases in strconv's functions.
 *   Add more hash functions and features to hash.h, it's pretty empty rn.
+
+## \[VERSION 0.2.0\]
+### Changes
+*   Fixed find and replace error, ___GNUC__ instead of __GNUC__
+*   Removed error queues, opting for instantaneous logging.
+*   Improved error handling a little in the renderer initialization.
+*   The core path now runs even if no memory is available. The program exits safely.
 
 ## \[VERSION 0.1.1\]
 ### Changes

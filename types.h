@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_TYPES__
-#define __NOVA_TYPES__
+#ifndef __NOVA_TYPES_H__
+#define __NOVA_TYPES_H__
 
 #ifdef __cplusplus
 extern "C"
@@ -57,4 +57,4 @@ extern "C"
 }
 #endif
 
-#endif //__NOVA_TYPES__
+#endif //__NOVA_TYPES_H__

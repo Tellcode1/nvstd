@@ -69,6 +69,10 @@ extern void* nv_memset(void* dst, char to, size_t dst_size);
  */
 extern void* nv_memmove(void* dst, const void* src, size_t sz);
 
+/**
+ * memcpy is marginally faster than memmove, but also has issues on overlapping regions of memory
+ * So, we ditch memcpy for memmove for the sake of safety.
+ */
 #define nv_memcpy(...) nv_memmove(__VA_ARGS__)
 
 /**

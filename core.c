@@ -35,69 +35,13 @@
 #include <string.h>
 
 #include "chrclass.h"
-#include "errqueue.h"
+#include "errorcodes.h"
 #include "print.h"
 #include "props.h"
 #include "stdafx.h"
 #include "strconv.h"
 #include "string.h"
 #include "types.h"
-
-#if !(NV_UNBUFFERED_ERRORS)
-static nv_error_queue_t g_error_queue = { .front = -1, .back = -1 };
-#endif
-
-void
-_nv_push_error(const char* file, size_t line, const char* func, struct tm* time, const char* fmt, ...)
-{
-#if !(NV_UNBUFFERED_ERRORS)
-  char* write = nv_error_queue_push(&g_error_queue);
-
-  va_list args;
-  va_start(args, fmt);
-
-  size_t written = nv_snprintf(write, NV_ERROR_LENGTH - 1, "[%d:%d:%d] [%s:%zu] err: %s(): ", time->tm_hour % 12, time->tm_min, time->tm_sec, nv_basename(file), line, func);
-  write += written;
-
-  nv_vsnprintf(args, write, NV_ERROR_LENGTH - 1 - written, fmt);
-
-  va_end(args);
-
-#else
-
-  nv_printf("[%d:%d:%d] [%s:%zu] err: %s(): ", time->tm_hour % 12, time->tm_min, time->tm_sec, nv_basename(file), line, func);
-
-  va_list args;
-  va_start(args, fmt);
-
-  nv_vprintf(args, fmt);
-
-  // Add a newline, as we aren't outputting to a string.
-  putc('\n', stdout);
-
-  va_end(args);
-#endif
-}
-
-const char*
-nv_pop_error(void)
-{
-#if !(NV_UNBUFFERED_ERRORS)
-  return nv_error_queue_pop(&g_error_queue);
-#else
-  return NULL;
-#endif
-}
-
-void
-nv_flush_errors(void)
-{
-  const char* err = NULL;
-  while ((err = nv_pop_error()) != NULL)
-  {
-    puts(err);
-  }
-}
 
 #if !defined(NVSM) && !defined(FONTC)
 
@@ -739,41 +683,41 @@ nv_vsnprintf(va_list src, char* dst, size_t max_chars, const char* fmt)
   return _nv_vsfnprintf(src, dst, 0, max_chars, fmt);
 }
 
-#  define NV_PRINTF_PEEK_FMT() ((info->iter < info->fmt_str_end) ? *info->iter : 0)
-#  define NV_PRINTF_PEEK_NEXT_FMT() (((info->iter + 1) < info->fmt_str_end) ? *(info->iter + 1) : 0)
+#  define NV_PRINTF_PEEK_FMT() ((info->itr < info->fmt_str_end) ? *info->itr : 0)
+#  define NV_PRINTF_PEEK_NEXT_FMT() (((info->itr + 1) < info->fmt_str_end) ? *(info->itr + 1) : 0)
 #  define NV_PRINTF_ADVANCE_FMT()                                                                                                                                             \
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
-      if ((info->iter + 1) < info->fmt_str_end)                                                                                                                               \
+      if ((info->itr + 1) < info->fmt_str_end)                                                                                                                                \
       {                                                                                                                                                                       \
-        info->iter++;                                                                                                                                                         \
+        info->itr++;                                                                                                                                                          \
       }                                                                                                                                                                       \
       else                                                                                                                                                                    \
       {                                                                                                                                                                       \
-        info->iter = info->fmt_str_end;                                                                                                                                       \
+        info->itr = info->fmt_str_end;                                                                                                                                        \
       }                                                                                                                                                                       \
     } while (0);
 #  define NV_PRINTF_ADVANCE_NUM_CHARACTERS_FMT(num_chars)                                                                                                                     \
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
-      if ((info->iter + (num_chars)) < info->fmt_str_end)                                                                                                                     \
+      if ((info->itr + (num_chars)) < info->fmt_str_end)                                                                                                                      \
       {                                                                                                                                                                       \
-        info->iter += (num_chars);                                                                                                                                            \
+        info->itr += (num_chars);                                                                                                                                             \
       }                                                                                                                                                                       \
       else                                                                                                                                                                    \
       {                                                                                                                                                                       \
-        info->iter = info->fmt_str_end;                                                                                                                                       \
+        info->itr = info->fmt_str_end;                                                                                                                                        \
       }                                                                                                                                                                       \
     } while (0);
 
 typedef struct nv_format_info_t
 {
-  va_list*    args;
-  void*       write_file;
-  char*       write_string;
-  char*       wbuf;
+  va_list     args;
+  void*       dst_file;
+  char*       dst_string;
+  char*       tmp_writebuffer;
   const char* fmt_str_end;
-  const char* iter;
+  const char* itr;
   size_t      chars_written;
   size_t      written;
   size_t      max_chars;
@@ -789,7 +733,7 @@ typedef struct nv_format_info_t
 } nv_format_info_t;
 
 static inline void
-nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written)
+_nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written)
 {
   if (info->chars_written >= info->max_chars)
   {
@@ -808,22 +752,27 @@ nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written
 
   if (info->file)
   {
-    FILE* file = (FILE*)info->write_file;
+    FILE* file = (FILE*)info->dst_file;
     fwrite(write_buffer, 1, to_write, file);
   }
-  else if (info->write_string)
+  else if (info->dst_string)
   {
     if (to_write > 0)
     {
-      nv_memcpy(info->write_string, write_buffer, to_write);
-      info->write_string += to_write;
+      nv_memcpy(info->dst_string, write_buffer, to_write);
+      info->dst_string += to_write;
     }
   }
 }
 
 static inline void
-nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
+_nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
 {
+  if (!NV_PRINTF_PEEK_FMT())
+  {
+    return;
+  }
+
   if (NV_PRINTF_PEEK_FMT() == '-')
   {
     info->left_align = true;
@@ -837,7 +786,7 @@ nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
 
   if (NV_PRINTF_PEEK_FMT() == '*')
   {
-    info->padding_w = va_arg(*info->args, int);
+    info->padding_w = va_arg(info->args, int);
     if (info->padding_w < 0)
     {
       // negative width means left align
@@ -866,7 +815,7 @@ nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
     info->precision_specified = 1;
     if (NV_PRINTF_PEEK_FMT() == '*')
     {
-      info->precision = va_arg(*info->args, int);
+      info->precision = va_arg(info->args, int);
       if (info->precision < 0)
       {
         info->precision = 6;
@@ -886,7 +835,7 @@ nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
 }
 
 static inline void
-nv_printf_format_process_char(nv_format_info_t* info)
+_nv_printf_format_process_char(nv_format_info_t* info)
 {
   if (info->chars_written >= info->max_chars - 1)
   {
@@ -894,15 +843,15 @@ nv_printf_format_process_char(nv_format_info_t* info)
   }
 
   // if user is asking for literal % sign, *iter will be the percent sign!!
-  int chr = (nv_chr_tolower(NV_PRINTF_PEEK_FMT()) == 'c') ? va_arg(*info->args, int) : NV_PRINTF_PEEK_FMT();
+  int chr = (nv_chr_tolower(NV_PRINTF_PEEK_FMT()) == 'c') ? va_arg(info->args, int) : NV_PRINTF_PEEK_FMT();
   if (info->file)
   {
-    fputc(chr, (FILE*)info->write_file);
+    fputc(chr, (FILE*)info->dst_file);
   }
-  else if (info->write_string)
+  else if (info->dst_string)
   {
-    *info->write_string = (char)chr;
-    info->write_string++;
+    *info->dst_string = (char)chr;
+    info->dst_string++;
   }
   info->wbuffer_used = false;
   info->chars_written++;
@@ -926,8 +875,10 @@ _nv_printf_handle_long_type(nv_format_info_t* info)
     switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
     {
       case 'd':
-      case 'i': info->written = nv_itoa2(va_arg(*info->args, long long), info->wbuf, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
-      case 'u': info->written = nv_utoa2(va_arg(*info->args, unsigned long long), info->wbuf, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
+      case 'i': info->written = nv_itoa2(va_arg(info->args, long long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
+      case 'u':
+        info->written = nv_utoa2(va_arg(info->args, unsigned long long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
+        break;
     }
   }
   else
@@ -937,8 +888,8 @@ _nv_printf_handle_long_type(nv_format_info_t* info)
     switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
     {
       case 'd':
-      case 'i': info->written = nv_itoa2(va_arg(*info->args, long), info->wbuf, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
-      case 'u': info->written = nv_utoa2(va_arg(*info->args, unsigned long), info->wbuf, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
+      case 'i': info->written = nv_itoa2(va_arg(info->args, long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
+      case 'u': info->written = nv_utoa2(va_arg(info->args, unsigned long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
     }
   }
 }
@@ -958,11 +909,11 @@ _nv_printf_handle_size_type(nv_format_info_t* info)
 
   if (nv_chr_tolower(NV_PRINTF_PEEK_FMT()) == 'i')
   {
-    info->written = nv_itoa2(va_arg(*info->args, ssize_t), info->wbuf, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
+    info->written = nv_itoa2(va_arg(info->args, ssize_t), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
   }
   else
   {
-    info->written = nv_utoa2(va_arg(*info->args, size_t), info->wbuf, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
+    info->written = nv_utoa2(va_arg(info->args, size_t), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
   }
 }
 
@@ -974,48 +925,52 @@ _nv_printf_handle_hash_prefix_and_children(nv_format_info_t* info)
     return;
   }
 
-  info->wbuf[0] = '0';
+  info->tmp_writebuffer[0] = '0';
 
   /* If the character is X, then the prefix needs to have X. If it is x, then teh prefix needs to have x */
-  info->wbuf[1] = NV_PRINTF_PEEK_NEXT_FMT();
+  info->tmp_writebuffer[1] = NV_PRINTF_PEEK_NEXT_FMT();
 
   /* Move past x\X */
   NV_PRINTF_ADVANCE_FMT();
 
   /* The 0x\0X prefix */
   info->written = 2;
-  info->written += nv_utoa2(va_arg(*info->args, unsigned), info->wbuf + 2, 16, info->max_chars - info->chars_written, false);
+  info->written += nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer + 2, 16, info->max_chars - info->chars_written, false);
 }
 
 static inline void
-nv_printf_format_parse_string(nv_format_info_t* info)
+_nv_printf_format_parse_string(nv_format_info_t* info)
 {
   if (!NV_PRINTF_PEEK_FMT() || NV_PRINTF_PEEK_FMT() != 's')
   {
     return;
   }
 
-  const char* string = va_arg(*info->args, const char*);
+  const char* string = va_arg(info->args, const char*);
   /* strlen(NULL) is not ok */
   if (!string)
   {
     string = "(null)";
   }
 
-  size_t string_length = nv_strlen(string);
+  size_t string_length = 0;
   if (info->precision_specified)
   {
-    string_length = NV_MIN(string_length, info->precision);
+    string_length = info->precision;
+  }
+  else
+  {
+    string_length = nv_strlen(string);
   }
 
-  nv_printf_write(info, string, string_length);
+  _nv_printf_write(info, string, string_length);
   info->wbuffer_used = false;
 }
 
 static inline void
-nv_printf_format_parse_format(nv_format_info_t* info)
+_nv_printf_format_parse_format(nv_format_info_t* info)
 {
-  if (!NV_PRINTF_PEEK_NEXT_FMT())
+  if (!NV_PRINTF_PEEK_FMT())
   {
     return;
   }
@@ -1025,11 +980,11 @@ nv_printf_format_parse_format(nv_format_info_t* info)
   switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
   {
     /* By default, ftoa should not trim trailing zeroes. */
-    case 'f': info->written = nv_ftoa2(va_arg(*info->args, real_t), info->wbuf, info->precision, remaining, false); break;
+    case 'f': info->written = nv_ftoa2(va_arg(info->args, real_t), info->tmp_writebuffer, info->precision, remaining, false); break;
     case 'l': _nv_printf_handle_long_type(info); break;
     case 'd':
-    case 'i': info->written = nv_itoa2(va_arg(*info->args, int), info->wbuf, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
-    case 'u': info->written = nv_utoa2(va_arg(*info->args, unsigned), info->wbuf, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
+    case 'i': info->written = nv_itoa2(va_arg(info->args, int), info->tmp_writebuffer, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
+    case 'u': info->written = nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
 
     /* size_t based formats. This is standard. */
     case 'z': _nv_printf_handle_size_type(info); break;
@@ -1038,25 +993,25 @@ nv_printf_format_parse_format(nv_format_info_t* info)
     case '#': _nv_printf_handle_hash_prefix_and_children(info); break;
 
     /* hex integer */
-    case 'x': info->written = nv_utoa2(va_arg(*info->args, unsigned), info->wbuf, 16, info->max_chars - info->chars_written, false); break;
+    case 'x': info->written = nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer, 16, info->max_chars - info->chars_written, false); break;
 
     /* pointer */
-    case 'p': info->written = nv_ptoa2(va_arg(*info->args, void*), info->wbuf, remaining); break;
+    case 'p': info->written = nv_ptoa2(va_arg(info->args, void*), info->tmp_writebuffer, remaining); break;
 
     /* bytes, custom */
-    case 'b': info->written = nv_btoa2(va_arg(*info->args, size_t), 1, info->wbuf, remaining); break;
+    case 'b': info->written = nv_btoa2(va_arg(info->args, size_t), 1, info->tmp_writebuffer, remaining); break;
 
-    case 's': nv_printf_format_parse_string(info); break;
+    case 's': _nv_printf_format_parse_string(info); break;
 
     case 'c':
     /* If there are two % symbols in a row */
     case '%':
-    default: nv_printf_format_process_char(info); break;
+    default: _nv_printf_format_process_char(info); break;
   }
 }
 
 static inline void
-nv_printf_write_padding(nv_format_info_t* info)
+_nv_printf_write_padding(nv_format_info_t* info)
 {
   info->padding = info->padding_w - (int)info->written;
   char pad_char = info->pad_zero ? '0' : ' ';
@@ -1065,47 +1020,49 @@ nv_printf_write_padding(nv_format_info_t* info)
     return;
   }
 
+  /* No, we cannot run out of padding buffer space, because we write it in chunks. */
+
   nv_memset(info->pad_buf, pad_char, sizeof(info->pad_buf));
   while (info->padding > 0)
   {
     int chunk = (info->padding > (int)sizeof(info->pad_buf)) ? (int)sizeof(info->pad_buf) : info->padding;
-    nv_printf_write(info, info->pad_buf, chunk);
+    _nv_printf_write(info, info->pad_buf, chunk);
     info->padding -= chunk;
   }
 }
 
 static inline void
-nv_printf_format_upload_to_destination(nv_format_info_t* info)
+_nv_printf_format_upload_to_destination(nv_format_info_t* info)
 {
   if (!info->wbuffer_used)
   {
     return;
   }
 
-  nv_printf_write_padding(info);
+  _nv_printf_write_padding(info);
 
-  nv_printf_write(info, info->wbuf, info->written);
+  _nv_printf_write(info, info->tmp_writebuffer, info->written);
 
-  nv_printf_write_padding(info);
+  _nv_printf_write_padding(info);
 }
 
 static inline void
-nv_printf_format_parse_format_specifier(nv_format_info_t* info)
+_nv_printf_format_parse_format_specifier(nv_format_info_t* info)
 {
   info->wbuffer_used        = true;
   info->padding_w           = 0;
   info->precision           = 6;
   info->precision_specified = 0;
 
-  nv_printf_get_padding_and_precision_if_given(info);
+  _nv_printf_get_padding_and_precision_if_given(info);
 
-  nv_printf_format_parse_format(info);
+  _nv_printf_format_parse_format(info);
 
-  nv_printf_format_upload_to_destination(info);
+  _nv_printf_format_upload_to_destination(info);
 }
 
 static inline void
-nv_printf_write_iterated_char(nv_format_info_t* info)
+_nv_printf_write_iterated_char(nv_format_info_t* info)
 {
   if (info->chars_written >= info->max_chars - 1)
   {
@@ -1121,43 +1078,43 @@ nv_printf_write_iterated_char(nv_format_info_t* info)
 
     if (info->file)
     {
-      fputc('\b', (FILE*)info->write_file);
+      fputc('\b', (FILE*)info->dst_file);
     }
-    else if (info->write_string)
+    else if (info->dst_string)
     {
-      info->write_string--;
+      info->dst_string--;
       info->chars_written--;
     }
   }
   else if (info->file)
   {
-    if (fputc(NV_PRINTF_PEEK_FMT(), (FILE*)info->write_file) != NV_PRINTF_PEEK_FMT())
+    if (fputc(NV_PRINTF_PEEK_FMT(), (FILE*)info->dst_file) != NV_PRINTF_PEEK_FMT())
     {
       /* we can't use nv_printf here to avoid recursion */
       puts(strerror(errno));
     }
   }
-  else if (info->write_string)
+  else if (info->dst_string)
   {
-    *info->write_string = NV_PRINTF_PEEK_FMT();
-    info->write_string++;
+    *info->dst_string = NV_PRINTF_PEEK_FMT();
+    info->dst_string++;
   }
   info->chars_written++;
 }
 
 static inline void
-nv_printf_loop(nv_format_info_t* info)
+_nv_printf_loop(nv_format_info_t* info)
 {
-  for (; NV_PRINTF_PEEK_FMT() && info->chars_written < info->max_chars; info->iter++)
+  for (; NV_PRINTF_PEEK_FMT() && info->chars_written < info->max_chars; info->itr++)
   {
     if (NV_PRINTF_PEEK_FMT() == '%')
     {
       NV_PRINTF_ADVANCE_FMT();
-      nv_printf_format_parse_format_specifier(info);
+      _nv_printf_format_parse_format_specifier(info);
     }
     else
     {
-      nv_printf_write_iterated_char(info);
+      _nv_printf_write_iterated_char(info);
     }
   }
 }
@@ -1175,34 +1132,32 @@ _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const ch
 
   nv_format_info_t info = nv_zero_init(nv_format_info_t);
 
-  va_list args_copy;
-  va_copy(args_copy, args);
-
   /* Aligned to 64 bytes for fast writing and reading access */
   NV_ALIGN_TO(64) char pad_buf[64];
 
   char wbuf[NOVA_WBUF_SIZE];
 
-  info.args         = &args_copy;
-  info.write_file   = is_file ? (FILE*)dst : NULL;
-  info.write_string = is_file ? NULL : (char*)dst;
-  info.max_chars    = max_chars;
-  info.precision    = 6;
-  info.fmt_str_end  = fmt + nv_strlen(fmt);
-  info.iter         = fmt;
-  info.file         = is_file;
-  info.pad_buf      = pad_buf;
-  info.wbuf         = wbuf;
+  info.dst_file        = is_file ? (FILE*)dst : NULL;
+  info.dst_string      = is_file ? NULL : (char*)dst;
+  info.max_chars       = max_chars;
+  info.precision       = 6;
+  info.fmt_str_end     = fmt + nv_strlen(fmt);
+  info.itr             = fmt;
+  info.file            = is_file;
+  info.pad_buf         = pad_buf;
+  info.tmp_writebuffer = wbuf;
 
-  nv_printf_loop(&info);
+  va_copy(info.args, args);
 
-  if (!is_file && info.write_string && max_chars > 0)
+  _nv_printf_loop(&info);
+
+  if (!is_file && info.dst_string && max_chars > 0)
   {
     size_t width        = (info.chars_written < max_chars) ? info.chars_written : max_chars - 1;
     ((char*)dst)[width] = 0;
   }
 
-  va_end(args_copy);
+  va_end(info.args);
 
   return info.chars_written;
 }
@@ -1386,7 +1341,7 @@ nv_calloc(size_t sz)
   nv_assert_and_ret(sz > 0, NULL);
 
   void* ptr = calloc(1, sz);
-  nv_assert(ptr != NULL);
+  nv_assert_and_ret(ptr != NULL, NULL);
   return ptr;
 }
 
@@ -1396,7 +1351,7 @@ nv_realloc(void* prevblock, size_t new_sz)
   nv_assert_and_ret(new_sz > 0, NULL);
 
   void* ptr = realloc(prevblock, new_sz);
-  nv_assert(ptr != NULL);
+  nv_assert_and_ret(ptr != NULL, NULL);
   return ptr;
 }
 
@@ -2189,16 +2144,16 @@ nv_props_gen_help(const nv_option_t* options, int noptions, char* buf, size_t bu
   }
 }
 
-static inline int
+static inline nv_errorc
 _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size, int* i)
 {
-  nv_assert(argc != 0);
-  nv_assert(argv != NULL);
-  nv_assert(options != NULL);
-  nv_assert(noptions > 0);
-  nv_assert(error != NULL);
-  nv_assert(error_size > 0);
-  nv_assert(i != NULL);
+  nv_assert_and_ret(argc != 0, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_and_ret(argv != NULL, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_and_ret(options != NULL, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_and_ret(noptions > 0, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_and_ret(error != NULL, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_and_ret(error_size > 0, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_and_ret(i != NULL, NOVA_ERROR_CODE_INVALID_ARG);
 
   char* arg     = argv[*i];
   bool  is_long = false;
@@ -2271,7 +2226,7 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
       if ((*i) >= argc || argv[*i][0] == '-')
       {
         nv_snprintf(error, error_size, "option --%s requires a value", name);
-        return -1;
+        return NOVA_ERROR_CODE_INVALID_INPUT;
       }
       value = argv[*i];
     }
@@ -2290,10 +2245,10 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
   }
 
   (*i)++;
-  return 0;
+  return NOVA_ERROR_CODE_SUCCESS;
 }
 
-int
+nv_errorc
 nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size)
 {
   nv_assert(argc != 0);
@@ -2303,18 +2258,18 @@ nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions,
   nv_assert(error != NULL);
   nv_assert(error_size > 0);
 
-  int  i       = 1; // program name is argv[0]
-  bool success = true;
+  int       i       = 1; // program name is argv[0]
+  nv_errorc errcode = NOVA_ERROR_CODE_SUCCESS;
 
   while (i < argc)
   {
     char* arg = argv[i];
     if (arg[0] == '-')
     {
-      int result = _nv_props_parse_arg(argc, argv, options, noptions, error, error_size, &i);
+      nv_errorc result = _nv_props_parse_arg(argc, argv, options, noptions, error, error_size, &i);
       if (result != 0)
       {
-        success = false;
+        errcode = false;
       }
     }
     else
@@ -2322,65 +2277,7 @@ nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions,
       break;
     }
   }
-  return success ? 0 : -1;
-}
-
-void
-nv_error_queue_init(nv_error_queue_t* dst)
-{
-  dst->front = -1;
-  dst->back  = -1;
-}
-
-void
-nv_error_queue_destroy(nv_error_queue_t* dst)
-{
-  (void)dst;
-}
-
-char*
-nv_error_queue_push(nv_error_queue_t* queue)
-{
-  if ((queue->back + 1) % NV_MAX_ERRORS == queue->front)
-  {
-    const char* overwritten_error = nv_error_queue_pop(queue);
-    if (overwritten_error)
-    {
-      nv_printf("queue full: poppd error '%s'\n", overwritten_error);
-    }
-  }
-
-  if (queue->front == -1)
-  {
-    queue->front = 0;
-  }
-  queue->back = (queue->back + 1) % NV_MAX_ERRORS;
-
-  char* ret = queue->errors[queue->back];
-  nv_memset(ret, 0, NV_ERROR_LENGTH);
-  return ret;
-}
-
-const char*
-nv_error_queue_pop(nv_error_queue_t* queue)
-{
-  if (queue->front == -1)
-  {
-    return NULL;
-  }
-
-  const char* value = queue->errors[queue->front];
-
-  if (queue->front == queue->back)
-  {
-    queue->front = queue->back = -1;
-  }
-  else
-  {
-    queue->front = (queue->front + 1) % NV_MAX_ERRORS;
-  }
-
-  return value; // return the popped value
+  return errcode;
 }
 
 bool

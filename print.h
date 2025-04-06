@@ -40,7 +40,7 @@ NOVA_HEADER_START
 
 /* Add commas to integers when printing. */
 #ifndef NOVA_PRINTF_ADD_COMMAS
-#  define NOVA_PRINTF_ADD_COMMAS true
+#  define NOVA_PRINTF_ADD_COMMAS false
 #endif
 
 /**
