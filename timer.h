@@ -56,8 +56,7 @@ nv_timer_begin(NV_TIMER_TIME_TYPE duration_seconds)
 {
   if (duration_seconds <= 0.0F)
   {
-    nv_log_error("Timer duration passed as negative or zero. What do you even want the "
-                  "timer to do????\n");
+    nv_log_error("Timer duration passed as negative or zero. What do you even want the timer to do????\n");
     return (nv_timer_t){ -1, -1 };
   }
   nv_timer_t tmr;
@@ -81,8 +80,7 @@ nv_timer_is_done(const nv_timer_t* tmr)
 {
   if (tmr->end == -1 || tmr->start == -1)
   {
-    nv_log_warning("Timer end is invalid (it has been reset or was not created "
-                   "correctly). The timer needs to be restarted using nv_timer_begin()");
+    nv_log_warning("Timer end is invalid (it has been reset or was not created correctly). The timer needs to be restarted using nv_timer_begin()");
     return false;
   }
 

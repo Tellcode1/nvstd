@@ -43,6 +43,9 @@ NOVA_HEADER_START
 #  define NOVA_STRING_USE_BUILTIN false
 #endif
 
+/* two strings are equal, returned by all nv_str*cmp functions */
+static const int nv_strequal = 0;
+
 #if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin)
 #  define NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(fn, ...)                                                                                                               \
     do                                                                                                                                                                        \

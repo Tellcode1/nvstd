@@ -60,6 +60,28 @@ nv_hash_fnv1a(const void* input, size_t input_size, void* user_data)
 }
 
 static inline u32
+nv_hash_fnv1a_string(const void* input, size_t input_size, void* user_data)
+{
+  (void)user_data;
+  (void)input_size;
+
+  const uchar* string = (const uchar*)input;
+
+  const u32 FNV_PRIME    = 16777619;
+  const u32 OFFSET_BASIS = 2166136261;
+
+  u32 hash = OFFSET_BASIS;
+
+  while (*string)
+  {
+    hash ^= *string; // xor
+    hash *= FNV_PRIME;
+    string++;
+  }
+  return hash;
+}
+
+static inline u32
 nv_hash_murmur3(const void* input, size_t input_size, void* user_data)
 {
   (void)user_data;

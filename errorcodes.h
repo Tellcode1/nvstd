@@ -78,7 +78,14 @@ typedef enum nv_errorc
   /**
    * A function returned an invalid value
    */
-  NOVA_ERROR_CODE_INVALID_RETVAL = __INT32_MAX__
+  NOVA_ERROR_CODE_INVALID_RETVAL = 9,
+
+  /**
+   * An unknown error.
+   * This typically is the result of something that is out of hand of the returning function.
+   * You should avoid returning this, as it is really opaque as to what went wrong.
+   */
+  NOVA_ERROR_CODE_UNKNOWN = 10
 } nv_errorc;
 
 static inline const char*
@@ -86,17 +93,18 @@ nv_error_str(nv_errorc code)
 {
   switch (code)
   {
-    case NOVA_ERROR_CODE_SUCCESS: return "Success"; break;
-    case NOVA_ERROR_CODE_INVALID_ARG: return "Invalid arg"; break;
-    case NOVA_ERROR_CODE_MALLOC_FAILED: return "malloc failed"; break;
-    case NOVA_ERROR_CODE_IO_ERROR: return "IO error"; break;
-    case NOVA_ERROR_CODE_EXTERNAL: return "External"; break;
-    case NOVA_ERROR_CODE_FILE_NOT_FOUND: return "File not found"; break;
-    case NOVA_ERROR_CODE_INVALID_CACHE: return "Invalid cache"; break;
-    case NOVA_ERROR_CODE_BROKEN_STATE: return "Broken state"; break;
-    case NOVA_ERROR_CODE_INVALID_INPUT: return "Invalid input"; break;
-    case NOVA_ERROR_CODE_INVALID_RETVAL: return "Invalid retval"; break;
-    default: return "(NotAnErrorCode)"; break;
+    case NOVA_ERROR_CODE_SUCCESS: return "Success";
+    case NOVA_ERROR_CODE_INVALID_ARG: return "Invalid arg";
+    case NOVA_ERROR_CODE_MALLOC_FAILED: return "malloc failed";
+    case NOVA_ERROR_CODE_IO_ERROR: return "IO error";
+    case NOVA_ERROR_CODE_EXTERNAL: return "External";
+    case NOVA_ERROR_CODE_FILE_NOT_FOUND: return "File not found";
+    case NOVA_ERROR_CODE_INVALID_CACHE: return "Invalid cache";
+    case NOVA_ERROR_CODE_BROKEN_STATE: return "Broken state";
+    case NOVA_ERROR_CODE_INVALID_INPUT: return "Invalid input";
+    case NOVA_ERROR_CODE_INVALID_RETVAL: return "Invalid retval";
+    case NOVA_ERROR_CODE_UNKNOWN: return "Unknown";
+    default: return "(NotAnErrorCode)";
   }
 }
 
