@@ -70,6 +70,7 @@ NOVA_HEADER_START
 #    define NV_TYPEOF(x) decltype(x)
 #  else
 #    pragma message("NV_TYPEOF not available")
+#    define NV_TYPEOF(x)
 #  endif
 #endif
 
@@ -163,8 +164,7 @@ NOVA_HEADER_START
 /* Only supports up to 10 arguments! However, increasing the limit is easy */
 /* Go to __GNUC_HELP_ME_PLEASE_SELECT_10TH and just add more variables and set the define to the last one */
 
-#define __GNUC_HELP_ME_PLEASE_FIRST(...) __GNUC_HELP_ME_PLEASE_FIRST_HELPER(__VA_ARGS__, throwaway)
-#define __GNUC_HELP_ME_PLEASE_FIRST_HELPER(first, ...) first
+#define NV_COMMA_ARGS_FIRST(...) __GNUC_HELP_ME_PLEASE_FIRST_HELPER(__VA_ARGS__, throwaway)
 
 /*
  * if there's only one argument, expands to nothing.  if there is more
@@ -172,7 +172,9 @@ NOVA_HEADER_START
  * the first argument.  only supports up to 10 arguments but can be
  * trivially expanded.
  */
-#define __GNUC_HELP_ME_PLEASE_REST(...) __GNUC_HELP_ME_PLEASE_REST_HELPER(__GNUC_HELP_ME_PLEASE_NUM(__VA_ARGS__), __VA_ARGS__)
+#define NV_COMMA_ARGS_REST(...) __GNUC_HELP_ME_PLEASE_REST_HELPER(__GNUC_HELP_ME_PLEASE_NUM(__VA_ARGS__), __VA_ARGS__)
+
+#define __GNUC_HELP_ME_PLEASE_FIRST_HELPER(first, ...) first
 #define __GNUC_HELP_ME_PLEASE_REST_HELPER(qty, ...) __GNUC_HELP_ME_PLEASE_REST_HELPER2(qty, __VA_ARGS__)
 #define __GNUC_HELP_ME_PLEASE_REST_HELPER2(qty, ...) __GNUC_HELP_ME_PLEASE_REST_HELPER_##qty(__VA_ARGS__)
 #define __GNUC_HELP_ME_PLEASE_REST_HELPER_ONE(first)
@@ -207,27 +209,18 @@ NOVA_HEADER_START
 #  pragma message("Assertions disabled")
 #endif
 
-// puts but with formatting and with the preceder "error". does not stop execution of program if you want that, use nv_log_and_abort instead.
-#define nv_log_error(...) _nv_log_error(__FILE__, __LINE__, __func__, __GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) __GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-// formats the string, puts() it with the preceder "fatal error" and then aborts the program
-#define nv_log_and_abort(...) _nv_log_and_abort(__FILE__, __LINE__, __func__, __GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) __GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-// puts but with formatting and with the preceder "warning"
-#define nv_log_warning(...) _nv_log_warning(__FILE__, __LINE__, __func__, __GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) __GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-// puts but with formatting and with the preceder "info"
-#define nv_log_info(...) _nv_log_info(__FILE__, __LINE__, __func__, __GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) __GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-// puts but with formatting and with the preceder "debug"
-#define nv_log_debug(...) _nv_log_debug(__FILE__, __LINE__, __func__, __GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) __GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
-// puts but with formatting and with a custom preceder
-#define nv_log_custom(preceder, ...) _nv_log_custom(__FILE__, __LINE__, __func__, preceder, __GNUC_HELP_ME_PLEASE_FIRST(__VA_ARGS__) __GNUC_HELP_ME_PLEASE_REST(__VA_ARGS__))
+#define _NV_LOG_EXPAND_PARAMETERS(preceder, is_error, ...)                                                                                                                    \
+  _nv_core_log(__FILE__, __LINE__, __func__, preceder, is_error, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 
-extern void _nv_log_error(const char* file, size_t line, const char* func, const char* fmt, ...);
-extern void _nv_log_and_abort(const char* file, size_t line, const char* func, const char* fmt, ...);
-extern void _nv_log_warning(const char* file, size_t line, const char* func, const char* fmt, ...);
-extern void _nv_log_info(const char* file, size_t line, const char* func, const char* fmt, ...);
-extern void _nv_log_debug(const char* file, size_t line, const char* func, const char* fmt, ...);
-extern void _nv_log_custom(const char* file, size_t line, const char* func, const char* preceder, const char* fmt, ...);
+#define nv_log_error(...) _NV_LOG_EXPAND_PARAMETERS(" err: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_and_abort(...) _NV_LOG_EXPAND_PARAMETERS(" fatal error: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_warning(...) _NV_LOG_EXPAND_PARAMETERS(" warning: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_info(...) _NV_LOG_EXPAND_PARAMETERS(" info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_debug(...) _NV_LOG_EXPAND_PARAMETERS(" debug: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_custom(...) _NV_LOG_EXPAND_PARAMETERS(preceder, false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 
-extern void _nv_log(va_list args, const char* file, size_t line, const char* fn, const char* preceder, const char* str, bool err);
+extern void _nv_core_log(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, ...);
+extern void nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, va_list args);
 
 /* printf's the time to stdout. yep. [hour:minute:second]*/
 extern void nv_print_time_as_string(FILE* stream);

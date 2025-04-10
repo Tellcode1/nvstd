@@ -53,13 +53,26 @@ nv_print_time_as_string(FILE* stream)
 }
 
 void
-_nv_log(va_list args, const char* file, size_t line, const char* fn, const char* preceder, const char* s, bool err)
+_nv_core_log(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, ...)
 {
-  nv_assert_and_ret(args != NULL, );
   nv_assert_and_ret(file != NULL, );
   nv_assert_and_ret(fn != NULL, );
   nv_assert_and_ret(preceder != NULL, );
-  nv_assert_and_ret(s != NULL, );
+
+  va_list args;
+  va_start(args, fmt);
+
+  nv_log_va(file, line, fn, preceder, err, fmt, args);
+
+  va_end(args);
+}
+
+void
+nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, va_list args)
+{
+  nv_assert_and_ret(file != NULL, );
+  nv_assert_and_ret(fn != NULL, );
+  nv_assert_and_ret(preceder != NULL, );
 
   FILE* out = (err) ? stderr : stdout;
 
@@ -68,7 +81,7 @@ _nv_log(va_list args, const char* file, size_t line, const char* fn, const char*
   struct tm* time = _nv_get_time();
   nv_fprintf(out, "[%d:%d:%d] [%s:%zu]%s%s(): ", time->tm_hour % 12, time->tm_min, time->tm_sec, nv_basename(file), line, preceder, fn);
 
-  nv_vfprintf(args, out, s);
+  nv_vfprintf(args, out, fmt);
 }
 
 // printf
@@ -1164,67 +1177,6 @@ _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const ch
 
 // printf
 
-void
-_nv_log_error(const char* file, size_t line, const char* func, const char* fmt, ...)
-{
-  // it was funny while it lasted.
-  const char* preceder = " err: ";
-  va_list     args;
-  va_start(args, fmt);
-  _nv_log(args, file, line, func, preceder, fmt, 1);
-  va_end(args);
-}
-
-void
-_nv_log_and_abort(const char* file, size_t line, const char* func, const char* fmt, ...)
-{
-  const char* preceder = " fatal error: ";
-  va_list     args;
-  va_start(args, fmt);
-  _nv_log(args, file, line, func, preceder, fmt, 1);
-  va_end(args);
-  exit(-1);
-}
-
-void
-_nv_log_warning(const char* file, size_t line, const char* func, const char* fmt, ...)
-{
-  const char* preceder = " warning: ";
-  va_list     args;
-  va_start(args, fmt);
-  _nv_log(args, file, line, func, preceder, fmt, 0);
-  va_end(args);
-}
-
-void
-_nv_log_info(const char* file, size_t line, const char* func, const char* fmt, ...)
-{
-  const char* preceder = " info: ";
-  va_list     args;
-  va_start(args, fmt);
-  _nv_log(args, file, line, func, preceder, fmt, 0);
-  va_end(args);
-}
-
-void
-_nv_log_debug(const char* file, size_t line, const char* func, const char* fmt, ...)
-{
-  const char* preceder = " debug: ";
-  va_list     args;
-  va_start(args, fmt);
-  _nv_log(args, file, line, func, preceder, fmt, 0);
-  va_end(args);
-}
-
-void
-_nv_log_custom(const char* file, size_t line, const char* func, const char* preceder, const char* fmt, ...)
-{
-  va_list args;
-  va_start(args, fmt);
-  _nv_log(args, file, line, func, preceder, fmt, 0);
-  va_end(args);
-}
-
 #  include <zlib.h>
 
 int
@@ -1360,6 +1312,10 @@ nv_free(void* block)
 {
   // fuck you
   nv_assert(block != NULL);
+  if (block == NULL)
+  {
+    block = NULL;
+  }
   free(block);
 }
 

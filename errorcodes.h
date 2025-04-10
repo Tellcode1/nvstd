@@ -29,14 +29,11 @@
 
 NOVA_HEADER_START
 
-/* A shorthand alternative to NOVA_ERROR_CODE_SUCCESS */
-#ifndef NOVA_SUCCESS
-#  define NOVA_SUCCESS (0)
-#endif
-
 typedef enum nv_errorc
 {
-  NOVA_ERROR_CODE_SUCCESS = 0,
+  /* A shorthand alternative to NOVA_ERROR_CODE_SUCCESS */
+  NOVA_SUCCESS            = 0,
+  NOVA_ERROR_CODE_SUCCESS = NOVA_SUCCESS,
 
   /**
    * Invalid argument to function, possibly indirectly.
