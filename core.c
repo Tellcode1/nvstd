@@ -1,7 +1,7 @@
 /*
   MIT License
 
-  Copyright (c) 2025 Tellcode
+  Copyright (c) 2025 Fouzan MD Ishaque (fouzanmdishaque@gmail.com)
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -20,9 +20,26 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
-*/
+  */
 
+#include "stdafx.h"
+
+#include "alloc.h"
+#include "chrclass.h"
+#include "errorcodes.h"
+#include "image.h"
+#include "math/math.h"
+#include "print.h"
+#include "props.h"
+#include "strconv.h"
+#include "string.h"
+#include "types.h"
+
+#include <SDL2/SDL_image.h>
 #include <SDL2/SDL_mutex.h>
+#include <SDL2/SDL_pixels.h>
+#include <SDL2/SDL_surface.h>
+
 #include <errno.h>
 #include <limits.h>
 #include <math.h>
@@ -34,16 +51,174 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "chrclass.h"
-#include "errorcodes.h"
-#include "print.h"
-#include "props.h"
-#include "stdafx.h"
-#include "strconv.h"
-#include "string.h"
-#include "types.h"
-
 #if !defined(NVSM) && !defined(FONTC)
+
+#  define ALLOC_ALLOC_CONDITION (old_size == NV_ALLOC_NEW_BLOCK)
+#  define ALLOC_FREE_CONDITION (new_size == NV_ALLOC_FREE)
+#  define ALLOC_REALLOC_CONDITION (!(ALLOC_ALLOC_CONDITION) && !(ALLOC_FREE_CONDITION))
+
+void*
+nv_allocator_c(void* user_data, void* old_ptr, size_t old_size, size_t new_size)
+{
+  (void)user_data;
+
+  if (ALLOC_ALLOC_CONDITION)
+  {
+    return nv_calloc(new_size);
+  }
+  else if (ALLOC_FREE_CONDITION)
+  {
+    nv_assert_and_ret(old_ptr != NULL, NULL);
+    nv_free(old_ptr);
+    return old_ptr;
+  }
+  else if (ALLOC_REALLOC_CONDITION)
+  {
+    nv_assert_and_ret(old_ptr != NULL, NULL);
+    nv_assert_and_ret(new_size != 0, NULL);
+    return nv_realloc(old_ptr, new_size);
+  }
+  else
+  {
+    nv_log_error("Invalid operation\n");
+    return NULL;
+  }
+
+  if (ALLOC_ALLOC_CONDITION)
+  {
+    return nv_calloc(new_size);
+  }
+  else if (ALLOC_FREE_CONDITION)
+  {
+    nv_free(old_ptr);
+    return old_ptr;
+  }
+  else if (ALLOC_REALLOC_CONDITION)
+  {
+    return nv_realloc(old_ptr, new_size);
+  }
+
+  return NULL;
+}
+
+void*
+nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_size)
+{
+  nv_alloc_estack_t* estack = (nv_alloc_estack_t*)user_data;
+  nv_assert_and_ret(estack != NULL, NULL);
+
+  if (ALLOC_ALLOC_CONDITION)
+  {
+    nv_assert_and_ret(old_ptr == NULL, NULL);
+    nv_assert_and_ret(new_size > 0, NULL);
+  }
+  // free || realloc
+  else if (ALLOC_REALLOC_CONDITION || ALLOC_FREE_CONDITION)
+  {
+    nv_assert_and_ret(old_ptr != NULL, NULL);
+  }
+  else
+  {
+    nv_log_error("Invalid operation\n");
+    return NULL;
+  }
+
+  /**
+   * Stack integrity checks
+   */
+  nv_assert_and_ret(estack->buffer != NULL, NULL);
+  nv_assert_and_ret(estack->buffer_size != 0, NULL);
+  nv_assert_and_ret(estack->buffer_bumper < estack->buffer_size, NULL);
+
+  // malloc or realloc && OOM
+  if ((ALLOC_ALLOC_CONDITION || ALLOC_REALLOC_CONDITION) && (estack->buffer_bumper + new_size) > (estack->buffer_size))
+  {
+    /**
+     * If we were already using a heap buffer, then we do need to free it
+     */
+    if (estack->using_heap_buffer)
+    {
+      nv_free(estack->buffer);
+      estack->buffer = NULL;
+    }
+
+    const size_t new_buffer_size = NV_MAX(estack->buffer_size * 2, estack->buffer_bumper + new_size);
+    nv_assert_and_ret(new_buffer_size != 0, NULL);
+
+    uchar* new_buffer = nv_calloc(new_buffer_size);
+    nv_assert_and_ret(new_buffer != NULL, NULL);
+
+    /**
+     * Copy all the memory from the old stack
+     */
+    nv_memmove(new_buffer, estack->buffer, estack->buffer_size);
+
+    estack->buffer            = new_buffer;
+    estack->buffer_size       = new_buffer_size;
+    estack->using_heap_buffer = true;
+  }
+
+  if (ALLOC_ALLOC_CONDITION)
+  {
+    if ((estack->buffer_bumper + new_size) > (estack->buffer_size))
+    {
+      // OOM
+      return NULL;
+    }
+
+    void* allocation = estack->buffer + estack->buffer_bumper;
+    nv_memset(allocation, 0, new_size);
+
+    // This can be checked later and reduce the bumper
+    estack->last_allocation = (uchar*)allocation;
+
+    /**
+     * Move the bumper by the new size
+     * buffer+bumper will now point to the new block
+     */
+    estack->buffer_bumper += new_size;
+
+    return allocation;
+  }
+  else if (ALLOC_FREE_CONDITION)
+  {
+    if ((unsigned char*)old_ptr == estack->last_allocation)
+    {
+      estack->buffer_bumper -= old_size;
+    }
+    return old_ptr;
+  }
+  else if (ALLOC_REALLOC_CONDITION)
+  {
+    if ((unsigned char*)old_ptr != estack->last_allocation)
+    {
+      // cant realloc non-last allocation
+      return NULL;
+    }
+
+    if (new_size > old_size)
+    {
+      if ((estack->buffer_bumper + (new_size - old_size)) > estack->buffer_size)
+      {
+        // OOM
+        return NULL;
+      }
+
+      estack->buffer_bumper += (new_size - old_size);
+      return old_ptr; // memory is contiguous, extended
+    }
+    else if (new_size < old_size)
+    {
+      estack->buffer_bumper -= (old_size - new_size);
+      return old_ptr; // shrunk in place
+    }
+
+    // sizes are equal, nothing changes
+    return old_ptr;
+  }
+
+  return NULL;
+}
 
 void
 nv_print_time_as_string(FILE* stream)
@@ -1311,11 +1486,7 @@ void
 nv_free(void* block)
 {
   // fuck you
-  nv_assert(block != NULL);
-  if (block == NULL)
-  {
-    block = NULL;
-  }
+  nv_assert_and_ret(block != NULL, );
   free(block);
 }
 
@@ -1555,23 +1726,31 @@ nv_strtrim_c(const char* s, const char** begin, const char** end)
 {
   nv_assert_and_ret(s != NULL, NULL);
   nv_assert_and_ret(begin != NULL, NULL);
-  nv_assert_and_ret(end != NULL, NULL);
 
   while (*s && nv_chr_isspace((uchar)*s))
   {
     s++;
   }
 
-  *begin = (const char*)s;
+  if (begin)
+  {
+    *begin = (const char*)s;
+  }
+
+  const char* begin_copy = s;
+
   s += nv_strlen(s);
 
-  while (s > *begin && nv_chr_isspace((uchar) * (s - 1)))
+  while (s > begin_copy && nv_chr_isspace((uchar) * (s - 1)))
   {
     s--;
   }
 
-  *end = (char*)s;
-  return *begin;
+  if (end)
+  {
+    *end = (char*)s;
+  }
+  return begin_copy;
 }
 
 int
@@ -1961,15 +2140,33 @@ nv_basename(const char* path)
 }
 
 char*
-nv_strdup(const char* s)
+nv_strdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s)
 {
   nv_assert_and_ret(s != NULL, NULL);
+  nv_assert_and_ret(alloc != NULL, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strdup, s);
 
-  size_t slen  = nv_strlen(s);
-  char*  new_s = nv_malloc(slen + 1);
+  size_t slen = nv_strlen(s);
+
+  char* new_s = alloc(alloc_user_data, NULL, NV_ALLOC_NEW_BLOCK, slen + 1);
+  nv_assert_and_ret(new_s != NULL, NULL);
+
   nv_strlcpy(new_s, s, slen + 1);
+
+  return new_s;
+}
+
+char*
+nv_strexdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s, size_t size)
+{
+  nv_assert_and_ret(s != NULL, NULL);
+  nv_assert_and_ret(alloc != NULL, NULL);
+
+  char* new_s = alloc(alloc_user_data, NULL, NV_ALLOC_NEW_BLOCK, size + 1);
+  nv_assert_and_ret(new_s != NULL, NULL);
+  nv_strlcpy(new_s, s, size + 1);
+
   return new_s;
 }
 
@@ -2107,8 +2304,6 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
   nv_assert_and_ret(argv != NULL, NOVA_ERROR_CODE_INVALID_ARG);
   nv_assert_and_ret(options != NULL, NOVA_ERROR_CODE_INVALID_ARG);
   nv_assert_and_ret(noptions > 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(error != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(error_size > 0, NOVA_ERROR_CODE_INVALID_ARG);
   nv_assert_and_ret(i != NULL, NOVA_ERROR_CODE_INVALID_ARG);
 
   char* arg     = argv[*i];
@@ -2141,7 +2336,10 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
   const nv_option_t* opt = is_long ? nv_option_find(options, noptions, NULL, name) : nv_option_find(options, noptions, name, NULL);
   if (!opt)
   {
-    nv_snprintf(error, error_size, "unknown option: %s%s", is_long ? "--" : "-", name);
+    if (error && error_size > 0)
+    {
+      nv_snprintf(error, error_size, "unknown option: %s%s", is_long ? "--" : "-", name);
+    }
     (*i)++;
     return -1;
   }
@@ -2181,7 +2379,10 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
       (*i)++;
       if ((*i) >= argc || argv[*i][0] == '-')
       {
-        nv_snprintf(error, error_size, "option --%s requires a value", name);
+        if (error && error_size > 0)
+        {
+          nv_snprintf(error, error_size, "option --%s requires a value", name);
+        }
         return NOVA_ERROR_CODE_INVALID_INPUT;
       }
       value = argv[*i];
@@ -2211,8 +2412,6 @@ nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions,
   nv_assert(argv != NULL);
   nv_assert(options != NULL);
   nv_assert(noptions > 0);
-  nv_assert(error != NULL);
-  nv_assert(error_size > 0);
 
   int       i       = 1; // program name is argv[0]
   nv_errorc errcode = NOVA_ERROR_CODE_SUCCESS;
@@ -2363,6 +2562,510 @@ nv_chr_toupper(int chr)
     return chr - 32; /* chr - 32 */
   }
   return chr;
+}
+
+nv_image_t
+nv_image_load(const char* path)
+{
+  SDL_Surface* surface = IMG_Load(path);
+  nv_assert_and_ret(surface != NULL, nv_zero_init(nv_image_t));
+
+  return _nv_sdl_surface_to_image(surface);
+}
+
+unsigned char*
+nv_image_pad_channels(const nv_image_t* src, size_t dst_channels)
+{
+  const size_t src_channels = nv_format_get_num_channels(src->format);
+  nv_assert(src_channels < dst_channels);
+
+  uint8_t* dst = nv_calloc(src->width * src->height * dst_channels * sizeof(uchar));
+
+  for (size_t y = 0; y < src->height; y++)
+  {
+    for (size_t x = 0; x < src->width; x++)
+    {
+      for (size_t c = 0; c < dst_channels; c++)
+      {
+        if (c < src_channels)
+        {
+          dst[(((y * src->width) + x) * dst_channels) + c] = src->data[(((y * src->width) + x) * src_channels) + c];
+        }
+        else
+        {
+          if (c == 3)
+          { // alpha channel
+            dst[(((y * src->width) + x) * dst_channels) + c] = __UINT8_MAX__;
+          }
+          else
+          {
+            dst[(((y * src->width) + x) * dst_channels) + c] = 0;
+          }
+        }
+      }
+    }
+  }
+
+  return dst;
+}
+
+bool
+nv_image_overlay(nv_image_t* dst, const nv_image_t* src, int dst_x_offset, int dst_y_offset, int src_x_offset, int src_y_offset)
+{
+  nv_assert(dst != NULL);
+  nv_assert(src != NULL);
+
+  const int src_channels = nv_format_get_num_channels(src->format);
+
+  for (ssize_t y = src_y_offset; y < (ssize_t)src->height; y++)
+  {
+    for (ssize_t x = src_x_offset; x < (ssize_t)src->width; x++)
+    {
+      ssize_t dst_x = dst_x_offset + (x - src_x_offset);
+      ssize_t dst_y = dst_y_offset + (y - src_y_offset);
+
+      if (dst_x >= 0 && dst_x < (ssize_t)dst->width && dst_y >= 0 && dst_y < (ssize_t)dst->height)
+      {
+        size_t src_i = (y * src->width + x) * src_channels;
+        size_t dst_i = (dst_y * dst->width + dst_x) * src_channels;
+
+        for (int c = 0; c < src_channels; c++)
+        {
+          dst->data[dst_i + c] = src->data[src_i + c];
+        }
+      }
+    }
+  }
+
+  return 0;
+}
+
+void
+nv_image_enlarge(nv_image_t* dst, const nv_image_t* src, size_t scale)
+{
+  size_t new_w = src->width * scale;
+
+  nv_assert(dst->data != NULL);
+
+  uchar*       write = dst->data;
+  const uchar* read  = src->data;
+
+  size_t bpp = nv_format_get_bytes_per_pixel(src->format); // bytes per pixel
+  for (size_t y = 0; y < src->height; y++)
+  {
+    for (size_t x = 0; x < src->width; x++)
+    {
+      size_t src_i = (y * src->width + x) * bpp;
+      for (size_t i = 0; i < scale; i++)
+      {
+        for (size_t j = 0; j < scale; j++)
+        {
+          size_t dst_i = ((y * scale + i) * new_w + (x * scale + j)) * bpp;
+          for (size_t c = 0; c < bpp; c++)
+          {
+            write[dst_i + c] = read[src_i + c];
+          }
+        }
+      }
+    }
+  }
+}
+
+void
+nv_image_bilinear_filter(nv_image_t* dst, const nv_image_t* src, flt_t scale)
+{
+  const int nchannels = nv_format_get_num_channels(src->format);
+
+  dst->width  = (size_t)((flt_t)src->width / scale);
+  dst->height = (size_t)((flt_t)src->width / scale);
+  dst->format = src->format;
+  dst->data   = nv_calloc(dst->width * dst->height * nv_format_get_bytes_per_pixel(dst->format));
+
+  // Calculate the ratios for x and y coordinates
+  flt_t x_ratio, y_ratio;
+  if (dst->width > 1)
+  {
+    x_ratio = ((flt_t)src->width - 1.0F) / ((flt_t)dst->width - 1.0F);
+  }
+  else
+  {
+    x_ratio = 0;
+  }
+
+  if (dst->height > 1)
+  {
+    y_ratio = ((flt_t)src->height - 1.0F) / ((flt_t)dst->height - 1.0F);
+  }
+  else
+  {
+    y_ratio = 0;
+  }
+
+  for (size_t y = 0; y < dst->height; y++)
+  {
+    const flt_t ratiod_y = y_ratio * (flt_t)y;
+    flt_t       y_l      = floorf(ratiod_y);
+    flt_t       y_h      = ceilf(ratiod_y);
+    flt_t       y_weight = (ratiod_y)-y_l;
+
+    const size_t y_l_offset = (size_t)y_l * src->width * nchannels;
+    const size_t y_h_offset = (size_t)y_h * src->width * nchannels;
+
+    for (size_t x = 0; x < dst->width; x++)
+    {
+      const flt_t ratiod_x = x_ratio * (flt_t)x;
+
+      flt_t x_l      = floorf(ratiod_x);
+      flt_t x_h      = ceilf(ratiod_x);
+      flt_t x_weight = (ratiod_x)-x_l;
+
+      const size_t x_l_offset = (size_t)x_l * nchannels;
+      const size_t x_h_offset = (size_t)x_h * nchannels;
+
+      uchar* top_left_pixel     = &src->data[y_l_offset + x_l_offset];
+      uchar* top_right_pixel    = &src->data[y_l_offset + x_h_offset];
+      uchar* bottom_left_pixel  = &src->data[y_h_offset + x_l_offset];
+      uchar* bottom_right_pixel = &src->data[y_h_offset + x_h_offset];
+      for (int c = 0; c < nchannels; c++)
+      {
+        flt_t pixel = (flt_t)top_left_pixel[c] * (1.0F - x_weight) * (1.0F - y_weight) + (flt_t)top_right_pixel[c] * x_weight * (1.0F - y_weight)
+            + (flt_t)bottom_left_pixel[c] * y_weight * (1.0F - x_weight) + (flt_t)bottom_right_pixel[c] * x_weight * y_weight;
+
+        dst->data[(y * dst->width + x) * nchannels + c] = (unsigned char)NVM_CLAMP(pixel, 0.0f, 255.0f);
+      }
+    }
+  }
+}
+
+SDL_Surface*
+_nv_image_to_sdl_surface(const nv_image_t* tex)
+{
+  nv_assert_and_ret(tex != NULL, NULL);
+  nv_assert_and_ret(tex->width != 0, NULL);
+  nv_assert_and_ret(tex->height != 0, NULL);
+  nv_assert_and_ret(tex->format != NOVA_FORMAT_UNDEFINED, NULL);
+  nv_assert_and_ret(tex->data != NULL, NULL);
+
+  SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
+      (void*)tex->data,
+      (int)tex->width,
+      (int)tex->height,
+      nv_format_get_bytes_per_pixel(tex->format) * 8,
+      (int)(tex->width * nv_format_get_bytes_per_pixel(tex->format)),
+      0,
+      0,
+      0,
+      0);
+  nv_assert_and_ret(surface != NULL, NULL);
+
+  return surface;
+}
+
+nv_image_t
+_nv_sdl_surface_to_image(SDL_Surface* surface)
+{
+  nv_assert_and_ret(surface != NULL, nv_zero_init(nv_image_t));
+  nv_assert_and_ret(surface->w != 0, nv_zero_init(nv_image_t));
+  nv_assert_and_ret(surface->h != 0, nv_zero_init(nv_image_t));
+
+  SDL_LockSurface(surface);
+
+  const size_t surface_size_bytes = surface->w * surface->h * surface->format->BytesPerPixel;
+
+  nv_image_t image;
+  image.width  = (size_t)surface->w;
+  image.height = (size_t)surface->h;
+  nv_assert_and_ret(image.width != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
+  nv_assert_and_ret(image.height != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
+
+  image.format = nv_sdl_format_to_nv_format((SDL_Format_)surface->format->format);
+  nv_assert_and_ret(image.format != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
+
+  image.data = nv_calloc(surface_size_bytes);
+  nv_assert_and_ret(image.data != NULL, nv_zero_init(nv_image_t));
+
+  nv_memcpy(image.data, surface->pixels, surface_size_bytes);
+
+  SDL_UnlockSurface(surface);
+  SDL_FreeSurface(surface);
+
+  return image;
+}
+
+void
+nv_image_write_png(const nv_image_t* tex, const char* path)
+{
+  if (tex == NULL || path == NULL || tex->data == NULL)
+  {
+    return;
+  }
+
+  SDL_Surface* surface = _nv_image_to_sdl_surface(tex);
+  nv_assert_and_ret(surface != NULL, );
+
+  if (IMG_SavePNG(surface, path) != 0)
+  {
+    nv_log_error("Failed in writing image %s. Perhaps its parent directories do not exist?. SDL reports: %s\n", path, IMG_GetError());
+  }
+
+  SDL_FreeSurface(surface);
+}
+
+void
+nv_image_write_jpeg(const nv_image_t* tex, const char* path, int quality)
+{
+  if (tex == NULL || path == NULL || tex->data == NULL)
+  {
+    return;
+  }
+
+  SDL_Surface* surface = _nv_image_to_sdl_surface(tex);
+  nv_assert_and_ret(surface != NULL, );
+
+  if (IMG_SaveJPG(surface, path, quality) != 0)
+  {
+    nv_log_error("Failed in writing image %s. Perhaps its parent directories do not exist?. SDL reports: %s\n", path, IMG_GetError());
+  }
+
+  SDL_FreeSurface(surface);
+}
+
+// nv_image_t
+
+const char*
+nv_format_to_string(nv_format format)
+{
+  switch (format)
+  {
+    case NOVA_FORMAT_UNDEFINED: return "NOVA_FORMAT_UNDEFINED";
+    case NOVA_FORMAT_R8: return "NOVA_FORMAT_R8";
+    case NOVA_FORMAT_RG8: return "NOVA_FORMAT_RG8";
+    case NOVA_FORMAT_RGB8: return "NOVA_FORMAT_RGB8";
+    case NOVA_FORMAT_RGBA8: return "NOVA_FORMAT_RGBA8";
+    case NOVA_FORMAT_BGR8: return "NOVA_FORMAT_BGR8";
+    case NOVA_FORMAT_BGRA8: return "NOVA_FORMAT_BGRA8";
+    case NOVA_FORMAT_RGB16: return "NOVA_FORMAT_RGB16";
+    case NOVA_FORMAT_RGBA16: return "NOVA_FORMAT_RGBA16";
+    case NOVA_FORMAT_RG32: return "NOVA_FORMAT_RG32";
+    case NOVA_FORMAT_RGB32: return "NOVA_FORMAT_RGB32";
+    case NOVA_FORMAT_RGBA32: return "NOVA_FORMAT_RGBA32";
+    case NOVA_FORMAT_R8_SINT: return "NOVA_FORMAT_R8_SINT";
+    case NOVA_FORMAT_RG8_SINT: return "NOVA_FORMAT_RG8_SINT";
+    case NOVA_FORMAT_RGB8_SINT: return "NOVA_FORMAT_RGB8_SINT";
+    case NOVA_FORMAT_RGBA8_SINT: return "NOVA_FORMAT_RGBA8_SINT";
+    case NOVA_FORMAT_R8_UINT: return "NOVA_FORMAT_R8_UINT";
+    case NOVA_FORMAT_RG8_UINT: return "NOVA_FORMAT_RG8_UINT";
+    case NOVA_FORMAT_RGB8_UINT: return "NOVA_FORMAT_RGB8_UINT";
+    case NOVA_FORMAT_RGBA8_UINT: return "NOVA_FORMAT_RGBA8_UINT";
+    case NOVA_FORMAT_R8_SRGB: return "NOVA_FORMAT_R8_SRGB";
+    case NOVA_FORMAT_RG8_SRGB: return "NOVA_FORMAT_RG8_SRGB";
+    case NOVA_FORMAT_RGB8_SRGB: return "NOVA_FORMAT_RGB8_SRGB";
+    case NOVA_FORMAT_RGBA8_SRGB: return "NOVA_FORMAT_RGBA8_SRGB";
+    case NOVA_FORMAT_BGR8_SRGB: return "NOVA_FORMAT_BGR8_SRGB";
+    case NOVA_FORMAT_BGRA8_SRGB: return "NOVA_FORMAT_BGRA8_SRGB";
+    case NOVA_FORMAT_D16: return "NOVA_FORMAT_D16";
+    case NOVA_FORMAT_D24: return "NOVA_FORMAT_D24";
+    case NOVA_FORMAT_D32: return "NOVA_FORMAT_D32";
+    case NOVA_FORMAT_D24_S8: return "NOVA_FORMAT_D24_S8";
+    case NOVA_FORMAT_D32_S8: return "NOVA_FORMAT_D32_S8";
+    case NOVA_FORMAT_BC1: return "NOVA_FORMAT_BC1";
+    case NOVA_FORMAT_BC3: return "NOVA_FORMAT_BC3";
+    case NOVA_FORMAT_BC7: return "NOVA_FORMAT_BC7";
+    default: return "(NotAFormat)";
+  }
+  return "(NotAFormat)";
+}
+
+bool
+nv_format_has_color_channel(nv_format fmt)
+{
+  switch (fmt)
+  {
+    case NOVA_FORMAT_D16:
+    case NOVA_FORMAT_D24:
+    case NOVA_FORMAT_D24_S8:
+    case NOVA_FORMAT_D32:
+    case NOVA_FORMAT_D32_S8:
+    case NOVA_FORMAT_BC1:
+    case NOVA_FORMAT_BC3:
+    case NOVA_FORMAT_BC7:
+    case NOVA_FORMAT_UNDEFINED: return 0;
+    default: return 1;
+  }
+}
+
+// Returns false even for stencil/depth and undefined format
+bool
+nv_format_has_alpha_channel(nv_format fmt)
+{
+  switch (fmt)
+  {
+    case NOVA_FORMAT_RGBA8:
+    case NOVA_FORMAT_BGRA8:
+    case NOVA_FORMAT_RGBA16:
+    case NOVA_FORMAT_RGBA32:
+    case NOVA_FORMAT_RGBA8_SINT:
+    case NOVA_FORMAT_RGBA8_UINT:
+    case NOVA_FORMAT_RGBA8_SRGB:
+    case NOVA_FORMAT_BGRA8_SRGB: return 1;
+    default: return 0;
+  }
+}
+
+bool
+nv_format_has_depth_channel(nv_format fmt)
+{
+  switch (fmt)
+  {
+    case NOVA_FORMAT_D16:
+    case NOVA_FORMAT_D24:
+    case NOVA_FORMAT_D24_S8:
+    case NOVA_FORMAT_D32:
+    case NOVA_FORMAT_D32_S8: return 1;
+
+    default: return 0;
+  }
+}
+
+bool
+nv_format_has_stencil_channel(nv_format fmt)
+{
+  switch (fmt)
+  {
+    case NOVA_FORMAT_D24_S8:
+    case NOVA_FORMAT_D32_S8: return 1;
+
+    default: return 0;
+  }
+}
+
+int
+nv_format_get_bytes_per_channel(nv_format fmt)
+{
+  switch (fmt)
+  {
+    case NOVA_FORMAT_R8:
+    case NOVA_FORMAT_RG8:
+    case NOVA_FORMAT_RGB8:
+    case NOVA_FORMAT_RGBA8:
+    case NOVA_FORMAT_BGR8:
+    case NOVA_FORMAT_BGRA8:
+    case NOVA_FORMAT_R8_SINT:
+    case NOVA_FORMAT_RG8_SINT:
+    case NOVA_FORMAT_RGB8_SINT:
+    case NOVA_FORMAT_RGBA8_SINT:
+    case NOVA_FORMAT_R8_UINT:
+    case NOVA_FORMAT_RG8_UINT:
+    case NOVA_FORMAT_RGB8_UINT:
+    case NOVA_FORMAT_RGBA8_UINT:
+    case NOVA_FORMAT_R8_SRGB:
+    case NOVA_FORMAT_RG8_SRGB:
+    case NOVA_FORMAT_RGB8_SRGB:
+    case NOVA_FORMAT_RGBA8_SRGB:
+    case NOVA_FORMAT_BGR8_SRGB:
+    case NOVA_FORMAT_BGRA8_SRGB: return 1;
+
+    case NOVA_FORMAT_RGB16:
+    case NOVA_FORMAT_RGBA16:
+    case NOVA_FORMAT_D16: return 2;
+
+    case NOVA_FORMAT_D24:
+    case NOVA_FORMAT_D24_S8: return 3;
+
+    case NOVA_FORMAT_RG32:
+    case NOVA_FORMAT_RGB32:
+    case NOVA_FORMAT_RGBA32:
+    case NOVA_FORMAT_D32:
+    case NOVA_FORMAT_D32_S8: return 4;
+
+    default:
+    case NOVA_FORMAT_BC1:
+    case NOVA_FORMAT_BC3:
+    case NOVA_FORMAT_BC7:
+    case NOVA_FORMAT_UNDEFINED: return -1;
+  }
+}
+
+int
+nv_format_get_bytes_per_pixel(nv_format fmt)
+{
+  return nv_format_get_bytes_per_channel(fmt) * nv_format_get_num_channels(fmt);
+}
+
+int
+nv_format_get_num_channels(nv_format fmt)
+{
+  switch (fmt)
+  {
+    case NOVA_FORMAT_R8:
+    case NOVA_FORMAT_R8_SINT:
+    case NOVA_FORMAT_R8_UINT:
+    case NOVA_FORMAT_R8_SRGB:
+    case NOVA_FORMAT_D16:
+    case NOVA_FORMAT_D24:
+    case NOVA_FORMAT_D32: return 1;
+
+    case NOVA_FORMAT_RG8:
+    case NOVA_FORMAT_RG32:
+    case NOVA_FORMAT_RG8_SINT:
+    case NOVA_FORMAT_RG8_UINT:
+    case NOVA_FORMAT_RG8_SRGB:
+    case NOVA_FORMAT_D24_S8:
+    case NOVA_FORMAT_D32_S8: return 2;
+
+    case NOVA_FORMAT_RGB8:
+    case NOVA_FORMAT_BGR8:
+    case NOVA_FORMAT_RGB16:
+    case NOVA_FORMAT_RGB32:
+    case NOVA_FORMAT_RGB8_SINT:
+    case NOVA_FORMAT_RGB8_UINT:
+    case NOVA_FORMAT_RGB8_SRGB:
+    case NOVA_FORMAT_BGR8_SRGB: return 3;
+
+    case NOVA_FORMAT_RGBA8:
+    case NOVA_FORMAT_BGRA8:
+    case NOVA_FORMAT_RGBA16:
+    case NOVA_FORMAT_RGBA32:
+    case NOVA_FORMAT_RGBA8_SINT:
+    case NOVA_FORMAT_RGBA8_UINT:
+    case NOVA_FORMAT_RGBA8_SRGB:
+    case NOVA_FORMAT_BGRA8_SRGB: return 4;
+
+    // FIXME: Implement
+    case NOVA_FORMAT_BC1:
+    case NOVA_FORMAT_BC3:
+    case NOVA_FORMAT_BC7:
+    case NOVA_FORMAT_UNDEFINED:
+    default: return 0;
+  }
+}
+
+nv_format
+nv_sdl_format_to_nv_format(SDL_Format_ format)
+{
+  switch (format)
+  {
+    /* TODO: Add more? I wasn't able to find any more though */
+    case SDL_PIXELFORMAT_RGB24: return NOVA_FORMAT_RGB8;
+    case SDL_PIXELFORMAT_RGBA32: return NOVA_FORMAT_RGBA8;
+    case SDL_PIXELFORMAT_ABGR32: return NOVA_FORMAT_BGRA8;
+
+    case SDL_PIXELFORMAT_YV12:
+    case SDL_PIXELFORMAT_IYUV:
+    default: return NOVA_FORMAT_UNDEFINED;
+  }
+}
+
+SDL_Format_
+nv_format_to_sdl_format(nv_format format)
+{
+  switch (format)
+  {
+    case NOVA_FORMAT_RGB8: return SDL_PIXELFORMAT_RGB24;
+    case NOVA_FORMAT_RGBA8: return SDL_PIXELFORMAT_RGBA32;
+    case NOVA_FORMAT_BGRA8: return SDL_PIXELFORMAT_ABGR32;
+    default: return SDL_PIXELFORMAT_UNKNOWN;
+  }
 }
 
 #endif

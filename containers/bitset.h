@@ -22,57 +22,38 @@
   SOFTWARE.
 */
 
-/* Utilities to accessing bits in bitmaps and making them. */
+#ifndef __NOVA_BITSET_H__
+#define __NOVA_BITSET_H__
 
-#ifndef __NOVA_BIT_H__
-#define __NOVA_BIT_H__
-
-#include "stdafx.h"
-#include <stdbool.h>
+#include "../alloc.h"
+#include "../errorcodes.h"
+#include "../stdafx.h"
+#include <SDL2/SDL_mutex.h>
 
 NOVA_HEADER_START
 
-typedef uchar* nv_bitmap_t;
-typedef uchar  nv_bit_t;
+typedef struct nv_bitset_t nv_bitset_t;
+typedef unsigned char      nv_bitset_bit;
 
-/* Get the size of the buffer needed, if it is to be interpreted as a bitmap */
-static inline size_t
-nv_get_equivalent_bitmap_size(size_t buffer_size)
-{
-  return (buffer_size + 7) / 8;
-}
+extern nv_errorc nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set);
+extern void      nv_bitset_set_bit(nv_bitset_t* set, int bitindex);
+extern void      nv_bitset_set_bit_to(nv_bitset_t* set, int bitindex, nv_bitset_bit to);
+extern void      nv_bitset_clear_bit(nv_bitset_t* set, int bitindex);
+extern void      nv_bitset_toggle_bit(nv_bitset_t* set, int bitindex);
+extern void      nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src);
+extern void      nv_bitset_destroy(nv_bitset_t* set);
 
-static inline nv_bit_t
-nv_bitmap_check_bit(nv_bitmap_t bitmap, size_t index)
-{
-  return (nv_bit_t)((bitmap[index / 8] & (1 << (index % 8))) != 0);
-}
+nv_bitset_bit nv_bitset_access_bit(nv_bitset_t* set, int bitindex);
 
-static inline void
-nv_bitmap_set_bit(nv_bitmap_t bitmap, size_t index)
+struct nv_bitset_t
 {
-  bitmap[index / 8] |= 1 << (index % 8);
-}
-
-static inline void
-nv_bitmap_clear_bit(nv_bitmap_t bitmap, size_t index)
-{
-  bitmap[index / 8] &= ~(1 << (index % 8));
-}
-
-static inline void
-nv_bitmap_set_bit_to(nv_bitmap_t bitmap, size_t index, nv_bit_t to)
-{
-  if (to == 1)
-  {
-    nv_bitmap_set_bit(bitmap, index);
-  }
-  else
-  {
-    nv_bitmap_clear_bit(bitmap, index);
-  }
-}
+  u8*             data;
+  size_t          size;
+  nv_allocator_fn alloc;
+  void*           alloc_arg;
+  SDL_mutex*      mutex;
+};
 
 NOVA_HEADER_END
 
-#endif //__NOVA_BIT_H__
+#endif //__NOVA_BITSET_H__

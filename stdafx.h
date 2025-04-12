@@ -1,7 +1,7 @@
 /*
   MIT License
 
-  Copyright (c) 2025 Tellcode
+  Copyright (c) 2025 Fouzan MD Ishaque (fouzanmdishaque@gmail.com)
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -56,7 +56,7 @@ NOVA_HEADER_START
 #if !defined(NV_RESTRICT)
 #  if defined(_MSC_VER)
 #    define NV_RESTRICT __restrict
-#  elif defined(__GNUC__) || defined(__clang__)
+#  elif (defined(__GNUC__) || defined(__clang__)) && __STDC_VERSION__ >= 199901L
 #    define NV_RESTRICT __restrict__
 #  else
 #    define NV_RESTRICT
@@ -101,6 +101,10 @@ NOVA_HEADER_START
 #if defined(__GNUC__) && __GNUC__ >= 7 || defined(__clang__) && __clang_major__ >= 12
 #  define NV_FALLTHROUGH __attribute__((fallthrough))
 #else
+/**
+ * @WARNING: This does not work. It expands to nothing
+ * This is becuase the comment is interpreted out of the define
+ */
 #  define NV_FALLTHROUGH /* fallthrough */
 #endif
 
@@ -121,6 +125,9 @@ NOVA_HEADER_START
 #  define NV_STATIC_ASSERT(expr, errmsg) typedef char static_assert_failed__##errmsg[!(expr) ? -1 : 1]
 #endif
 
+/**
+ * Note that you may change these and everything should still work
+ */
 #ifndef real_t
 #  define real_t double
 #endif
@@ -159,11 +166,12 @@ NOVA_HEADER_START
 #  endif
 #endif
 
-/* https://stackoverflow.com/a/11172679 */
-/* Stupid fix to , ##__VA_ARGS__ being a GNU extension */
-/* Only supports up to 10 arguments! However, increasing the limit is easy */
-/* Go to __GNUC_HELP_ME_PLEASE_SELECT_10TH and just add more variables and set the define to the last one */
-
+/**
+ * https://stackoverflow.com/a/11172679
+ * Stupid fix to , ##__VA_ARGS__ being a GNU extension
+ * Only supports up to 10 arguments! However, increasing the limit is easy
+ * Go to __GNUC_HELP_ME_PLEASE_SELECT_10TH and just add more variables and set the define to the last one
+ */
 #define NV_COMMA_ARGS_FIRST(...) __GNUC_HELP_ME_PLEASE_FIRST_HELPER(__VA_ARGS__, throwaway)
 
 /*
@@ -193,6 +201,12 @@ NOVA_HEADER_START
         return retval;                                                                                                                                                        \
       }                                                                                                                                                                       \
     } while (0);
+#  define nv_assert_and_exec(expr, code)                                                                                                                                      \
+    if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                         \
+    {                                                                                                                                                                         \
+      nv_log_error("Assertion failed -> %s\n", #expr);                                                                                                                        \
+      code                                                                                                                                                                    \
+    }
 #  define nv_assert(expr)                                                                                                                                                     \
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
@@ -205,6 +219,7 @@ NOVA_HEADER_START
 // These are typecasted to void because they give warnings because result (its
 // like expr != NULL) is not used
 #  define nv_assert_and_ret(expr, retval) (void)(expr)
+#  define nv_assert_and_exec(expr, code) (void)(expr)
 #  define nv_assert(expr) (void)(expr)
 #  pragma message("Assertions disabled")
 #endif

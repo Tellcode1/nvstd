@@ -6,6 +6,9 @@
 ### Changes
 *   Fixed find and replace error, ___GNUC__ instead of __GNUC__
 *   Removed error queues, opting for instantaneous logging.
+*   Added alloc.h, a lua style allocator.
+*   Incorporated the containers for NV. A lot of bug fixes are needed in these, especially relating to MT
+*   Modified the license to include my actual name.
 
 ## \[VERSION 0.1.1\]
 ### Changes

@@ -22,6 +22,11 @@
   SOFTWARE.
 */
 
+/**
+ * Utils for packing and unpacking version numbers as per semantic versioning
+ * https://semver.org/
+ */
+
 #ifndef __NOVA_SEMVER_H__
 #define __NOVA_SEMVER_H__
 
@@ -38,6 +43,11 @@ NOVA_HEADER_START
 #  define __NOVA_SEMVER_MINOR_SHIFT (12)
 #  define __NOVA_SEMVER_PATCH_SHIFT (0)
 #endif
+
+#define NV_SEMVER_PACK_VERSION_DEF(major, minor, patch) ((major << __NOVA_SEMVER_MAJOR_SHIFT) | (minor << __NOVA_SEMVER_MINOR_SHIFT) | (patch << __NOVA_SEMVER_PATCH_SHIFT))
+#define NV_SEMVER_UNPACK_VERSION_MAJOR_DEF(packed) ((version >> __NOVA_SEMVER_MAJOR_SHIFT) & 0x3FF)
+#define NV_SEMVER_UNPACK_VERSION_MINOR_DEF(packed) ((version >> __NOVA_SEMVER_MINOR_SHIFT) & 0x3FF)
+#define NV_SEMVER_UNPACK_VERSION_PATCH_DEF(packed) ((version >> __NOVA_SEMVER_PATCH_SHIFT) & 0xFFF)
 
 typedef uint32_t version_t;
 

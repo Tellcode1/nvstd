@@ -1,7 +1,7 @@
 /*
   MIT License
 
-  Copyright (c) 2025 Tellcode
+  Copyright (c) 2025 Fouzan MD Ishaque (fouzanmdishaque@gmail.com)
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -30,6 +30,7 @@
 
 // implementation: core.c
 
+#include "alloc.h"
 #include "stdafx.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -76,7 +77,7 @@ extern void* nv_memmove(void* dst, const void* src, size_t sz);
  * memcpy is marginally faster than memmove, but also has issues on overlapping regions of memory
  * So, we ditch memcpy for memmove for the sake of safety.
  */
-#define nv_memcpy(...) nv_memmove(__VA_ARGS__)
+#define nv_memcpy nv_memmove
 
 /**
  *  @return a pointer to the first occurance of chr in p
@@ -92,7 +93,7 @@ extern int nv_memcmp(const void* ptr1, const void* ptr2, size_t max);
 // god is dead and i killed him
 
 /* Dude, if using calloc is really slowing down your program, your program is the fault. */
-#define nv_malloc(...) (nv_calloc(__VA_ARGS__))
+#define nv_malloc nv_calloc
 
 extern void* nv_calloc(size_t sz);
 
@@ -184,6 +185,8 @@ extern char* nv_strtrim(char* s);
 
 /**
  * @brief A constant version of strtrim. begin will contain the first non whitespace character and end will contain the last non space char.
+ * @param begin may be NULL
+ * @param end may be NULL
  * @return s if success, NULL if not.
  */
 extern const char* nv_strtrim_c(const char* s, const char** begin, const char** end);
@@ -305,7 +308,13 @@ extern char* nv_basename(const char* path);
  *  @brief duplicate a string (using nv_malloc)
  *  and return it
  */
-extern char* nv_strdup(const char* s);
+extern char* nv_strdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s);
+
+/**
+ *  @brief duplicate a string (using nv_malloc) with extra space
+ *  Note that the NULL terminator is excluded from 'size', i.e. one extra byte will be allocated at the end for the terminator.
+ */
+extern char* nv_strexdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s, size_t size);
 
 /**
  *  @brief make a substring of the string s
