@@ -31,6 +31,7 @@
 #include "math/math.h"
 #include "print.h"
 #include "props.h"
+#include "regex.h"
 #include "strconv.h"
 #include "string.h"
 #include "types.h"
@@ -42,7 +43,6 @@
 
 #include <errno.h>
 #include <limits.h>
-#include <math.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -462,7 +462,7 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
 #  define NOVA_FTOA_HANDLE_CASE(fn, n, str)                                                                                                                                   \
     if (fn(n))                                                                                                                                                                \
     {                                                                                                                                                                         \
-      if (signbit(n) == 0)                                                                                                                                                    \
+      if ((n) >= 0)                                                                                                                                                           \
         return nv_strncpy2(out, str, max);                                                                                                                                    \
       else                                                                                                                                                                    \
         return nv_strncpy2(out, "-" str, max);                                                                                                                                \
@@ -497,14 +497,14 @@ nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros)
     itr++;
   }
 
-  int exponent        = (num == 0.0) ? 0 : (int)log10(num);
+  int exponent        = (num == 0.0) ? 0 : (int)SDL_log10(num);
   int to_use_exponent = (exponent >= 14 || (neg && exponent >= 9) || exponent <= -9);
   if (to_use_exponent)
   {
-    num /= pow(10.0, exponent);
+    num /= SDL_pow(10.0, exponent);
   }
 
-  real_t rounding = pow(10.0, -precision) * 0.5;
+  real_t rounding = SDL_pow(10.0, -precision) * 0.5;
   num += rounding;
 
   /* n has been absoluted before so we can expect that it won't be negative */
@@ -572,7 +572,7 @@ nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros)
 #  define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &s, NULL);
 
 intmax_t
-nv_atoi(const char in_string[], size_t max)
+nv_atoi(const char in_string[], char** endptr, size_t max)
 {
   if (!in_string)
   {
@@ -617,11 +617,22 @@ nv_atoi(const char in_string[], size_t max)
     ret *= -1;
   }
 
+  if (endptr)
+  {
+    *endptr = (char*)c;
+  }
+
   return ret;
 }
 
+static inline real_t
+_nv_ldexp(real_t x, int exp)
+{
+  return x * SDL_pow(2.0, (real_t)exp);
+}
+
 real_t
-nv_atof(const char in_string[], size_t max)
+nv_atof(const char in_string[], char** endptr, size_t max)
 {
   if (!in_string)
   {
@@ -693,7 +704,7 @@ nv_atof(const char in_string[], size_t max)
       i++;
     }
 
-    result = ldexp(result, exp_sign * exponent);
+    result = _nv_ldexp(result, exp_sign * exponent);
   }
 
   if (neg)
@@ -701,11 +712,16 @@ nv_atof(const char in_string[], size_t max)
     result *= -1.0;
   }
 
+  if (endptr)
+  {
+    *endptr = (char*)c;
+  }
+
   return result;
 }
 
 bool
-nv_atobool(const char in_string[], size_t max)
+nv_atobool(const char in_string[], char** endptr, size_t max)
 {
   size_t i = 0;
   NV_SKIP_WHITSPACE(in_string);
@@ -715,7 +731,17 @@ nv_atobool(const char in_string[], size_t max)
   }
   if (nv_strcasencmp(in_string, "false", max - i) == 0 || nv_strncmp(in_string, "0", max - i) == 0)
   {
+    if (endptr)
+    {
+      /* TODO: Implement */
+      nv_assert(0);
+      *endptr = (char*)in_string;
+    }
     return false;
+  }
+  if (endptr)
+  {
+    *endptr = NULL;
   }
   return true;
 }
@@ -1307,6 +1333,12 @@ _nv_printf_loop(nv_format_info_t* info)
   }
 }
 
+static inline bool
+has_format_specifier(const char* string)
+{
+  return nv_strchr(string, '%') != NULL;
+}
+
 size_t
 _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt)
 {
@@ -1316,6 +1348,52 @@ _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const ch
   if (max_chars == 0)
   {
     return 0;
+  }
+
+  /* Probably won't ever happen, just for the edge case */
+  if (NV_UNLIKELY(!*fmt))
+  {
+    return 0;
+  }
+
+  /* Only one character to print, function as fputc/write one char to strings */
+  else if (!*(fmt + 1))
+  {
+    if (!dst)
+    {
+      return 1;
+    }
+
+    if (is_file)
+    {
+      fputc(*fmt, (FILE*)dst);
+    }
+    else
+    {
+      char* write_string = (char*)dst;
+
+      *write_string = *fmt;
+    }
+    return 1;
+  }
+
+  /* If the string does not contain any format specifiers, then we can function as fputs / just write the entire fmt string to memory */
+  if (!has_format_specifier(fmt))
+  {
+    if (!dst)
+    {
+      return nv_strlen(fmt);
+    }
+
+    if (is_file)
+    {
+      fputs(fmt, (FILE*)dst);
+    }
+    else
+    {
+      nv_strlcpy((char*)dst, fmt, max_chars);
+    }
+    return nv_strlen(fmt);
   }
 
   nv_format_info_t info = nv_zero_init(nv_format_info_t);
@@ -2349,7 +2427,7 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
     bool flag_value = true;
     if (is_long && value)
     {
-      flag_value = nv_atobool(value, NOVA_MAX_IGNORE);
+      flag_value = nv_atobool(value, NULL, NOVA_MAX_IGNORE);
     }
     if (opt->value)
     {
@@ -2394,9 +2472,9 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
     switch (opt->type)
     {
       case NV_OP_TYPE_STRING: nv_strlcpy((char*)opt->value, value, opt->buffer_size); break;
-      case NV_OP_TYPE_INT: *(int*)opt->value = (int)nv_atoi(value, NOVA_MAX_IGNORE); break;
-      case NV_OP_TYPE_FLOAT: *(flt_t*)opt->value = (flt_t)nv_atof(value, NOVA_MAX_IGNORE); break;
-      case NV_OP_TYPE_DOUBLE: *(real_t*)opt->value = nv_atof(value, NOVA_MAX_IGNORE); break;
+      case NV_OP_TYPE_INT: *(int*)opt->value = (int)nv_atoi(value, NULL, NOVA_MAX_IGNORE); break;
+      case NV_OP_TYPE_FLOAT: *(flt_t*)opt->value = (flt_t)nv_atof(value, NULL, NOVA_MAX_IGNORE); break;
+      case NV_OP_TYPE_DOUBLE: *(real_t*)opt->value = nv_atof(value, NULL, NOVA_MAX_IGNORE); break;
       default: break;
     }
   }
@@ -2704,8 +2782,8 @@ nv_image_bilinear_filter(nv_image_t* dst, const nv_image_t* src, flt_t scale)
   for (size_t y = 0; y < dst->height; y++)
   {
     const flt_t ratiod_y = y_ratio * (flt_t)y;
-    flt_t       y_l      = floorf(ratiod_y);
-    flt_t       y_h      = ceilf(ratiod_y);
+    flt_t       y_l      = SDL_floorf(ratiod_y);
+    flt_t       y_h      = SDL_ceilf(ratiod_y);
     flt_t       y_weight = (ratiod_y)-y_l;
 
     const size_t y_l_offset = (size_t)y_l * src->width * nchannels;
@@ -2715,8 +2793,8 @@ nv_image_bilinear_filter(nv_image_t* dst, const nv_image_t* src, flt_t scale)
     {
       const flt_t ratiod_x = x_ratio * (flt_t)x;
 
-      flt_t x_l      = floorf(ratiod_x);
-      flt_t x_h      = ceilf(ratiod_x);
+      flt_t x_l      = SDL_floorf(ratiod_x);
+      flt_t x_h      = SDL_ceilf(ratiod_x);
       flt_t x_weight = (ratiod_x)-x_l;
 
       const size_t x_l_offset = (size_t)x_l * nchannels;
@@ -3066,6 +3144,109 @@ nv_format_to_sdl_format(nv_format format)
     case NOVA_FORMAT_BGRA8: return SDL_PIXELFORMAT_ABGR32;
     default: return SDL_PIXELFORMAT_UNKNOWN;
   }
+}
+
+bool match_here(const char* pattern, const char* text);
+
+// Match the pattern from here
+bool
+match_here(const char* NV_RESTRICT expr, const char* NV_RESTRICT str)
+{
+  /* We've walked over the entire pattern, that means we've matched! */
+  if (expr[0] == 0)
+  {
+    return true;
+  }
+
+  /**
+   * The * operator operates on the char previous to it
+   * To allow any character, use .* which matches . (any character).
+   * So, "^.*"  would match any string, entirely
+   * Also, "hello *" would match up to a space! The character preceding the * is a space, and so up to a space is considered
+   */
+  if (expr[1] == '*')
+  {
+    /**
+     * The only character that we are accepting.
+     * This may be '.' to specify that any character may be accepted (except newlines)
+     */
+    const int   accept = expr[0];
+    const char* t      = str;
+    do
+    {
+      /**
+       * We skip over two characters here to skip over the allowed character and the asterisk
+       * i.e. for ".*", we skip over both of them. This results in a match eventually by the string, after we loop over both strings
+       */
+      if (match_here(expr + 2, t))
+      {
+        return true;
+      }
+    } while (*t && (*t++ == accept || accept == '.'));
+
+    /**
+     * We looped over the entire string, or we encountered a different chraracter
+     */
+    return false;
+  }
+
+  /**
+   * We encounter the $ symbol, and the regex terminates
+   * Then return true if we are also at the end of the string
+   */
+  if (expr[0] == '$' && expr[1] == 0)
+  {
+    return *str == 0;
+  }
+
+  /**
+   * If we are not at the end of string,
+   * And we have a . operator or if it is a trivial character, advance.
+   */
+  if (*str && (expr[0] == '.' || expr[0] == *str))
+  {
+    return match_here(expr + 1, str + 1);
+  }
+
+  return false;
+}
+
+bool
+nv_regex_parse(nv_regex_state_t* NV_RESTRICT regex, const char* NV_RESTRICT input, size_t len)
+{
+  /* .* would simply match the entire string, no nuance. */
+  if (nv_strncmp(regex->regex_string, ".*", len) == 0)
+  {
+    return true;
+  }
+  /**
+   * For ^.* though, we need to match up to the first newline.
+   * However, if there are no newlines in the string, then it is functionally equivalent to .*
+   */
+  if (nv_strncmp(regex->regex_string, ".*", len) == 0 && nv_strchr(input, '\n') == NULL)
+  {
+    return true;
+  }
+
+  const char* expr = regex->regex_string;
+
+  /* If anchored, start the matching strictly from the beginning of the string */
+  if (expr[0] == '^')
+  {
+    /* Skip ^ */
+    return match_here(expr + 1, input);
+  }
+
+  /* Otherwise, walk the entire string searching for matches */
+  do
+  {
+    if (match_here(expr, input))
+    {
+      return true;
+    }
+  } while (*input++ != '\0');
+
+  return false;
 }
 
 #endif

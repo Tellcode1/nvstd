@@ -78,17 +78,17 @@ extern size_t nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max);
 /**
  * @brief Converts a string to an integer.
  */
-extern intmax_t nv_atoi(const char in_string[], size_t max);
+extern intmax_t nv_atoi(const char in_string[], char** endptr, size_t max);
 
 /**
  * @brief Converts a string to a real_t.
  */
-extern real_t nv_atof(const char in_string[], size_t max);
+extern real_t nv_atof(const char in_string[], char** endptr, size_t max);
 
 /**
  * @brief Converts a string to a boolean.
  */
-extern bool nv_atobool(const char in_string[], size_t max);
+extern bool nv_atobool(const char in_string[], char** endptr, size_t max);
 
 static inline char*
 nv_itoa(intmax_t x, char out[], int base, size_t max, bool add_commas)
