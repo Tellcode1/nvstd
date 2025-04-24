@@ -58,8 +58,8 @@ struct nv_skyline_bin_t
   SDL_mutex*         mutex;
 };
 
-extern nv_errorc nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* bin);
-extern void      nv_skyline_bin_destroy(nv_skyline_bin_t* bin);
+extern nv_error nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* bin);
+extern void     nv_skyline_bin_destroy(nv_skyline_bin_t* bin);
 
 /**
  * @brief The maximum height of a skyline in the bin

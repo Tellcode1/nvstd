@@ -68,34 +68,20 @@ nv_allocator_c(void* user_data, void* old_ptr, size_t old_size, size_t new_size)
   }
   else if (ALLOC_FREE_CONDITION)
   {
-    nv_assert_and_ret(old_ptr != NULL, NULL);
+    nv_assert_else_return(old_ptr != NULL, NULL);
     nv_free(old_ptr);
     return old_ptr;
   }
   else if (ALLOC_REALLOC_CONDITION)
   {
-    nv_assert_and_ret(old_ptr != NULL, NULL);
-    nv_assert_and_ret(new_size != 0, NULL);
+    nv_assert_else_return(old_ptr != NULL, NULL);
+    nv_assert_else_return(new_size != 0, NULL);
     return nv_realloc(old_ptr, new_size);
   }
   else
   {
     nv_log_error("Invalid operation\n");
     return NULL;
-  }
-
-  if (ALLOC_ALLOC_CONDITION)
-  {
-    return nv_calloc(new_size);
-  }
-  else if (ALLOC_FREE_CONDITION)
-  {
-    nv_free(old_ptr);
-    return old_ptr;
-  }
-  else if (ALLOC_REALLOC_CONDITION)
-  {
-    return nv_realloc(old_ptr, new_size);
   }
 
   return NULL;
@@ -105,17 +91,17 @@ void*
 nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_size)
 {
   nv_alloc_estack_t* estack = (nv_alloc_estack_t*)user_data;
-  nv_assert_and_ret(estack != NULL, NULL);
+  nv_assert_else_return(estack != NULL, NULL);
 
   if (ALLOC_ALLOC_CONDITION)
   {
-    nv_assert_and_ret(old_ptr == NULL, NULL);
-    nv_assert_and_ret(new_size > 0, NULL);
+    nv_assert_else_return(old_ptr == NULL, NULL);
+    nv_assert_else_return(new_size > 0, NULL);
   }
   // free || realloc
   else if (ALLOC_REALLOC_CONDITION || ALLOC_FREE_CONDITION)
   {
-    nv_assert_and_ret(old_ptr != NULL, NULL);
+    nv_assert_else_return(old_ptr != NULL, NULL);
   }
   else
   {
@@ -126,9 +112,9 @@ nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_
   /**
    * Stack integrity checks
    */
-  nv_assert_and_ret(estack->buffer != NULL, NULL);
-  nv_assert_and_ret(estack->buffer_size != 0, NULL);
-  nv_assert_and_ret(estack->buffer_bumper < estack->buffer_size, NULL);
+  nv_assert_else_return(estack->buffer != NULL, NULL);
+  nv_assert_else_return(estack->buffer_size != 0, NULL);
+  nv_assert_else_return(estack->buffer_bumper < estack->buffer_size, NULL);
 
   // malloc or realloc && OOM
   if ((ALLOC_ALLOC_CONDITION || ALLOC_REALLOC_CONDITION) && (estack->buffer_bumper + new_size) > (estack->buffer_size))
@@ -143,10 +129,10 @@ nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_
     }
 
     const size_t new_buffer_size = NV_MAX(estack->buffer_size * 2, estack->buffer_bumper + new_size);
-    nv_assert_and_ret(new_buffer_size != 0, NULL);
+    nv_assert_else_return(new_buffer_size != 0, NULL);
 
     uchar* new_buffer = nv_calloc(new_buffer_size);
-    nv_assert_and_ret(new_buffer != NULL, NULL);
+    nv_assert_else_return(new_buffer != NULL, NULL);
 
     /**
      * Copy all the memory from the old stack
@@ -230,9 +216,9 @@ nv_print_time_as_string(FILE* stream)
 void
 _nv_core_log(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, ...)
 {
-  nv_assert_and_ret(file != NULL, );
-  nv_assert_and_ret(fn != NULL, );
-  nv_assert_and_ret(preceder != NULL, );
+  nv_assert_else_return(file != NULL, );
+  nv_assert_else_return(fn != NULL, );
+  nv_assert_else_return(preceder != NULL, );
 
   va_list args;
   va_start(args, fmt);
@@ -245,9 +231,9 @@ _nv_core_log(const char* file, size_t line, const char* fn, const char* preceder
 void
 nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, va_list args)
 {
-  nv_assert_and_ret(file != NULL, );
-  nv_assert_and_ret(fn != NULL, );
-  nv_assert_and_ret(preceder != NULL, );
+  nv_assert_else_return(file != NULL, );
+  nv_assert_else_return(fn != NULL, );
+  nv_assert_else_return(preceder != NULL, );
 
   FILE* out = (err) ? stderr : stdout;
 
@@ -1310,8 +1296,8 @@ _nv_printf_loop(nv_format_info_t* info)
 size_t
 _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt)
 {
-  nv_assert_and_ret(args != NULL, 0);
-  nv_assert_and_ret(fmt != NULL, 0);
+  nv_assert_else_return(args != NULL, 0);
+  nv_assert_else_return(fmt != NULL, 0);
 
   if (max_chars == 0)
   {
@@ -1429,9 +1415,9 @@ nv_memset(void* dst, char to, size_t sz)
 void*
 nv_memmove(void* dst, const void* src, size_t sz)
 {
-  nv_assert_and_ret(dst != NULL, NULL);
-  nv_assert_and_ret(src != NULL, NULL);
-  nv_assert_and_ret(sz > 0, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
+  nv_assert_else_return(sz > 0, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memmove, dst, src, sz);
 
@@ -1465,20 +1451,20 @@ nv_memmove(void* dst, const void* src, size_t sz)
 void*
 nv_calloc(size_t sz)
 {
-  nv_assert_and_ret(sz > 0, NULL);
+  nv_assert_else_return(sz > 0, NULL);
 
   void* ptr = calloc(1, sz);
-  nv_assert_and_ret(ptr != NULL, NULL);
+  nv_assert_else_return(ptr != NULL, NULL);
   return ptr;
 }
 
 void*
 nv_realloc(void* prevblock, size_t new_sz)
 {
-  nv_assert_and_ret(new_sz > 0, NULL);
+  nv_assert_else_return(new_sz > 0, NULL);
 
   void* ptr = realloc(prevblock, new_sz);
-  nv_assert_and_ret(ptr != NULL, NULL);
+  nv_assert_else_return(ptr != NULL, NULL);
   return ptr;
 }
 
@@ -1486,15 +1472,15 @@ void
 nv_free(void* block)
 {
   // fuck you
-  nv_assert_and_ret(block != NULL, );
+  nv_assert_else_return(block != NULL, );
   free(block);
 }
 
 void*
 nv_memchr(const void* p, int chr, size_t psize)
 {
-  nv_assert_and_ret(p != NULL, NULL);
-  nv_assert_and_ret(psize > 0, NULL);
+  nv_assert_else_return(p != NULL, NULL);
+  nv_assert_else_return(psize > 0, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memchr, p, chr, psize);
 
@@ -1513,9 +1499,9 @@ nv_memchr(const void* p, int chr, size_t psize)
 int
 nv_memcmp(const void* _p1, const void* _p2, size_t max)
 {
-  nv_assert_and_ret(_p1 != NULL, -1);
-  nv_assert_and_ret(_p2 != NULL, -1);
-  nv_assert_and_ret(max > 0, -1);
+  nv_assert_else_return(_p1 != NULL, -1);
+  nv_assert_else_return(_p2 != NULL, -1);
+  nv_assert_else_return(max > 0, -1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memcmp, _p1, _p2, max);
 
@@ -1538,8 +1524,8 @@ nv_memcmp(const void* _p1, const void* _p2, size_t max)
 size_t
 nv_strncpy2(char* dst, const char* src, size_t max)
 {
-  nv_assert_and_ret(src != NULL, 0);
-  nv_assert_and_ret(max > 0, 0);
+  nv_assert_else_return(src != NULL, 0);
+  nv_assert_else_return(max > 0, 0);
 
   size_t slen         = nv_strlen(src);
   size_t original_max = max;
@@ -1570,8 +1556,8 @@ nv_strncpy2(char* dst, const char* src, size_t max)
 char*
 nv_strcpy(char* dst, const char* src)
 {
-  nv_assert_and_ret(dst != NULL, NULL);
-  nv_assert_and_ret(src != NULL, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strcpy, dst, src); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
 
@@ -1592,8 +1578,8 @@ nv_strcpy(char* dst, const char* src)
 char*
 nv_stpcpy(char* dst, char* src)
 {
-  nv_assert_and_ret(dst != NULL, NULL);
-  nv_assert_and_ret(src != NULL, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(stpcpy, dst, src);
 
@@ -1611,9 +1597,9 @@ nv_stpcpy(char* dst, char* src)
 char*
 nv_strncpy(char* dst, const char* src, size_t max)
 {
-  nv_assert_and_ret(dst != NULL, NULL);
-  nv_assert_and_ret(src != NULL, NULL);
-  nv_assert_and_ret(max > 0, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
+  nv_assert_else_return(max > 0, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strncpy, dst, src, max);
 
@@ -1624,8 +1610,8 @@ nv_strncpy(char* dst, const char* src, size_t max)
 char*
 nv_strcat(char* dst, const char* src)
 {
-  nv_assert_and_ret(dst != NULL, NULL);
-  nv_assert_and_ret(src != NULL, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
 
   char* end = dst + nv_strlen(dst);
 
@@ -1643,9 +1629,9 @@ nv_strcat(char* dst, const char* src)
 char*
 nv_strncat(char* dst, const char* src, size_t max)
 {
-  nv_assert_and_ret(dst != NULL, NULL);
-  nv_assert_and_ret(src != NULL, NULL);
-  nv_assert_and_ret(max > 0, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
+  nv_assert_else_return(max > 0, NULL);
 
   char* original_dest = dst;
 
@@ -1672,8 +1658,8 @@ size_t
 nv_strcat_max(char* dst, const char* src, size_t dest_size)
 {
   /* Optionally, memset the remaining part of dst to 0? */
-  nv_assert_and_ret(dst != NULL, 0);
-  nv_assert_and_ret(src != NULL, 0);
+  nv_assert_else_return(dst != NULL, 0);
+  nv_assert_else_return(src != NULL, 0);
 
   if (dest_size == 0)
   {
@@ -1707,7 +1693,7 @@ nv_strcat_max(char* dst, const char* src, size_t dest_size)
 char*
 nv_strtrim(char* s)
 {
-  nv_assert_and_ret(s != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
 
   char *begin, *end;
   if (nv_strtrim_c(s, (const char**)&begin, (const char**)&end) == NULL)
@@ -1724,8 +1710,8 @@ nv_strtrim(char* s)
 const char*
 nv_strtrim_c(const char* s, const char** begin, const char** end)
 {
-  nv_assert_and_ret(s != NULL, NULL);
-  nv_assert_and_ret(begin != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
+  nv_assert_else_return(begin != NULL, NULL);
 
   while (*s && nv_chr_isspace((uchar)*s))
   {
@@ -1756,8 +1742,8 @@ nv_strtrim_c(const char* s, const char** begin, const char** end)
 int
 nv_strcmp(const char* s1, const char* s2)
 {
-  nv_assert_and_ret(s1 != NULL, -1);
-  nv_assert_and_ret(s2 != NULL, -1);
+  nv_assert_else_return(s1 != NULL, -1);
+  nv_assert_else_return(s2 != NULL, -1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strcmp, s1, s2);
 
@@ -1773,7 +1759,7 @@ nv_strcmp(const char* s1, const char* s2)
 char*
 nv_strchr(const char* s, int chr)
 {
-  nv_assert_and_ret(s != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
 
   uchar c = (uchar)chr;
 
@@ -1792,7 +1778,7 @@ nv_strchr(const char* s, int chr)
 char*
 nv_strchr_n(const char* s, int chr, int n)
 {
-  nv_assert_and_ret(s != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
 
   while (*s)
   {
@@ -1811,7 +1797,7 @@ nv_strchr_n(const char* s, int chr, int n)
 char*
 nv_strrchr(const char* s, int chr)
 {
-  nv_assert_and_ret(s != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strrchr, s, chr);
 
@@ -1837,9 +1823,9 @@ nv_strrchr(const char* s, int chr)
 int
 nv_strncmp(const char* s1, const char* s2, size_t max)
 {
-  nv_assert_and_ret(s1 != NULL, -1);
-  nv_assert_and_ret(s2 != NULL, -1);
-  nv_assert_and_ret(max > 0, -1);
+  nv_assert_else_return(s1 != NULL, -1);
+  nv_assert_else_return(s2 != NULL, -1);
+  nv_assert_else_return(max > 0, -1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strncmp, s1, s2, max);
   size_t i = 0;
@@ -1855,9 +1841,9 @@ nv_strncmp(const char* s1, const char* s2, size_t max)
 int
 nv_strcasencmp(const char* s1, const char* s2, size_t max)
 {
-  nv_assert_and_ret(s1 != NULL, -1);
-  nv_assert_and_ret(s2 != NULL, -1);
-  nv_assert_and_ret(max > 0, -1);
+  nv_assert_else_return(s1 != NULL, -1);
+  nv_assert_else_return(s2 != NULL, -1);
+  nv_assert_else_return(max > 0, -1);
 
   size_t i = 0;
   while (*s1 && *s2 && i < max)
@@ -1883,8 +1869,8 @@ nv_strcasencmp(const char* s1, const char* s2, size_t max)
 int
 nv_strcasecmp(const char* s1, const char* s2)
 {
-  nv_assert_and_ret(s1 != NULL, -1);
-  nv_assert_and_ret(s2 != NULL, -1);
+  nv_assert_else_return(s1 != NULL, -1);
+  nv_assert_else_return(s2 != NULL, -1);
 
   while (*s1 && *s2)
   {
@@ -1903,7 +1889,7 @@ nv_strcasecmp(const char* s1, const char* s2)
 size_t
 nv_strlen(const char* s)
 {
-  nv_assert_and_ret(s != NULL, -1);
+  nv_assert_else_return(s != NULL, -1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strlen, s);
 
@@ -1919,8 +1905,8 @@ nv_strlen(const char* s)
 size_t
 nv_strnlen(const char* s, size_t max)
 {
-  nv_assert_and_ret(s != NULL, 0);
-  nv_assert_and_ret(max > 0, 0);
+  nv_assert_else_return(s != NULL, 0);
+  nv_assert_else_return(max > 0, 0);
 
   const char* s_orig = s;
   while (*s && max > 0)
@@ -1935,8 +1921,8 @@ nv_strnlen(const char* s, size_t max)
 char*
 nv_strstr(const char* s, const char* sub)
 {
-  nv_assert_and_ret(s != NULL, NULL);
-  nv_assert_and_ret(sub != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
+  nv_assert_else_return(sub != NULL, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strstr, s, sub);
 
@@ -1964,8 +1950,8 @@ nv_strstr(const char* s, const char* sub)
 char*
 nv_strlcpy(char* dst, const char* src, size_t dst_size)
 {
-  nv_assert_and_ret(dst != NULL, NULL);
-  nv_assert_and_ret(src != NULL, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
 
   if (dst_size == 0)
   {
@@ -1991,7 +1977,7 @@ nv_strlcpy(char* dst, const char* src, size_t dst_size)
 size_t
 nv_strcpy2(char* dst, const char* src)
 {
-  nv_assert_and_ret(src != NULL, (size_t)-1);
+  nv_assert_else_return(src != NULL, (size_t)-1);
 
   size_t slen = nv_strlen(src);
   if (!dst)
@@ -2017,8 +2003,8 @@ nv_strcpy2(char* dst, const char* src)
 size_t
 nv_strspn(const char* s, const char* accept)
 {
-  nv_assert_and_ret(s != NULL, (size_t)-1);
-  nv_assert_and_ret(accept != NULL, (size_t)-1);
+  nv_assert_else_return(s != NULL, (size_t)-1);
+  nv_assert_else_return(accept != NULL, (size_t)-1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strspn, s, accept);
   size_t i = 0;
@@ -2034,8 +2020,8 @@ nv_strspn(const char* s, const char* accept)
 size_t
 nv_strcspn(const char* s, const char* reject)
 {
-  nv_assert_and_ret(s != NULL, (size_t)-1);
-  nv_assert_and_ret(reject != NULL, (size_t)-1);
+  nv_assert_else_return(s != NULL, (size_t)-1);
+  nv_assert_else_return(reject != NULL, (size_t)-1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strcspn, s, reject);
 
@@ -2062,8 +2048,8 @@ nv_strcspn(const char* s, const char* reject)
 char*
 nv_strpbrk(const char* s1, const char* s2)
 {
-  nv_assert_and_ret(s1 != NULL, NULL);
-  nv_assert_and_ret(s2 != NULL, NULL);
+  nv_assert_else_return(s1 != NULL, NULL);
+  nv_assert_else_return(s2 != NULL, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strpbrk, s1, s2);
 
@@ -2086,7 +2072,7 @@ nv_strpbrk(const char* s1, const char* s2)
 char*
 nv_strtok(char* s, const char* delim, char** context)
 {
-  nv_assert_and_ret(context != NULL, NULL);
+  nv_assert_else_return(context != NULL, NULL);
 
   if (!s)
   {
@@ -2142,15 +2128,15 @@ nv_basename(const char* path)
 char*
 nv_strdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s)
 {
-  nv_assert_and_ret(s != NULL, NULL);
-  nv_assert_and_ret(alloc != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
+  nv_assert_else_return(alloc != NULL, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strdup, s);
 
   size_t slen = nv_strlen(s);
 
   char* new_s = alloc(alloc_user_data, NULL, NV_ALLOC_NEW_BLOCK, slen + 1);
-  nv_assert_and_ret(new_s != NULL, NULL);
+  nv_assert_else_return(new_s != NULL, NULL);
 
   nv_strlcpy(new_s, s, slen + 1);
 
@@ -2160,11 +2146,11 @@ nv_strdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s)
 char*
 nv_strexdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s, size_t size)
 {
-  nv_assert_and_ret(s != NULL, NULL);
-  nv_assert_and_ret(alloc != NULL, NULL);
+  nv_assert_else_return(s != NULL, NULL);
+  nv_assert_else_return(alloc != NULL, NULL);
 
   char* new_s = alloc(alloc_user_data, NULL, NV_ALLOC_NEW_BLOCK, size + 1);
-  nv_assert_and_ret(new_s != NULL, NULL);
+  nv_assert_else_return(new_s != NULL, NULL);
   nv_strlcpy(new_s, s, size + 1);
 
   return new_s;
@@ -2173,8 +2159,8 @@ nv_strexdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s, size_t 
 char*
 nv_substr(const char* s, size_t start, size_t len)
 {
-  nv_assert_and_ret(s != NULL, NULL);
-  nv_assert_and_ret(len > 0, NULL);
+  nv_assert_else_return(s != NULL, NULL);
+  nv_assert_else_return(len > 0, NULL);
 
   size_t slen = nv_strlen(s);
   if (start + len > slen)
@@ -2191,7 +2177,7 @@ nv_substr(const char* s, size_t start, size_t len)
 char*
 nv_strrev(char* str)
 {
-  nv_assert_and_ret(str != NULL, NULL);
+  nv_assert_else_return(str != NULL, NULL);
 
   size_t len = nv_strlen(str);
   for (size_t i = 0; i < len / 2; i++)
@@ -2206,8 +2192,8 @@ nv_strrev(char* str)
 char*
 nv_strnrev(char* str, size_t max)
 {
-  nv_assert_and_ret(str != NULL, NULL);
-  nv_assert_and_ret(max != 0, NULL);
+  nv_assert_else_return(str != NULL, NULL);
+  nv_assert_else_return(max != 0, NULL);
 
   size_t len = nv_strnlen(str, max);
   if (len == 0)
@@ -2297,14 +2283,14 @@ nv_props_gen_help(const nv_option_t* options, int noptions, char* buf, size_t bu
   }
 }
 
-static inline nv_errorc
+static inline nv_error
 _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size, int* i)
 {
-  nv_assert_and_ret(argc != 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(argv != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(options != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(noptions > 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(i != NULL, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_else_return(argc != 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(argv != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(options != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(noptions > 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(i != NULL, NV_ERROR_INVALID_ARG);
 
   char* arg     = argv[*i];
   bool  is_long = false;
@@ -2383,7 +2369,7 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
         {
           nv_snprintf(error, error_size, "option --%s requires a value", name);
         }
-        return NOVA_ERROR_CODE_INVALID_INPUT;
+        return NV_ERROR_INVALID_INPUT;
       }
       value = argv[*i];
     }
@@ -2402,10 +2388,10 @@ _nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopt
   }
 
   (*i)++;
-  return NOVA_ERROR_CODE_SUCCESS;
+  return NV_ERROR_SUCCESS;
 }
 
-nv_errorc
+nv_error
 nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size)
 {
   nv_assert(argc != 0);
@@ -2413,15 +2399,15 @@ nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions,
   nv_assert(options != NULL);
   nv_assert(noptions > 0);
 
-  int       i       = 1; // program name is argv[0]
-  nv_errorc errcode = NOVA_ERROR_CODE_SUCCESS;
+  int      i       = 1; // program name is argv[0]
+  nv_error errcode = NV_ERROR_SUCCESS;
 
   while (i < argc)
   {
     char* arg = argv[i];
     if (arg[0] == '-')
     {
-      nv_errorc result = _nv_props_parse_arg(argc, argv, options, noptions, error, error_size, &i);
+      nv_error result = _nv_props_parse_arg(argc, argv, options, noptions, error, error_size, &i);
       if (result != 0)
       {
         errcode = false;
@@ -2564,13 +2550,19 @@ nv_chr_toupper(int chr)
   return chr;
 }
 
-nv_image_t
-nv_image_load(const char* path)
+nv_error
+nv_image_load(const char* path, nv_image_t* dst)
 {
-  SDL_Surface* surface = IMG_Load(path);
-  nv_assert_and_ret(surface != NULL, nv_zero_init(nv_image_t));
+  nv_assert_else_return(dst != NULL, NV_ERROR_INVALID_ARG);
 
-  return _nv_sdl_surface_to_image(surface);
+  nv_bzero(dst, sizeof(nv_image_t));
+
+  SDL_Surface* surface = IMG_Load(path);
+  nv_assert_and_exec(surface != NULL, { nv_log_error("load failed $?(%s)\n", IMG_GetError()); });
+
+  *dst = _nv_sdl_surface_to_image(surface);
+
+  return NV_SUCCESS;
 }
 
 unsigned char*
@@ -2740,11 +2732,11 @@ nv_image_bilinear_filter(nv_image_t* dst, const nv_image_t* src, flt_t scale)
 SDL_Surface*
 _nv_image_to_sdl_surface(const nv_image_t* tex)
 {
-  nv_assert_and_ret(tex != NULL, NULL);
-  nv_assert_and_ret(tex->width != 0, NULL);
-  nv_assert_and_ret(tex->height != 0, NULL);
-  nv_assert_and_ret(tex->format != NOVA_FORMAT_UNDEFINED, NULL);
-  nv_assert_and_ret(tex->data != NULL, NULL);
+  nv_assert_else_return(tex != NULL, NULL);
+  nv_assert_else_return(tex->width != 0, NULL);
+  nv_assert_else_return(tex->height != 0, NULL);
+  nv_assert_else_return(tex->format != NOVA_FORMAT_UNDEFINED, NULL);
+  nv_assert_else_return(tex->data != NULL, NULL);
 
   SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
       (void*)tex->data,
@@ -2756,7 +2748,7 @@ _nv_image_to_sdl_surface(const nv_image_t* tex)
       0,
       0,
       0);
-  nv_assert_and_ret(surface != NULL, NULL);
+  nv_assert_else_return(surface != NULL, NULL);
 
   return surface;
 }
@@ -2764,9 +2756,9 @@ _nv_image_to_sdl_surface(const nv_image_t* tex)
 nv_image_t
 _nv_sdl_surface_to_image(SDL_Surface* surface)
 {
-  nv_assert_and_ret(surface != NULL, nv_zero_init(nv_image_t));
-  nv_assert_and_ret(surface->w != 0, nv_zero_init(nv_image_t));
-  nv_assert_and_ret(surface->h != 0, nv_zero_init(nv_image_t));
+  nv_assert_else_return(surface != NULL, nv_zero_init(nv_image_t));
+  nv_assert_else_return(surface->w != 0, nv_zero_init(nv_image_t));
+  nv_assert_else_return(surface->h != 0, nv_zero_init(nv_image_t));
 
   SDL_LockSurface(surface);
 
@@ -2775,14 +2767,14 @@ _nv_sdl_surface_to_image(SDL_Surface* surface)
   nv_image_t image;
   image.width  = (size_t)surface->w;
   image.height = (size_t)surface->h;
-  nv_assert_and_ret(image.width != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
-  nv_assert_and_ret(image.height != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
+  nv_assert_else_return(image.width != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
+  nv_assert_else_return(image.height != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
 
   image.format = nv_sdl_format_to_nv_format((SDL_Format_)surface->format->format);
-  nv_assert_and_ret(image.format != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
+  nv_assert_else_return(image.format != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
 
   image.data = nv_calloc(surface_size_bytes);
-  nv_assert_and_ret(image.data != NULL, nv_zero_init(nv_image_t));
+  nv_assert_else_return(image.data != NULL, nv_zero_init(nv_image_t));
 
   nv_memcpy(image.data, surface->pixels, surface_size_bytes);
 
@@ -2801,7 +2793,7 @@ nv_image_write_png(const nv_image_t* tex, const char* path)
   }
 
   SDL_Surface* surface = _nv_image_to_sdl_surface(tex);
-  nv_assert_and_ret(surface != NULL, );
+  nv_assert_else_return(surface != NULL, );
 
   if (IMG_SavePNG(surface, path) != 0)
   {
@@ -2820,7 +2812,7 @@ nv_image_write_jpeg(const nv_image_t* tex, const char* path, int quality)
   }
 
   SDL_Surface* surface = _nv_image_to_sdl_surface(tex);
-  nv_assert_and_ret(surface != NULL, );
+  nv_assert_else_return(surface != NULL, );
 
   if (IMG_SaveJPG(surface, path, quality) != 0)
   {

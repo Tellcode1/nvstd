@@ -76,7 +76,7 @@ typedef struct nv_rbmap_t
   void*             alloc_arg;
 } nv_rbmap_t;
 
-extern nv_errorc nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_allocator_fn alloc, void* alloc_arg, nv_rbmap_t* dst);
+extern nv_error nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_allocator_fn alloc, void* alloc_arg, nv_rbmap_t* dst);
 
 extern void nv_rbmap_destroy(nv_rbmap_t* map);
 

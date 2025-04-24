@@ -55,8 +55,8 @@ typedef int (*nv_list_compare_fn)(const void* obj1, const void* obj2);
 /**
  * init_capacity may be 0
  */
-extern nv_errorc nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void* alloc_arg, nv_list_t* vec);
-extern void      nv_list_destroy(nv_list_t* vec);
+extern nv_error nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void* alloc_arg, nv_list_t* vec);
+extern void     nv_list_destroy(nv_list_t* vec);
 
 /*
   Returns 0 if the list is valid and anything else if it's not

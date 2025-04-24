@@ -40,7 +40,7 @@ NOVA_HEADER_START
 
 typedef struct nv_texture_atlas_t nv_texture_atlas_t;
 
-extern nv_errorc nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, nv_texture_atlas_t* dst);
+extern nv_error nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, nv_texture_atlas_t* dst);
 
 /**
  * @return Returns false(0) if the image was not packed and anything else if it was

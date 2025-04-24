@@ -43,11 +43,11 @@ __shutup_compiler_errno_warning__(void)
 // listTOR
 // ==============================
 
-nv_errorc
+nv_error
 nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void* alloc_arg, nv_list_t* list)
 {
-  nv_assert_and_ret(type_size > 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(alloc != NULL, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_else_return(type_size > 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(alloc != NULL, NV_ERROR_INVALID_ARG);
 
   *list = nv_zero_init(nv_list_t);
 
@@ -58,7 +58,7 @@ nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void
   list->mutex = SDL_CreateMutex();
   if (!list->mutex)
   {
-    return NOVA_ERROR_CODE_EXTERNAL;
+    return NV_ERROR_EXTERNAL;
   }
 
   list->alloc     = alloc;
@@ -76,7 +76,7 @@ nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void
   }
   SDL_UnlockMutex(list->mutex);
 
-  return NOVA_ERROR_CODE_SUCCESS;
+  return NV_ERROR_SUCCESS;
 }
 
 void
@@ -205,8 +205,8 @@ nv_list_get(const nv_list_t* list, size_t i)
   }
 
   SDL_LockMutex((SDL_mutex*)list->mutex);
-  nv_assert_and_ret(CONT_IS_VALID(list), NULL);
-  nv_assert_and_ret(i < list->capacity, NULL);
+  nv_assert_else_return(CONT_IS_VALID(list), NULL);
+  nv_assert_else_return(i < list->capacity, NULL);
   uchar* data      = list->data;
   size_t type_size = list->type_size;
   SDL_UnlockMutex((SDL_mutex*)list->mutex);
@@ -299,7 +299,7 @@ nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
 void
 nv_list_resize(nv_list_t* list, size_t new_size)
 {
-  nv_assert_and_ret(CONT_IS_VALID(list), );
+  nv_assert_else_return(CONT_IS_VALID(list), );
 
   if (list->data)
   {
@@ -317,7 +317,7 @@ nv_list_resize(nv_list_t* list, size_t new_size)
 void
 nv_list_push_back(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 {
-  nv_assert_and_ret(CONT_IS_VALID(list), );
+  nv_assert_else_return(CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -359,7 +359,7 @@ nv_list_push_empty(nv_list_t* __restrict list)
 void
 nv_list_push_set(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT arr, size_t count)
 {
-  nv_assert_and_ret(CONT_IS_VALID(list), );
+  nv_assert_else_return(CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -377,7 +377,7 @@ nv_list_push_set(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT arr, size_
 void
 nv_list_pop_back(nv_list_t* list)
 {
-  nv_assert_and_ret(CONT_IS_VALID(list), );
+  nv_assert_else_return(CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -392,7 +392,7 @@ nv_list_pop_back(nv_list_t* list)
 void
 nv_list_pop_front(nv_list_t* list)
 {
-  nv_assert_and_ret(CONT_IS_VALID(list), );
+  nv_assert_else_return(CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -508,19 +508,19 @@ power_of_two_mod(u32 num, u32 mod_by)
 
 #define NV_NODE_OCCUPIED(node) ((node).key != NULL && (node).value != NULL)
 
-nv_errorc
+nv_error
 nv_hashmap_init(size_t init_size, size_t key_size, size_t value_size, nv_hash_fn hash_fn, nv_allocator_fn allocator, void* alloc_arg, nv_hashmap_t* dst)
 {
-  nv_assert_and_ret(dst != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(key_size > 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(value_size > 0, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_else_return(dst != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(key_size > 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(value_size > 0, NV_ERROR_INVALID_ARG);
 
   *dst = nv_zero_init(nv_hashmap_t);
 
   dst->mutex = SDL_CreateMutex();
   if (!dst->mutex)
   {
-    return NOVA_ERROR_CODE_EXTERNAL;
+    return NV_ERROR_EXTERNAL;
   }
 
   // TODO: Is this needed?
@@ -529,7 +529,7 @@ nv_hashmap_init(size_t init_size, size_t key_size, size_t value_size, nv_hash_fn
   dst->alloc     = allocator;
   dst->alloc_arg = alloc_arg;
   dst->nodes     = init_size == 0 ? NULL : (nv_hashmap_node_t*)NV_ALLOC(allocator, alloc_arg, init_size * sizeof(nv_hashmap_node_t));
-  nv_assert_and_ret(dst->nodes != NULL, NOVA_ERROR_CODE_MALLOC_FAILED);
+  nv_assert_else_return(dst->nodes != NULL, NV_ERROR_MALLOC_FAILED);
 
   dst->hash_fn    = hash_fn ? hash_fn : nv_hash_murmur3;
   dst->key_size   = key_size;
@@ -540,7 +540,7 @@ nv_hashmap_init(size_t init_size, size_t key_size, size_t value_size, nv_hash_fn
 
   SDL_UnlockMutex(dst->mutex);
 
-  return NOVA_ERROR_CODE_SUCCESS;
+  return NV_ERROR_SUCCESS;
 }
 
 void
@@ -619,7 +619,7 @@ nv_hashmap_resize(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_arg)
 void
 nv_hashmap_clear(nv_hashmap_t* map)
 {
-  nv_assert_and_ret(CONT_IS_VALID(map), );
+  nv_assert_else_return(CONT_IS_VALID(map), );
 
   nv_hashmap_destroy(map);
 
@@ -633,7 +633,7 @@ nv_hashmap_clear(nv_hashmap_t* map)
 size_t
 nv_hashmap_size(const nv_hashmap_t* map)
 {
-  nv_assert_and_ret(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t size = map->size;
@@ -645,7 +645,7 @@ nv_hashmap_size(const nv_hashmap_t* map)
 size_t
 nv_hashmap_capacity(const nv_hashmap_t* map)
 {
-  nv_assert_and_ret(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t capacity = map->capacity;
@@ -657,7 +657,7 @@ nv_hashmap_capacity(const nv_hashmap_t* map)
 size_t
 nv_hashmap_keysize(const nv_hashmap_t* map)
 {
-  nv_assert_and_ret(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t key_size = map->key_size;
@@ -669,7 +669,7 @@ nv_hashmap_keysize(const nv_hashmap_t* map)
 size_t
 nv_hashmap_valuesize(const nv_hashmap_t* map)
 {
-  nv_assert_and_ret(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t value_size = map->value_size;
@@ -681,7 +681,7 @@ nv_hashmap_valuesize(const nv_hashmap_t* map)
 nv_hashmap_node_t*
 nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* __i)
 {
-  nv_assert_and_ret(CONT_IS_VALID(map), NULL);
+  nv_assert_else_return(CONT_IS_VALID(map), NULL);
 
   /**
    * If map->capacity is 0, it simply jumps to returning NULL
@@ -863,14 +863,14 @@ nv_hashmap_deserialize(nv_hashmap_t* map, FILE* f, void* hash_fn_arg)
 // ATLAS
 // ==============================
 
-nv_errorc
+nv_error
 nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, nv_texture_atlas_t* dst)
 {
-  nv_assert_and_ret(dst != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(width != 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(height != 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(padding >= 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(fmt != NOVA_FORMAT_UNDEFINED, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_else_return(dst != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(width != 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(height != 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(padding >= 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(fmt != NOVA_FORMAT_UNDEFINED, NV_ERROR_INVALID_ARG);
 
   *dst = nv_zero_init(nv_texture_atlas_t);
 
@@ -880,22 +880,22 @@ nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, n
   dst->format  = fmt;
   dst->padding = padding;
   dst->data    = (unsigned char*)nv_calloc(width * height * nv_format_get_bytes_per_pixel(dst->format));
-  nv_assert_and_ret(dst->data != NULL, NOVA_ERROR_CODE_MALLOC_FAILED);
+  nv_assert_else_return(dst->data != NULL, NV_ERROR_MALLOC_FAILED);
 
   dst->mutex = SDL_CreateMutex();
   if (!dst->mutex)
   {
-    return NOVA_ERROR_CODE_EXTERNAL;
+    return NV_ERROR_EXTERNAL;
   }
 
   if (nv_skyline_bin_init(width, height, &dst->bin) != 0)
   {
-    return NOVA_ERROR_CODE_INVALID_RETVAL;
+    return NV_ERROR_INVALID_RETVAL;
   }
 
-  nv_assert_and_ret(CONT_IS_VALID(dst), NOVA_ERROR_CODE_BROKEN_STATE);
+  nv_assert_else_return(CONT_IS_VALID(dst), NV_ERROR_BROKEN_STATE);
 
-  return NOVA_ERROR_CODE_SUCCESS;
+  return NV_ERROR_SUCCESS;
 }
 
 SDL_mutex* atlas_resize_mutex = NULL;
@@ -1068,12 +1068,12 @@ nv_texture_atlas_destroy(nv_texture_atlas_t* atlas)
 // RECTPACK
 // ==============================
 
-nv_errorc
+nv_error
 nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* dst)
 {
-  nv_assert_and_ret(dst != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(width != 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(height != 0, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_else_return(dst != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(width != 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(height != 0, NV_ERROR_INVALID_ARG);
 
   *dst = nv_zero_init(nv_skyline_bin_t);
 
@@ -1086,14 +1086,14 @@ nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* dst)
   dst->allocated_rect_count = 0;
 
   dst->skyline = (size_t*)nv_calloc(width * sizeof(size_t));
-  nv_assert_and_ret(dst->skyline != NULL, NOVA_ERROR_CODE_MALLOC_FAILED);
+  nv_assert_else_return(dst->skyline != NULL, NV_ERROR_MALLOC_FAILED);
 
   dst->mutex = SDL_CreateMutex();
-  nv_assert_and_ret(dst->mutex != NULL, NOVA_ERROR_CODE_EXTERNAL);
+  nv_assert_else_return(dst->mutex != NULL, NV_ERROR_EXTERNAL);
 
-  nv_assert_and_ret(CONT_IS_VALID(dst), NOVA_ERROR_CODE_BROKEN_STATE);
+  nv_assert_else_return(CONT_IS_VALID(dst), NV_ERROR_BROKEN_STATE);
 
-  return NOVA_ERROR_CODE_SUCCESS;
+  return NV_ERROR_SUCCESS;
 }
 
 void
@@ -1370,17 +1370,17 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
 // BITSET
 // ==============================
 
-nv_errorc
+nv_error
 nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set)
 {
-  nv_assert_and_ret(set != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(allocator != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(init_capacity >= 0, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_else_return(set != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(allocator != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(init_capacity >= 0, NV_ERROR_INVALID_ARG);
 
   *set = nv_zero_init(nv_bitset_t);
 
   set->mutex = SDL_CreateMutex();
-  nv_assert_and_ret(set->mutex != NULL, NOVA_ERROR_CODE_EXTERNAL);
+  nv_assert_else_return(set->mutex != NULL, NV_ERROR_EXTERNAL);
 
   if (init_capacity > 0)
   {
@@ -1389,14 +1389,14 @@ nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set)
     set->alloc    = allocator;
 
     set->data = NV_ALLOC(set->alloc, set->alloc_arg, init_capacity * sizeof(uint8_t));
-    nv_assert_and_ret(set->data != NULL, NOVA_ERROR_CODE_MALLOC_FAILED);
+    nv_assert_else_return(set->data != NULL, NV_ERROR_MALLOC_FAILED);
   }
   else
   {
     set->size = 0;
   }
 
-  return NOVA_ERROR_CODE_SUCCESS;
+  return NV_ERROR_SUCCESS;
 }
 
 void
@@ -1480,13 +1480,13 @@ nv_bitset_destroy(nv_bitset_t* set)
 
 // RBMAP
 
-nv_errorc
+nv_error
 nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_allocator_fn alloc, void* alloc_arg, nv_rbmap_t* dst)
 {
-  nv_assert_and_ret(key_size != 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(val_size != 0, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(compare_fn != NULL, NOVA_ERROR_CODE_INVALID_ARG);
-  nv_assert_and_ret(alloc != NULL, NOVA_ERROR_CODE_INVALID_ARG);
+  nv_assert_else_return(key_size != 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(val_size != 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(compare_fn != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(alloc != NULL, NV_ERROR_INVALID_ARG);
 
   *dst = nv_zero_init(nv_rbmap_t);
 
@@ -1498,7 +1498,7 @@ nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_all
   dst->alloc      = alloc;
   dst->alloc_arg  = alloc_arg;
 
-  return NOVA_ERROR_CODE_SUCCESS;
+  return NV_ERROR_SUCCESS;
 }
 
 void

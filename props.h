@@ -66,7 +66,7 @@ struct nv_option_t
  * @param error buffer for error messages.
  * @param error_size size of the error buffer.
  */
-extern nv_errorc nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size);
+extern nv_error nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size);
 
 /**
  * @brief generate a help message and write it into buf

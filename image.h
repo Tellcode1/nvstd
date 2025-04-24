@@ -25,7 +25,9 @@
 #ifndef __NOVA_IMAGE_H__
 #define __NOVA_IMAGE_H__
 
+#include "../std/errorcodes.h"
 #include "../std/stdafx.h"
+
 #include "format.h"
 
 NOVA_HEADER_START
@@ -45,8 +47,8 @@ struct nv_image_t
  * If an error occurs, then a zero initialized image is returned.
  * TODO: Add an error code return
  */
-extern nv_image_t nv_image_load(const char* path);
-extern nv_image_t nv_image_load_png(const char* path);
+extern nv_error nv_image_load(const char* path, nv_image_t* dst);
+extern nv_error nv_image_load_png(const char* path, nv_image_t* dst);
 
 // jpg and jpeg (they're the same thing by the way)
 extern nv_image_t nv_image_load_jpeg(const char* path);

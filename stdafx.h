@@ -192,7 +192,7 @@ NOVA_HEADER_START
 #define __GNUC_HELP_ME_PLEASE_SELECT_10TH(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, ...) a10
 
 #ifndef NDEBUG
-#  define nv_assert_and_ret(expr, retval)                                                                                                                                     \
+#  define nv_assert_else_return(expr, retval)                                                                                                                                 \
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
       if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                       \
@@ -218,7 +218,7 @@ NOVA_HEADER_START
 #else
 // These are typecasted to void because they give warnings because result (its
 // like expr != NULL) is not used
-#  define nv_assert_and_ret(expr, retval) (void)(expr)
+#  define nv_assert_else_return(expr, retval) (void)(expr)
 #  define nv_assert_and_exec(expr, code) (void)(expr)
 #  define nv_assert(expr) (void)(expr)
 #  pragma message("Assertions disabled")
@@ -232,6 +232,7 @@ NOVA_HEADER_START
 #define nv_log_warning(...) _NV_LOG_EXPAND_PARAMETERS(" warning: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 #define nv_log_info(...) _NV_LOG_EXPAND_PARAMETERS(" info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 #define nv_log_debug(...) _NV_LOG_EXPAND_PARAMETERS(" debug: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_verbose(...) _NV_LOG_EXPAND_PARAMETERS(" verbose: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 #define nv_log_custom(...) _NV_LOG_EXPAND_PARAMETERS(preceder, false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 
 extern void _nv_core_log(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, ...);

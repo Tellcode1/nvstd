@@ -35,13 +35,13 @@ NOVA_HEADER_START
 typedef struct nv_bitset_t nv_bitset_t;
 typedef unsigned char      nv_bitset_bit;
 
-extern nv_errorc nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set);
-extern void      nv_bitset_set_bit(nv_bitset_t* set, int bitindex);
-extern void      nv_bitset_set_bit_to(nv_bitset_t* set, int bitindex, nv_bitset_bit to);
-extern void      nv_bitset_clear_bit(nv_bitset_t* set, int bitindex);
-extern void      nv_bitset_toggle_bit(nv_bitset_t* set, int bitindex);
-extern void      nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src);
-extern void      nv_bitset_destroy(nv_bitset_t* set);
+extern nv_error nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set);
+extern void     nv_bitset_set_bit(nv_bitset_t* set, int bitindex);
+extern void     nv_bitset_set_bit_to(nv_bitset_t* set, int bitindex, nv_bitset_bit to);
+extern void     nv_bitset_clear_bit(nv_bitset_t* set, int bitindex);
+extern void     nv_bitset_toggle_bit(nv_bitset_t* set, int bitindex);
+extern void     nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src);
+extern void     nv_bitset_destroy(nv_bitset_t* set);
 
 nv_bitset_bit nv_bitset_access_bit(nv_bitset_t* set, int bitindex);
 
