@@ -33,7 +33,7 @@ NOVA_HEADER_START
 
 #define CONT_CANARY 0xFEEF
 
-typedef struct nv_list_t
+typedef struct nv_list_s
 {
   u32             canary;
   size_t          size;

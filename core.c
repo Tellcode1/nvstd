@@ -1044,6 +1044,7 @@ _nv_printf_handle_long_type(nv_format_info_t* info)
   {
     /* Move past the extra l */
     NV_PRINTF_ADVANCE_FMT();
+    NV_PRINTF_ADVANCE_FMT();
 
     /* long long integers */
     switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
@@ -1057,6 +1058,7 @@ _nv_printf_handle_long_type(nv_format_info_t* info)
   }
   else
   {
+    NV_PRINTF_ADVANCE_FMT();
     /* standard long integers */
     /* %lF\f is non standard behaviour */
     switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
@@ -1458,6 +1460,76 @@ nv_calloc(size_t sz)
   return ptr;
 }
 
+static inline size_t
+_align_up(size_t sz, size_t align)
+{
+  return (sz + (align - 1)) & ~(align - 1);
+}
+
+void*
+nv_aligned_alloc(size_t size, size_t alignment)
+{
+  nv_assert_else_return((alignment & (alignment - 1)) == 0, NULL);
+  nv_assert_else_return(size > 0, NULL);
+
+  const size_t total_size = _align_up(size + sizeof(void*) + sizeof(size_t), alignment);
+
+  void* const orig = nv_malloc(total_size);
+  if (!orig)
+  {
+    return NULL;
+  }
+
+  /**
+   * We need to store the original pointer and the previous size just behind the
+   * aligned block of memory.
+   */
+  uchar* ptr     = (uchar*)orig + sizeof(void*) + sizeof(size_t);
+  uchar* aligned = (uchar*)((uintptr_t)(ptr + alignment - 1) & ~(alignment - 1));
+
+  size_t* store_size = (size_t*)(aligned - sizeof(void*) - sizeof(size_t));
+  *store_size        = size;
+
+  void** store_ptr = (void**)(aligned - sizeof(void*));
+  *store_ptr       = orig;
+
+  nv_assert_else_return(((uintptr_t)aligned % alignment) == 0, NULL);
+
+  return aligned;
+}
+
+void*
+nv_aligned_realloc(void* orig, size_t size, size_t alignment)
+{
+  nv_assert_else_return(size != 0, NULL);
+  nv_assert_else_return(alignment != 0, NULL);
+  nv_assert_else_return((alignment & (alignment - 1)) == 0, NULL);
+
+  if (orig == NULL)
+  {
+    return nv_aligned_alloc(size, alignment);
+  }
+
+  void** orig_location = (void**)((uchar*)orig - sizeof(void*));
+  if (*orig_location)
+  {
+    size_t prev_size = *(size_t*)((uchar*)orig - sizeof(void*) - sizeof(size_t));
+
+    void* new_block = nv_aligned_alloc(size, alignment);
+    nv_memmove(new_block, orig, NV_MIN(prev_size, size));
+    nv_aligned_free(orig);
+
+    return new_block;
+  }
+  else
+  {
+    nv_log_error("double free %p\n", orig);
+    abort();
+  }
+
+  return NULL;
+}
+
 void*
 nv_realloc(void* prevblock, size_t new_sz)
 {
@@ -1474,6 +1546,30 @@ nv_free(void* block)
   // fuck you
   nv_assert_else_return(block != NULL, );
   free(block);
+}
+
+void
+nv_aligned_free(void* aligned_block)
+{
+  nv_assert_else_return(aligned_block != NULL, );
+
+  void** orig_location = (void**)((uchar*)aligned_block - sizeof(void*));
+
+  void* orig = *orig_location;
+  if (orig)
+  {
+    *orig_location = NULL;
+    nv_free(orig);
+  }
+  else
+  {
+    nv_log_error("double free %p\n", aligned_block);
+
+    /**
+     * TODO: should we?
+     */
+    abort();
+  }
 }
 
 void*

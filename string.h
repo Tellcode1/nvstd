@@ -97,9 +97,21 @@ extern int nv_memcmp(const void* ptr1, const void* ptr2, size_t max);
 
 extern void* nv_calloc(size_t sz);
 
+/**
+ * Get an aligned block of memory
+ * The memory must be freed by aligned_free
+ * WARNING: Only supports power of two alignments
+ * https://tabreztalks.medium.com/memory-aligned-malloc-6c7b562d58d0
+ */
+extern void* nv_aligned_alloc(size_t sz, size_t alignment);
+
+extern void* nv_aligned_realloc(void* orig, size_t size, size_t alignment);
+
 extern void* nv_realloc(void* prevblock, size_t new_sz);
 
 extern void nv_free(void* block);
+
+extern void nv_aligned_free(void* aligned_block);
 
 /**
  *  uses zlib to compress and decompress the buffer

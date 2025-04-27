@@ -39,15 +39,15 @@
 
 NOVA_HEADER_START
 
-typedef struct nv_skyline_bin_t  nv_skyline_bin_t;
-typedef struct nv_skyline_rect_t nv_skyline_rect_t;
+typedef struct nv_skyline_bin_s  nv_skyline_bin_t;
+typedef struct nv_skyline_rect_s nv_skyline_rect_t;
 
-struct nv_skyline_rect_t
+struct nv_skyline_rect_s
 {
   size_t width, height, posx, posy;
 };
 
-struct nv_skyline_bin_t
+struct nv_skyline_bin_s
 {
   unsigned           canary;
   size_t*            skyline;

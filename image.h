@@ -32,11 +32,11 @@
 
 NOVA_HEADER_START
 
-typedef struct nv_image_t nv_image_t;
+typedef struct nv_image_s nv_image_t;
 struct SDL_Surface;
 
 // CPU Image
-struct nv_image_t
+struct nv_image_s
 {
   size_t         width, height;
   nv_format      format;
@@ -59,7 +59,6 @@ extern nv_image_t nv_image_load_jpeg(const char* path);
 extern struct SDL_Surface* _nv_image_to_sdl_surface(const nv_image_t* tex);
 extern nv_image_t          _nv_sdl_surface_to_image(struct SDL_Surface* surface);
 
-extern void nv_image_write_(const nv_image_t* tex, const char* path);
 extern void nv_image_write_png(const nv_image_t* tex, const char* path);
 extern void nv_image_write_jpeg(const nv_image_t* tex, const char* path, int quality);
 

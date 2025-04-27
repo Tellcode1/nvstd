@@ -38,7 +38,7 @@ NOVA_HEADER_START
 // Possibly add features for removing textures?
 // Possibly start compressing the texture in async when finish is called?
 
-typedef struct nv_texture_atlas_t nv_texture_atlas_t;
+typedef struct nv_texture_atlas_s nv_texture_atlas_t;
 
 extern nv_error nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, nv_texture_atlas_t* dst);
 
@@ -57,7 +57,7 @@ extern int nv_texture_atlas_finish(nv_texture_atlas_t* atlas);
 
 extern void nv_texture_atlas_destroy(nv_texture_atlas_t* atlas);
 
-struct nv_texture_atlas_t
+struct nv_texture_atlas_s
 {
   unsigned  canary; // = 0xDEADBEEF
   u32       padding;

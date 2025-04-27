@@ -32,7 +32,7 @@
 
 NOVA_HEADER_START
 
-typedef struct nv_bitset_t nv_bitset_t;
+typedef struct nv_bitset_s nv_bitset_t;
 typedef unsigned char      nv_bitset_bit;
 
 extern nv_error nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set);
@@ -45,7 +45,7 @@ extern void     nv_bitset_destroy(nv_bitset_t* set);
 
 nv_bitset_bit nv_bitset_access_bit(nv_bitset_t* set, int bitindex);
 
-struct nv_bitset_t
+struct nv_bitset_s
 {
   u8*             data;
   size_t          size;

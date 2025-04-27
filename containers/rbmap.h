@@ -36,6 +36,10 @@
 
 NOVA_HEADER_START
 
+typedef struct nv_rbmap_node_s     nv_rbmap_node_t;
+typedef struct nv_rbmap_iterator_s nv_rbmap_iterator_t;
+typedef struct nv_rbmap_s          nv_rbmap_t;
+
 /**
  * Red black trees are a threat to god and must not be implemented by hand
  * WARNING: A lot of the code here is stolen from soruces like wiki, and shoved in by me
@@ -47,24 +51,24 @@ typedef enum nv_rbnode_color
   NOVA_RBNODE_COLOR_BLK = 1
 } nv_rbnode_color;
 
-typedef struct nv_rbmap_node_t
+struct nv_rbmap_node_s
 {
-  struct nv_rbmap_node_t* parent;
-  struct nv_rbmap_node_t* children[2];
-  nv_rbnode_color         color;
-  void*                   key;
-  void*                   val;
-} nv_rbmap_node_t;
+  nv_rbmap_node_t* parent;
+  nv_rbmap_node_t* children[2];
+  nv_rbnode_color  color;
+  void*            key;
+  void*            val;
+};
 
-typedef struct nv_rbmap_iterator_t
+struct nv_rbmap_iterator_s
 {
   nv_rbmap_node_t*  current;
   size_t            top;
   size_t            capacity;
   nv_rbmap_node_t** stack;
-} nv_rbmap_iterator_t;
+};
 
-typedef struct nv_rbmap_t
+struct nv_rbmap_s
 {
   unsigned          canary;
   size_t            key_size;
@@ -74,7 +78,7 @@ typedef struct nv_rbmap_t
   nv_rbmap_node_t** nodes;
   nv_allocator_fn   alloc;
   void*             alloc_arg;
-} nv_rbmap_t;
+};
 
 extern nv_error nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_allocator_fn alloc, void* alloc_arg, nv_rbmap_t* dst);
 

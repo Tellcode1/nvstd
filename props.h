@@ -32,7 +32,7 @@
 
 NOVA_HEADER_START
 
-typedef struct nv_option_t nv_option_t;
+typedef struct nv_option_s nv_option_t;
 
 typedef enum nv_option_type
 {
@@ -43,7 +43,8 @@ typedef enum nv_option_type
   NV_OP_TYPE_DOUBLE
 } nv_option_type;
 
-struct nv_option_t
+/* (nv_option_t){ .type = , .short_name = , .long_name = , .value = , .buffer_size = , } */
+struct nv_option_s
 {
   nv_option_type type;
   const char*    short_name;

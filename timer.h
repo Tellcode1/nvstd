@@ -37,7 +37,7 @@ NOVA_HEADER_START
 #  define NV_TIMER_TIME_TYPE real_t
 #endif
 
-typedef struct nv_timer_t
+typedef struct nv_timer_s
 {
   NV_TIMER_TIME_TYPE start;
   NV_TIMER_TIME_TYPE end;
