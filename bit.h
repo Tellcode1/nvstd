@@ -35,6 +35,30 @@ NOVA_HEADER_START
 typedef uchar* nv_bitmap_t;
 typedef uchar  nv_bit_t;
 
+static inline size_t
+nv_bytes_to_bits(size_t bytes)
+{
+  return bytes * 8;
+}
+
+static inline size_t
+nv_bytes_to_kib(size_t bytes)
+{
+  return bytes * 1024;
+}
+
+static inline size_t
+nv_bytes_to_mib(size_t bytes)
+{
+  return bytes * 1024 * 1024;
+}
+
+static inline size_t
+nv_bytes_to_gib(size_t bytes)
+{
+  return bytes * 1024 * 1024 * 1024;
+}
+
 /* Get the size of the buffer needed, if it is to be interpreted as a bitmap */
 static inline size_t
 nv_get_equivalent_bitmap_size(size_t buffer_size)

@@ -44,6 +44,10 @@ NOVA_HEADER_START
 #  define NOVA_STRING_USE_BUILTIN false
 #endif
 
+#define nv_alloc_struct(struc) (nv_calloc(sizeof(struc)))
+#define nv_zero_struct(struc) (nv_memset(&struc, 0, sizeof(struc)))
+#define nv_zero_structp(struc) (nv_memset(struc, 0, sizeof(*struc)))
+
 /* two strings are equal, returned by all nv_str*cmp functions */
 static const int nv_strequal = 0;
 
@@ -106,6 +110,17 @@ extern void* nv_calloc(size_t sz);
 extern void* nv_aligned_alloc(size_t sz, size_t alignment);
 
 extern void* nv_aligned_realloc(void* orig, size_t size, size_t alignment);
+
+/**
+ * Get the actual pointer allocated by nv_aligned_alloc()\*realloc()
+ * WARNING: If the block had been freed(), this function returns NULL
+ */
+extern void* nv_aligned_get_absolute_ptr(void* aligned_ptr);
+
+/**
+ * Get the size allocated by nv_aligned_alloc()\*realloc
+ */
+extern size_t nv_aligned_ptr_get_size(void* aligned_ptr);
 
 extern void* nv_realloc(void* prevblock, size_t new_sz);
 

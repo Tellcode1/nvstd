@@ -1510,10 +1510,15 @@ nv_aligned_realloc(void* orig, size_t size, size_t alignment)
     return nv_aligned_alloc(size, alignment);
   }
 
-  void** orig_location = (void**)((uchar*)orig - sizeof(void*));
-  if (*orig_location)
+  void* absolute = nv_aligned_get_absolute_ptr(orig);
+  if (NV_LIKELY(absolute))
   {
     size_t prev_size = *(size_t*)((uchar*)orig - sizeof(void*) - sizeof(size_t));
+
+    if (prev_size == size)
+    {
+      return orig;
+    }
 
     void* new_block = nv_aligned_alloc(size, alignment);
     nv_memmove(new_block, orig, NV_MIN(prev_size, size));
@@ -1528,6 +1533,20 @@ nv_aligned_realloc(void* orig, size_t size, size_t alignment)
   }
 
   return NULL;
+}
+
+void*
+nv_aligned_get_absolute_ptr(void* aligned_ptr)
+{
+  void** orig_location = (void**)((uchar*)aligned_ptr - sizeof(void*));
+  return *orig_location;
+}
+
+size_t
+nv_aligned_ptr_get_size(void* aligned_ptr)
+{
+  size_t prev_size = *(size_t*)((uchar*)aligned_ptr - sizeof(void*) - sizeof(size_t));
+  return prev_size;
 }
 
 void*

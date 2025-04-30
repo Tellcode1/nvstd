@@ -437,34 +437,67 @@ nv_list_remove(nv_list_t* list, size_t index)
     return;
   }
 
-  if (list->size - index - 1)
+  size_t elements_to_move = list->size - index - 1;
+  if (elements_to_move > 0)
   {
-    // please don't ask me what this is
-    nv_memcpy((uchar*)list->data + (index * list->type_size), (uchar*)list->data + ((index + 1) * list->type_size), (list->size - index - 1) * list->type_size);
+    uchar* dest          = (uchar*)list->data + (index * list->type_size);
+    uchar* src           = (uchar*)list->data + ((index + 1) * list->type_size);
+    size_t bytes_to_move = elements_to_move * list->type_size;
+
+    nv_memcpy(dest, src, bytes_to_move);
   }
+
   list->size--;
 
   SDL_UnlockMutex(list->mutex);
 }
 
-int
+size_t
 nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 {
   nv_assert(CONT_IS_VALID(list));
 
   SDL_LockMutex((SDL_mutex*)list->mutex);
 
-  for (int i = 0; i < (int)list->size; i++)
+  if (list->size == 0)
   {
-    if (nv_memcmp((unsigned char*)list->data + (i * list->type_size), elem, list->type_size))
+    return SIZE_MAX;
+  }
+  else if (list->size == 1)
+  {
+    if (nv_memcmp(list->data, elem, list->type_size) == 0)
+    {
+      return 0;
+    }
+    else
+    {
+      return SIZE_MAX;
+    }
+  }
+
+  /* start two probes, one from the front and one from behind */
+  for (size_t i = 0; i < list->size; i++)
+  {
+    const size_t fwd_index = i;
+    const size_t bck_index = (list->size - 1) - i;
+
+    const void* fwd = (unsigned char*)list->data + (fwd_index * list->type_size);
+    const void* bck = (unsigned char*)list->data + (bck_index * list->type_size);
+
+    if (nv_memcmp(fwd, elem, list->type_size) == 0)
     {
       SDL_UnlockMutex((SDL_mutex*)list->mutex);
-      return i;
+      return fwd_index;
+    }
+    else if (nv_memcmp(bck, elem, list->type_size) == 0)
+    {
+      SDL_UnlockMutex((SDL_mutex*)list->mutex);
+      return bck_index;
     }
   }
 
   SDL_UnlockMutex((SDL_mutex*)list->mutex);
-  return -1;
+  return (size_t)-1;
 }
 
 void
@@ -570,7 +603,7 @@ nv_hashmap_destroy(nv_hashmap_t* map)
   SDL_DestroyMutex(map->mutex);
 }
 
-void
+static inline void
 nv_hashmap_resize_unsafe(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_arg)
 {
   nv_assert(CONT_IS_VALID(map));
@@ -700,14 +733,14 @@ nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* __i)
   return NULL;
 }
 
-nv_hashmap_node_t*
+static inline nv_hashmap_node_t*
 nv_hashmap_root_node_unsafe(const nv_hashmap_t* map)
 {
   nv_assert(CONT_IS_VALID(map));
   return map->nodes;
 }
 
-void*
+static inline void*
 nv_hashmap_find_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key, void* hash_fn_arg)
 {
   nv_assert(CONT_IS_VALID(map));

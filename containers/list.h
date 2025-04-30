@@ -58,9 +58,6 @@ typedef int (*nv_list_compare_fn)(const void* obj1, const void* obj2);
 extern nv_error nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void* alloc_arg, nv_list_t* vec);
 extern void     nv_list_destroy(nv_list_t* vec);
 
-/*
-  Returns 0 if the list is valid and anything else if it's not
-*/
 static inline bool
 nv_list_is_valid(const nv_list_t* arr)
 {
@@ -131,7 +128,7 @@ extern void nv_list_pop_front(nv_list_t* vec); // expensive
 extern void nv_list_insert(nv_list_t* NV_RESTRICT vec, size_t index, const void* NV_RESTRICT elem);
 extern void nv_list_remove(nv_list_t* vec, size_t index);
 
-extern int nv_list_find(const nv_list_t* NV_RESTRICT vec, const void* NV_RESTRICT elem);
+extern size_t nv_list_find(const nv_list_t* NV_RESTRICT vec, const void* NV_RESTRICT elem);
 
 /**
  * Internally calls qsort.
