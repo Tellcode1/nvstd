@@ -24,8 +24,8 @@
 
 /* Utilities to accessing bits in bitmaps and making them. */
 
-#ifndef __NOVA_BIT_H__
-#define __NOVA_BIT_H__
+#ifndef NOVA_BIT_H_INCLUDED_
+#define NOVA_BIT_H_INCLUDED_
 
 #include "stdafx.h"
 #include <stdbool.h>

@@ -27,8 +27,8 @@
  * https://semver.org/
  */
 
-#ifndef __NOVA_SEMVER_H__
-#define __NOVA_SEMVER_H__
+#ifndef NOVA_SEMANTIC_VERSIONING_H_INCLUDED_
+#define NOVA_SEMANTIC_VERSIONING_H_INCLUDED_
 
 #include "stdafx.h"
 

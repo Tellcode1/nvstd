@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_STDAFX_H__
-#define __NOVA_STDAFX_H__
+#ifndef NOVA_STDAFX_H_INCLUDED_
+#define NOVA_STDAFX_H_INCLUDED_
 
 // implementation: core.c
 

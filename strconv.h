@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_STRING_CONV_H__
-#define __NOVA_STRING_CONV_H__
+#ifndef NOVA_STRING_CONVERT_H_INCLUDED_
+#define NOVA_STRING_CONVERT_H_INCLUDED_
 
 #include "stdafx.h"
 #include <limits.h>

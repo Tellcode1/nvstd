@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_IMAGE_H__
-#define __NOVA_IMAGE_H__
+#ifndef NOVA_IMAGE_H_INCLUDED_
+#define NOVA_IMAGE_H_INCLUDED_
 
 #include "../std/errorcodes.h"
 #include "../std/stdafx.h"

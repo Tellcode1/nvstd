@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_ERROR_CODES_H__
-#define __NOVA_ERROR_CODES_H__
+#ifndef NOVA_ERROR_CODES_H_INCLUDED_
+#define NOVA_ERROR_CODES_H_INCLUDED_
 
 #include "stdafx.h"
 

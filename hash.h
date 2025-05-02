@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_HASH_H__
-#define __NOVA_HASH_H__
+#ifndef NOVA_HASH_H_INCLUDED_
+#define NOVA_HASH_H_INCLUDED_
 
 #include "stdafx.h"
 #include "string.h"

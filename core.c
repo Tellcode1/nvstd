@@ -22,6 +22,7 @@
   SOFTWARE.
   */
 
+#include "rand.h"
 #include "stdafx.h"
 
 #include "alloc.h"
@@ -51,11 +52,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if !defined(NVSM) && !defined(FONTC)
-
-#  define ALLOC_ALLOC_CONDITION (old_size == NV_ALLOC_NEW_BLOCK)
-#  define ALLOC_FREE_CONDITION (new_size == NV_ALLOC_FREE)
-#  define ALLOC_REALLOC_CONDITION (!(ALLOC_ALLOC_CONDITION) && !(ALLOC_FREE_CONDITION))
+#define ALLOC_ALLOC_CONDITION (old_size == NV_ALLOC_NEW_BLOCK)
+#define ALLOC_FREE_CONDITION (new_size == NV_ALLOC_FREE)
+#define ALLOC_REALLOC_CONDITION (!(ALLOC_ALLOC_CONDITION) && !(ALLOC_FREE_CONDITION))
 
 void*
 nv_allocator_c(void* user_data, void* old_ptr, size_t old_size, size_t new_size)
@@ -445,14 +444,14 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
   return i;
 }
 
-#  define NOVA_FTOA_HANDLE_CASE(fn, n, str)                                                                                                                                   \
-    if (fn(n))                                                                                                                                                                \
-    {                                                                                                                                                                         \
-      if (signbit(n) == 0)                                                                                                                                                    \
-        return nv_strncpy2(out, str, max);                                                                                                                                    \
-      else                                                                                                                                                                    \
-        return nv_strncpy2(out, "-" str, max);                                                                                                                                \
-    }
+#define NOVA_FTOA_HANDLE_CASE(fn, n, str)                                                                                                                                     \
+  if (fn(n))                                                                                                                                                                  \
+  {                                                                                                                                                                           \
+    if (signbit(n) == 0)                                                                                                                                                      \
+      return nv_strncpy2(out, str, max);                                                                                                                                      \
+    else                                                                                                                                                                      \
+      return nv_strncpy2(out, "-" str, max);                                                                                                                                  \
+  }
 
 // WARNING::: I didn't write most of this, stole it from stack overflow.
 // if it explodes your computer its your fault!!!
@@ -555,7 +554,7 @@ nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros)
   return itr - out;
 }
 
-#  define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &s, NULL);
+#define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &s, NULL);
 
 intmax_t
 nv_atoi(const char in_string[], size_t max)
@@ -857,32 +856,32 @@ nv_vsnprintf(va_list src, char* dst, size_t max_chars, const char* fmt)
   return _nv_vsfnprintf(src, dst, 0, max_chars, fmt);
 }
 
-#  define NV_PRINTF_PEEK_FMT() ((info->itr < info->fmt_str_end) ? *info->itr : 0)
-#  define NV_PRINTF_PEEK_NEXT_FMT() (((info->itr + 1) < info->fmt_str_end) ? *(info->itr + 1) : 0)
-#  define NV_PRINTF_ADVANCE_FMT()                                                                                                                                             \
-    do                                                                                                                                                                        \
+#define NV_PRINTF_PEEK_FMT() ((info->itr < info->fmt_str_end) ? *info->itr : 0)
+#define NV_PRINTF_PEEK_NEXT_FMT() (((info->itr + 1) < info->fmt_str_end) ? *(info->itr + 1) : 0)
+#define NV_PRINTF_ADVANCE_FMT()                                                                                                                                               \
+  do                                                                                                                                                                          \
+  {                                                                                                                                                                           \
+    if ((info->itr + 1) < info->fmt_str_end)                                                                                                                                  \
     {                                                                                                                                                                         \
-      if ((info->itr + 1) < info->fmt_str_end)                                                                                                                                \
-      {                                                                                                                                                                       \
-        info->itr++;                                                                                                                                                          \
-      }                                                                                                                                                                       \
-      else                                                                                                                                                                    \
-      {                                                                                                                                                                       \
-        info->itr = info->fmt_str_end;                                                                                                                                        \
-      }                                                                                                                                                                       \
-    } while (0);
-#  define NV_PRINTF_ADVANCE_NUM_CHARACTERS_FMT(num_chars)                                                                                                                     \
-    do                                                                                                                                                                        \
+      info->itr++;                                                                                                                                                            \
+    }                                                                                                                                                                         \
+    else                                                                                                                                                                      \
     {                                                                                                                                                                         \
-      if ((info->itr + (num_chars)) < info->fmt_str_end)                                                                                                                      \
-      {                                                                                                                                                                       \
-        info->itr += (num_chars);                                                                                                                                             \
-      }                                                                                                                                                                       \
-      else                                                                                                                                                                    \
-      {                                                                                                                                                                       \
-        info->itr = info->fmt_str_end;                                                                                                                                        \
-      }                                                                                                                                                                       \
-    } while (0);
+      info->itr = info->fmt_str_end;                                                                                                                                          \
+    }                                                                                                                                                                         \
+  } while (0);
+#define NV_PRINTF_ADVANCE_NUM_CHARACTERS_FMT(num_chars)                                                                                                                       \
+  do                                                                                                                                                                          \
+  {                                                                                                                                                                           \
+    if ((info->itr + (num_chars)) < info->fmt_str_end)                                                                                                                        \
+    {                                                                                                                                                                         \
+      info->itr += (num_chars);                                                                                                                                               \
+    }                                                                                                                                                                         \
+    else                                                                                                                                                                      \
+    {                                                                                                                                                                         \
+      info->itr = info->fmt_str_end;                                                                                                                                          \
+    }                                                                                                                                                                         \
+  } while (0);
 
 typedef struct nv_format_info_t
 {
@@ -1340,7 +1339,7 @@ _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const ch
 
 // printf
 
-#  include <zlib.h>
+#include <zlib.h>
 
 int
 nv_bufcompress(const void* NV_RESTRICT input, size_t input_size, void* NV_RESTRICT output, size_t* NV_RESTRICT output_size)
@@ -1650,10 +1649,10 @@ nv_strncpy2(char* dst, const char* src, size_t max)
     return NV_MIN(slen, max);
   }
 
-#  if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strncpy)
+#if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strncpy)
   __builtin_strncpy(dst, src, max);
   return NV_MIN(slen, max);
-#  endif
+#endif
 
   while (*src && max > 0)
   {
@@ -2100,9 +2099,9 @@ nv_strcpy2(char* dst, const char* src)
     return slen;
   }
 
-#  if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strcpy)
+#if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strcpy)
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strlen, __builtin_strcpy(dst, src)); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
-#  endif
+#endif
 
   const char* original_dest = dst;
   while (*src)
@@ -3175,4 +3174,72 @@ nv_format_to_sdl_format(nv_format format)
   }
 }
 
+static inline nv_rand_t
+rotl(nv_rand_t x, int k)
+{
+#if defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_rotateleft64) && (__SIZEOF_LONG_LONG__ == 8)
+  return __builtin_rotateleft64(x, k);
+#else
+  return (x << k) | (x >> ((sizeof(nv_rand_t) * 8 - k) & ((sizeof(nv_rand_t) * 8) - 1)));
 #endif
+}
+
+nv_error
+nv_random_bulk_range(nv_rand_info_t* info, nv_rand_t* outbuf, size_t outbuf_size, size_t min, size_t max)
+{
+  nv_assert_else_return(info != NULL, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(outbuf_size != 0, NV_ERROR_INVALID_ARG);
+  nv_assert_else_return(outbuf != NULL, NV_ERROR_INVALID_ARG);
+
+  if (min >= max)
+  {
+    return min;
+  }
+
+  for (size_t i = 0; i < outbuf_size; i++)
+  {
+    /**
+     * xoshiro 256 random number generator
+     * https://prng.di.unimi.it/xoshiro256plusplus.c
+     */
+    const _NOVA_RAND_TMP_CONVERT_TYPE bound = max - min + 1;
+
+    const nv_rand_t result = rotl(info->state[0] + info->state[3], 23) + info->state[0];
+
+    _NOVA_RAND_TMP_CONVERT_TYPE tmp = ((_NOVA_RAND_TMP_CONVERT_TYPE)result * bound);
+    outbuf[i]                       = min + (tmp >> (sizeof(nv_rand_t) * 8));
+
+    const nv_rand_t t = info->state[1] << 17;
+
+    info->state[2] ^= info->state[0];
+    info->state[3] ^= info->state[1];
+    info->state[1] ^= info->state[2];
+    info->state[0] ^= info->state[3];
+
+    info->state[2] ^= t;
+    info->state[3] = rotl(info->state[3], 45);
+  }
+
+  return NV_SUCCESS;
+}
+
+static inline nv_rand_t
+_splitmix(nv_rand_t* state)
+{
+  nv_rand_t tmp = (*state += 0x9E3779B97f4A7C15);
+  tmp           = (tmp ^ (tmp >> 30)) * 0xBF58476D1CE4E5B9;
+  tmp           = (tmp ^ (tmp >> 27)) * 0x94D049BB133111EB;
+  return tmp ^ (tmp >> 31);
+}
+
+void
+nv_random_seed(nv_rand_info_t* info, nv_rand_t seed)
+{
+  nv_assert_else_return(info != NULL, );
+
+  nv_rand_t splitmixstate = seed;
+  for (size_t i = 0; i < 4; i++)
+  {
+    info->state[i] = _splitmix(&splitmixstate);
+  }
+}

@@ -22,39 +22,36 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_TYPES_H_INCLUDED_
-#define NOVA_TYPES_H_INCLUDED_
+#ifndef NOVA_SYSTEM_ALLOCATOR_H_INCLUDED_
+#define NOVA_SYSTEM_ALLOCATOR_H_INCLUDED_
 
-#ifdef __cplusplus
-extern "C"
+#include "stdafx.h"
+
+NOVA_HEADER_START
+
+/**
+ * 64 KiB on 64 bit, 32 KiB on 32 bit
+ */
+#ifndef NOVA_SYSALLOC_PAGE_SIZE
+#  define NOVA_SYSALLOC_PAGE_SIZE (sizeof(void*) * 8192)
+#endif // NOVA_SYSALLOC_PAGE_SIZE
+
+/**
+ * A structure containing all of the data of the system allocator.
+ */
+typedef struct nv_sysalloc_s      nv_sysalloc_t;
+typedef struct nv_sysalloc_page_s nv_sysalloc_page_t;
+
+struct nv_sysalloc_s
 {
-#endif
+  nv_sysalloc_page_t* root_page;
+};
 
-#include <stdint.h>
+struct nv_sysalloc_page_s
+{
 
-  typedef uint64_t nv_word_t;
+};
 
-  typedef uint64_t u64;
-  typedef uint32_t u32;
-  typedef uint16_t u16;
-  typedef uint8_t  u8;
-  typedef int8_t   sbyte;
-  typedef uint8_t  ubyte;
+NOVA_HEADER_END
 
-  typedef unsigned char uchar;
-
-  typedef int64_t i64;
-  typedef int32_t i32;
-  typedef int16_t i16;
-  typedef int8_t  i8;
-
-  // They ARE 32 and 64 bits by IEEE-754 but aren't set by the standard
-  // But there is a 99.9% chance that they will be
-  typedef float  f32;
-  typedef double f64;
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif // NOVA_TYPES_H_INCLUDED_
+#endif // NOVA_SYSTEM_ALLOCATOR_H_INCLUDED_

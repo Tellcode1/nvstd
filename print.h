@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_PRINT_H__
-#define __NOVA_PRINT_H__
+#ifndef NOVA_PRINT_H_INCLUDED_
+#define NOVA_PRINT_H_INCLUDED_
 
 #include "stdafx.h"
 #include <stdarg.h>

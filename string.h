@@ -25,8 +25,8 @@
 /* An overlayer of standard string.h */
 /* This library though, contains many differences than the standard. Like memcpy has been abolished in favour of memmove. */
 
-#ifndef __NOVA_STRING_H__
-#define __NOVA_STRING_H__
+#ifndef NOVA_STRING_H_INCLUDED_
+#define NOVA_STRING_H_INCLUDED_
 
 // implementation: core.c
 

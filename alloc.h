@@ -48,8 +48,8 @@
  * For more info: https://nullprogram.com/blog/2023/12/17/
  */
 
-#ifndef __NOVA_ALLOC_H__
-#define __NOVA_ALLOC_H__
+#ifndef NOVA_ALLOC_H_INCLUDED_
+#define NOVA_ALLOC_H_INCLUDED_
 
 #include "stdafx.h"
 

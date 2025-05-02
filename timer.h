@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_TIMER_H__
-#define __NOVA_TIMER_H__
+#ifndef NOVA_TIMER_H_INCLUDED_
+#define NOVA_TIMER_H_INCLUDED_
 
 // implementation: none
 

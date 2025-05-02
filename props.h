@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_PROGRAM_OPTIONS_H__
-#define __NOVA_PROGRAM_OPTIONS_H__
+#ifndef NOVA_PROGRAM_OPTIONS_H_INCLUDED_
+#define NOVA_PROGRAM_OPTIONS_H_INCLUDED_
 
 // implementation: core.c
 

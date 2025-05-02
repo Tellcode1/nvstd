@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_FORMAT_H__
-#define __NOVA_FORMAT_H__
+#ifndef NOVA_FORMAT_H_INCLUDED_
+#define NOVA_FORMAT_H_INCLUDED_
 
 // implementation: core.c
 
