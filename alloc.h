@@ -88,14 +88,14 @@ NOVA_HEADER_START
  */
 typedef void* (*nv_allocator_fn)(void* user_data, void* old_ptr, size_t old_size, size_t new_size);
 
-typedef struct nv_alloc_estack_s nv_alloc_estack_t;
+typedef struct nv_alloc_estack nv_alloc_estack_t;
 
 /**
  * The C standard's allocator
  */
 extern void* nv_allocator_c(void* user_data, void* old_ptr, size_t old_size, size_t new_size);
 
-struct nv_alloc_estack_s
+struct nv_alloc_estack
 {
   unsigned char* buffer;      // << USER MUST WRITE >>
   size_t         buffer_size; // << USER MUST WRITE >>

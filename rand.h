@@ -44,10 +44,10 @@ NOVA_HEADER_START
  * Most random functions are specialized to bit width, and
  * so would require specialization which I do not have the time to do.
  */
-typedef u64                   nv_rand_t;
-typedef struct nv_rand_info_s nv_rand_info_t;
+typedef u64                 nv_rand_t;
+typedef struct nv_rand_info nv_rand_info_t;
 
-struct nv_rand_info_s
+struct nv_rand_info
 {
   nv_rand_t state[4];
 };
@@ -77,9 +77,7 @@ nv_random_range(nv_rand_info_t* info, nv_rand_t min, nv_rand_t max)
 static inline nv_error
 nv_random_bulk(nv_rand_info_t* info, nv_rand_t* outbuf, size_t buf_num_elements)
 {
-  nv_rand_t buf[1];
-  nv_random_bulk_range(info, outbuf, buf_num_elements, 0, SIZE_MAX);
-  return buf[0];
+  return nv_random_bulk_range(info, outbuf, buf_num_elements, 0, SIZE_MAX);
 }
 
 /**

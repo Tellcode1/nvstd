@@ -36,8 +36,8 @@ NOVA_HEADER_START
 #  define NV_HASHMAP_LOAD_FACTOR (3.0f / 4.0f)
 #endif
 
-typedef struct nv_hashmap_s      nv_hashmap_t;
-typedef struct nv_hashmap_node_s nv_hashmap_node_t;
+typedef struct nv_hashmap      nv_hashmap_t;
+typedef struct nv_hashmap_node nv_hashmap_node_t;
 
 /**
   @note hash_fn may be NULL for the standard FNV-1A function.
@@ -99,14 +99,14 @@ extern void nv_hashmap_serialize(nv_hashmap_t* NV_RESTRICT map, FILE* NV_RESTRIC
  */
 extern void nv_hashmap_deserialize(nv_hashmap_t* NV_RESTRICT map, FILE* NV_RESTRICT f, void* hash_fn_arg);
 
-struct nv_hashmap_node_s
+struct nv_hashmap_node
 {
   void* key;
   void* value;
   u32   hash;
 };
 
-struct nv_hashmap_s
+struct nv_hashmap
 {
   unsigned           canary;
   SDL_mutex*         mutex;

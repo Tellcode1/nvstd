@@ -30,7 +30,7 @@ void __shutup_compiler_errno_warning__(void);
 void
 __shutup_compiler_errno_warning__(void)
 {
-  (void)__errno_location();
+  (void)(errno);
 }
 
 /* find last quote in a line: "([^"]+)"(?!.*") */
@@ -719,8 +719,6 @@ nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* __i)
   /**
    * If map->capacity is 0, it simply jumps to returning NULL
    */
-  NV_LIKELY(map->capacity > 0);
-
   for (; (*__i) < map->capacity; (*__i)++)
   {
     size_t i = *__i;
@@ -902,7 +900,6 @@ nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, n
   nv_assert_else_return(dst != NULL, NV_ERROR_INVALID_ARG);
   nv_assert_else_return(width != 0, NV_ERROR_INVALID_ARG);
   nv_assert_else_return(height != 0, NV_ERROR_INVALID_ARG);
-  nv_assert_else_return(padding >= 0, NV_ERROR_INVALID_ARG);
   nv_assert_else_return(fmt != NOVA_FORMAT_UNDEFINED, NV_ERROR_INVALID_ARG);
 
   *dst = nv_zero_init(nv_texture_atlas_t);

@@ -39,15 +39,15 @@ NOVA_HEADER_START
 /**
  * A structure containing all of the data of the system allocator.
  */
-typedef struct nv_sysalloc_s      nv_sysalloc_t;
-typedef struct nv_sysalloc_page_s nv_sysalloc_page_t;
+typedef struct nv_sysalloc      nv_sysalloc_t;
+typedef struct nv_sysalloc_page nv_sysalloc_page_t;
 
-struct nv_sysalloc_s
+struct nv_sysalloc
 {
   nv_sysalloc_page_t* root_page;
 };
 
-struct nv_sysalloc_page_s
+struct nv_sysalloc_page
 {
 
 };

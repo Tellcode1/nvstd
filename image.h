@@ -32,11 +32,11 @@
 
 NOVA_HEADER_START
 
-typedef struct nv_image_s nv_image_t;
+typedef struct nv_image nv_image_t;
 struct SDL_Surface;
 
 // CPU Image
-struct nv_image_s
+struct nv_image
 {
   size_t         width, height;
   nv_format      format;

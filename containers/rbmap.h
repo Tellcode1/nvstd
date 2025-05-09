@@ -36,9 +36,9 @@
 
 NOVA_HEADER_START
 
-typedef struct nv_rbmap_node_s     nv_rbmap_node_t;
-typedef struct nv_rbmap_iterator_s nv_rbmap_iterator_t;
-typedef struct nv_rbmap_s          nv_rbmap_t;
+typedef struct nv_rbmap_node     nv_rbmap_node_t;
+typedef struct nv_rbmap_iterator nv_rbmap_iterator_t;
+typedef struct nv_rbmap          nv_rbmap_t;
 
 /**
  * Red black trees are a threat to god and must not be implemented by hand
@@ -51,7 +51,7 @@ typedef enum nv_rbnode_color
   NOVA_RBNODE_COLOR_BLK = 1
 } nv_rbnode_color;
 
-struct nv_rbmap_node_s
+struct nv_rbmap_node
 {
   nv_rbmap_node_t* parent;
   nv_rbmap_node_t* children[2];
@@ -60,7 +60,7 @@ struct nv_rbmap_node_s
   void*            val;
 };
 
-struct nv_rbmap_iterator_s
+struct nv_rbmap_iterator
 {
   nv_rbmap_node_t*  current;
   size_t            top;
@@ -68,7 +68,7 @@ struct nv_rbmap_iterator_s
   nv_rbmap_node_t** stack;
 };
 
-struct nv_rbmap_s
+struct nv_rbmap
 {
   unsigned          canary;
   size_t            key_size;

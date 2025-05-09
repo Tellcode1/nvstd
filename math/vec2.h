@@ -29,6 +29,7 @@ NOVA_HEADER_START
   }
 
 _NV_DEC_VEC2(int, v2i, vec2i, sqrt)
+_NV_DEC_VEC2(unsigned, v2u, vec2u, sqrt)
 _NV_DEC_VEC2(float, v2f, vec2f, sqrtf)
 _NV_DEC_VEC2(double, v2d, vec2d, sqrt)
 _NV_DEC_VEC2(flt_t, v2, vec2, sqrtf)

@@ -25,6 +25,7 @@
 #ifndef NOVA_PRINT_H_INCLUDED_
 #define NOVA_PRINT_H_INCLUDED_
 
+#include "attributes.h"
 #include "stdafx.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -76,49 +77,49 @@ extern void nv_setstdout(FILE* stream);
  * prints formatted output to the g_stdstream
  * @return number of characters written
  */
-extern size_t nv_printf(const char* fmt, ...);
+extern size_t nv_printf(const char* fmt, ...) NOVA_ATTR_FORMAT(1, 2) NOVA_ATTR_NONNULL(1);
 
 /**
  * prints formatted output to a file
  */
-extern size_t nv_fprintf(FILE* f, const char* fmt, ...);
+extern size_t nv_fprintf(FILE* outfile, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(1, 2);
 
 /**
  * prints no more than max_chars to g_stdstream
  */
-extern size_t nv_nprintf(size_t max_chars, const char* fmt, ...);
+extern size_t nv_nprintf(size_t max_chars, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(2);
 
 /**
  * prints formatted output to a string
  *
  * note: not recommended. use nv_snprintf instead.
  */
-extern size_t nv_sprintf(char* src, const char* fmt, ...);
+extern size_t nv_sprintf(char* dst, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(2);
 
 /**
  * prints formatted output using a va_list
  */
-extern size_t nv_vprintf(va_list args, const char* fmt);
+extern size_t nv_vprintf(va_list args, const char* fmt) NOVA_ATTR_NONNULL(2);
 
 /**
  * prints formatted output using a va_list to a file
  */
-extern size_t nv_vfprintf(va_list args, FILE* f, const char* fmt);
+extern size_t nv_vfprintf(va_list args, FILE* outfile, const char* fmt) NOVA_ATTR_NONNULL(1, 3);
 
 /**
  * prints formatted output to a string, writing no more than max_chars
  */
-extern size_t nv_snprintf(char* src, size_t max_chars, const char* fmt, ...);
+extern size_t nv_snprintf(char* dst, size_t max_chars, const char* fmt, ...) NOVA_ATTR_FORMAT(3, 4) NOVA_ATTR_NONNULL(3);
 
 /**
  * prints no more than max_chars to g_stdstream using a va_list
  */
-extern size_t nv_vnprintf(va_list args, size_t max_chars, const char* fmt);
+extern size_t nv_vnprintf(va_list args, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 3);
 
 /**
  * prints no more than max_chars to a string using a va_list
  */
-extern size_t nv_vsnprintf(va_list args, char* src, size_t max_chars, const char* fmt);
+extern size_t nv_vsnprintf(va_list args, char* dst, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 4);
 
 /**
  * the core print function
@@ -129,7 +130,7 @@ extern size_t nv_vsnprintf(va_list args, char* src, size_t max_chars, const char
  * @param dst destination buffer or FILE ptr. It is safe to pass NULL.
  * @return The number of characters that WOULD be written, even if dst is NULL, but truncated to max_chars.
  */
-extern size_t _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt);
+extern size_t _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 5);
 
 NOVA_HEADER_END
 
