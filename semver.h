@@ -31,6 +31,7 @@
 #define NOVA_SEMANTIC_VERSIONING_H_INCLUDED_
 
 #include "stdafx.h"
+#include "attributes.h"
 
 NOVA_HEADER_START
 
@@ -51,7 +52,7 @@ NOVA_HEADER_START
 
 typedef uint32_t version_t;
 
-static inline version_t
+static inline NOVA_ATTR_CONST version_t
 nv_semver_pack_version(version_t major, version_t minor, version_t patch)
 {
   nv_assert(major <= NV_SEMVER_MAJOR_VERSION_NUMBER_MAX);

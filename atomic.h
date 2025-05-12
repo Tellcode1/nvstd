@@ -56,6 +56,7 @@ typedef _Atomic(bool)      nv_atomic_bool;
 #    include <Windows.h>
 typedef volatile long          nv_atomic_int;
 typedef volatile unsigned long nv_atomic_uint;
+typedef volatile long          nv_atomic_long;
 typedef volatile bool          nv_atomic_bool;
 typedef void*                  nv_atomic_ptr;
 
@@ -69,8 +70,9 @@ typedef void*                  nv_atomic_ptr;
 #  elif defined(__GNUC__) || defined(__clang__)
 typedef volatile int      nv_atomic_int;
 typedef volatile unsigned nv_atomic_uint;
-typedef volatile bool     nv_atomic_bool;
+typedef volatile long     nv_atomic_long;
 typedef volatile void*    nv_atomic_ptr;
+typedef volatile bool     nv_atomic_bool;
 
 #    define nv_atomic_load(ptr) __atomic_load_n(ptr, __ATOMIC_SEQ_CST)
 #    define nv_atomic_store(ptr, val) __atomic_store_n(ptr, val, __ATOMIC_SEQ_CST)

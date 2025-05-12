@@ -25,6 +25,7 @@
 #ifndef NOVA_HASH_H_INCLUDED_
 #define NOVA_HASH_H_INCLUDED_
 
+#include "attributes.h"
 #include "stdafx.h"
 #include "string.h"
 #include <stdio.h>
@@ -35,12 +36,11 @@ NOVA_HEADER_START
  * Return: the hash computed from the input
  * A modulus will be performed if needed on the returned hash, you need not concern yourself with that
  */
-typedef u32 (*nv_hash_fn)(const void* input, size_t input_size, void* user_data);
+typedef u32 (*nv_hash_fn)(const void* input, size_t input_size, void* user_data) NOVA_ATTR_CONST;
 
-typedef int (*nv_compare_fn)(const void* key1, const void* key2, size_t size, void* user_data);
+typedef int (*nv_compare_fn)(const void* key1, const void* key2, size_t size, void* user_data) NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1, 2);
 
-static inline u32
-nv_hash_fnv1a(const void* input, size_t input_size, void* user_data)
+static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_fnv1a(const void* input, size_t input_size, void* user_data)
 {
   (void)user_data;
 
@@ -59,8 +59,7 @@ nv_hash_fnv1a(const void* input, size_t input_size, void* user_data)
   return hash;
 }
 
-static inline u32
-nv_hash_fnv1a_string(const void* input, size_t input_size, void* user_data)
+static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_fnv1a_string(const void* input, size_t input_size, void* user_data)
 {
   (void)user_data;
   (void)input_size;
@@ -81,8 +80,7 @@ nv_hash_fnv1a_string(const void* input, size_t input_size, void* user_data)
   return hash;
 }
 
-static inline u32
-nv_hash_murmur3(const void* input, size_t input_size, void* user_data)
+static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_murmur3(const void* input, size_t input_size, void* user_data)
 {
   (void)user_data;
 

@@ -26,30 +26,60 @@
 #define NOVA_SYSTEM_ALLOCATOR_H_INCLUDED_
 
 #include "stdafx.h"
+#include "string.h"
+
+#include <sys/mman.h>
 
 NOVA_HEADER_START
+
+#ifndef NOVA_SYSALLOC_PAGE_CAPACITY
+#  define NOVA_SYSALLOC_PAGE_CAPACITY (4096 - sizeof(void*) - sizeof(void*))
+#endif // NOVA_SYSALLOC_PAGE_CAPACITY
 
 /**
  * 64 KiB on 64 bit, 32 KiB on 32 bit
  */
-#ifndef NOVA_SYSALLOC_PAGE_SIZE
-#  define NOVA_SYSALLOC_PAGE_SIZE (sizeof(void*) * 8192)
-#endif // NOVA_SYSALLOC_PAGE_SIZE
+#ifndef NOVA_SYSALLOC_SUPER_BLOCK_CAPACITY
+#  define NOVA_SYSALLOC_SUPER_BLOCK_CAPACITY (sizeof(void*) * 8192)
+#endif // NOVA_SYSALLOC_SUPER_BLOCK_CAPACITY
+
+#define NOVA_SYSALLOC_PAGE_HEADER_SIZE (sizeof(void*) * 2 + sizeof(size_t))
+
+#define NOVA_SYSALLOC_PAGES_PER_BLOCK (NOVA_SYSALLOC_SUPER_BLOCK_CAPACITY / NOVA_SYSALLOC_PAGE_CAPACITY)
 
 /**
  * A structure containing all of the data of the system allocator.
  */
-typedef struct nv_sysalloc      nv_sysalloc_t;
-typedef struct nv_sysalloc_page nv_sysalloc_page_t;
+typedef struct nv_sa_page      nv_sa_page_t;
+typedef struct nv_sa_block     nv_sa_block_t;
+typedef struct nv_sa_freeblock nv_sa_freeblock_t;
 
-struct nv_sysalloc
+void* nv_sa_alloc(size_t size);
+void  _sort_and_merge_free_blocks(struct nv_sa_page* page);
+void* nv_sa_realloc(void* old_ptr, size_t new_size);
+void  nv_sa_free(void* ptr);
+
+struct nv_sa_block
 {
-  nv_sysalloc_page_t* root_page;
+  size_t             size;
+  size_t             offset;
+  struct nv_sa_page* page;
+  size_t             alignment_exponent : 6;
 };
 
-struct nv_sysalloc_page
+struct nv_sa_freeblock
 {
+  size_t                  size;
+  size_t                  offset;
+  struct nv_sa_freeblock* next;
+};
 
+struct nv_sa_page
+{
+  struct nv_sa_freeblock* root_free_block;
+  struct nv_sa_page*      next;
+  size_t                  page_size;
+  uchar                   capacity[NOVA_SYSALLOC_PAGE_CAPACITY];
 };
 
 NOVA_HEADER_END

@@ -28,7 +28,7 @@
 #include "../alloc.h"
 #include "../errorcodes.h"
 #include "../stdafx.h"
-#include <SDL2/SDL_mutex.h>
+#include <SDL3/SDL_mutex.h>
 
 NOVA_HEADER_START
 
@@ -51,7 +51,7 @@ struct nv_bitset
   size_t          size;
   nv_allocator_fn alloc;
   void*           alloc_arg;
-  SDL_mutex*      mutex;
+  SDL_Mutex*      mutex;
 };
 
 NOVA_HEADER_END

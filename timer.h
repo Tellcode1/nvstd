@@ -28,8 +28,10 @@
 // implementation: none
 
 #include "stdafx.h"
-#include <SDL2/SDL_timer.h>
+#include <SDL3/SDL_timer.h>
+#include <bits/time.h>
 #include <stdbool.h>
+#include <time.h>
 
 NOVA_HEADER_START
 
@@ -46,7 +48,9 @@ typedef struct nv_timer_s
 static inline NV_TIMER_TIME_TYPE
 _nv_timer_get_currtime(void)
 {
-  return (NV_TIMER_TIME_TYPE)SDL_GetPerformanceCounter() / (NV_TIMER_TIME_TYPE)SDL_GetPerformanceFrequency();
+  struct timespec tp;
+  clock_gettime(CLOCK_MONOTONIC, &tp);
+  return (float)tp.tv_nsec * 1.000000e-09;
 }
 
 // the timer will finish after 's' seconds

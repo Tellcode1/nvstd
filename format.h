@@ -28,6 +28,7 @@
 // implementation: core.c
 
 #include "../std/stdafx.h"
+#include "attributes.h"
 
 NOVA_HEADER_START
 
@@ -88,11 +89,11 @@ typedef enum nv_format
   NOVA_FORMAT_BC7,
 } nv_format;
 
-extern VkFormat_   nv_format_to_vk_format(nv_format format);
-extern SDL_Format_ nv_format_to_sdl_format(nv_format format);
+extern VkFormat_   nv_format_to_vk_format(nv_format format) NOVA_ATTR_CONST;
+extern SDL_Format_ nv_format_to_sdl_format(nv_format format) NOVA_ATTR_CONST;
 
-extern nv_format nv_vk_format_to_nv_format(VkFormat_ format);
-extern nv_format nv_sdl_format_to_nv_format(SDL_Format_ format);
+extern nv_format nv_vk_format_to_nv_format(VkFormat_ format) NOVA_ATTR_CONST;
+extern nv_format nv_sdl_format_to_nv_format(SDL_Format_ format) NOVA_ATTR_CONST;
 
 // dst is a pointer to a const char *
 // like:
@@ -100,27 +101,27 @@ extern nv_format nv_sdl_format_to_nv_format(SDL_Format_ format);
 /**
  * This function must never return NULL
  */
-extern const char* nv_format_to_string(nv_format format);
+extern const char* nv_format_to_string(nv_format format) NOVA_ATTR_CONST;
 
-extern bool nv_format_has_color_channel(nv_format fmt);
+extern bool nv_format_has_color_channel(nv_format fmt) NOVA_ATTR_CONST;
 
 // Returns false even for stencil/depth and undefined format
-extern bool nv_format_has_alpha_channel(nv_format fmt);
+extern bool nv_format_has_alpha_channel(nv_format fmt) NOVA_ATTR_CONST;
 
-extern bool nv_format_has_depth_channel(nv_format fmt);
+extern bool nv_format_has_depth_channel(nv_format fmt) NOVA_ATTR_CONST;
 
-extern bool nv_format_has_stencil_channel(nv_format fmt);
+extern bool nv_format_has_stencil_channel(nv_format fmt) NOVA_ATTR_CONST;
 
 // returns -1 on invalid format (or compressed formats)
 // returns the size of depth component (in bytes) even in combined depth stencil formats
-extern int nv_format_get_bytes_per_channel(nv_format fmt);
+extern int nv_format_get_bytes_per_channel(nv_format fmt) NOVA_ATTR_CONST;
 
-extern int nv_format_get_bytes_per_pixel(nv_format fmt);
+extern int nv_format_get_bytes_per_pixel(nv_format fmt) NOVA_ATTR_CONST;
 
 // 0 on error or undefined format.
 // oh and I haven't implemented compressed formats yet..
 // also, stencil channels are also counted
-extern int nv_format_get_num_channels(nv_format fmt);
+extern int nv_format_get_num_channels(nv_format fmt) NOVA_ATTR_CONST;
 
 NOVA_HEADER_END
 

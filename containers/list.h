@@ -27,7 +27,7 @@
 
 #include "../alloc.h"
 #include "../errorcodes.h"
-#include <SDL2/SDL_mutex.h>
+#include <SDL3/SDL_mutex.h>
 
 NOVA_HEADER_START
 
@@ -40,7 +40,7 @@ typedef struct nv_list_s
   size_t          capacity;
   size_t          type_size;
   void*           data;
-  SDL_mutex*      mutex;
+  SDL_Mutex*      mutex;
   nv_allocator_fn alloc;
   void*           alloc_arg;
 } nv_list_t;

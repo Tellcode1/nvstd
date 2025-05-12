@@ -12,8 +12,8 @@
 #include "containers/list.h"
 #include "containers/rbmap.h"
 
-#include <SDL2/SDL.h>
-#include <SDL2/SDL_mutex.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_mutex.h>
 
 #include <errno.h>
 #include <limits.h>
@@ -117,10 +117,10 @@ nv_list_size(const nv_list_t* list)
     return 0;
   }
 
-  SDL_LockMutex((SDL_mutex*)list->mutex);
+  SDL_LockMutex((SDL_Mutex*)list->mutex);
   nv_assert(CONT_IS_VALID(list));
   size_t sz = list->size;
-  SDL_UnlockMutex((SDL_mutex*)list->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return sz;
 }
 
@@ -132,10 +132,10 @@ nv_list_capacity(const nv_list_t* list)
     return 0;
   }
 
-  SDL_LockMutex((SDL_mutex*)list->mutex);
+  SDL_LockMutex((SDL_Mutex*)list->mutex);
   nv_assert(CONT_IS_VALID(list));
   size_t cap = list->capacity;
-  SDL_UnlockMutex((SDL_mutex*)list->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return cap;
 }
 
@@ -146,10 +146,10 @@ nv_list_type_size(const nv_list_t* list)
   {
     return 0;
   }
-  SDL_LockMutex((SDL_mutex*)list->mutex);
+  SDL_LockMutex((SDL_Mutex*)list->mutex);
   nv_assert(CONT_IS_VALID(list));
   size_t tsize = list->type_size;
-  SDL_UnlockMutex((SDL_mutex*)list->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return tsize;
 }
 
@@ -160,10 +160,10 @@ nv_list_data(const nv_list_t* list)
   {
     return 0;
   }
-  SDL_LockMutex((SDL_mutex*)list->mutex);
+  SDL_LockMutex((SDL_Mutex*)list->mutex);
   nv_assert(CONT_IS_VALID(list));
   void* ptr = list->data;
-  SDL_UnlockMutex((SDL_mutex*)list->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return ptr;
 }
 
@@ -204,12 +204,12 @@ nv_list_get(const nv_list_t* list, size_t i)
     return NULL;
   }
 
-  SDL_LockMutex((SDL_mutex*)list->mutex);
+  SDL_LockMutex((SDL_Mutex*)list->mutex);
   nv_assert_else_return(CONT_IS_VALID(list), NULL);
   nv_assert_else_return(i < list->capacity, NULL);
   uchar* data      = list->data;
   size_t type_size = list->type_size;
-  SDL_UnlockMutex((SDL_mutex*)list->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   if (!data)
   {
     return NULL;
@@ -229,7 +229,7 @@ nv_list_set(nv_list_t* list, size_t i, void* elem)
 void
 nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
 {
-  SDL_LockMutex((SDL_mutex*)src->mutex);
+  SDL_LockMutex((SDL_Mutex*)src->mutex);
   SDL_LockMutex(dst->mutex);
 
   nv_assert(CONT_IS_VALID(src));
@@ -243,7 +243,7 @@ nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
   dst->size = src->size;
   nv_memcpy(dst->data, src->data, src->size * src->type_size);
 
-  SDL_UnlockMutex((SDL_mutex*)src->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)src->mutex);
   SDL_UnlockMutex(dst->mutex);
 }
 
@@ -281,8 +281,8 @@ nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
   nv_assert(CONT_IS_VALID(list1));
   nv_assert(CONT_IS_VALID(list2));
 
-  SDL_LockMutex((SDL_mutex*)list1->mutex);
-  SDL_LockMutex((SDL_mutex*)list2->mutex);
+  SDL_LockMutex((SDL_Mutex*)list1->mutex);
+  SDL_LockMutex((SDL_Mutex*)list2->mutex);
 
   bool equal = 1;
   if ((list1->size != list2->size || list1->type_size != list2->type_size) || (nv_memcmp(list1->data, list2->data, list1->size * list1->type_size) != 0))
@@ -290,8 +290,8 @@ nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
     equal = 0;
   }
 
-  SDL_UnlockMutex((SDL_mutex*)list1->mutex);
-  SDL_UnlockMutex((SDL_mutex*)list2->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list1->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list2->mutex);
 
   return equal;
 }
@@ -457,7 +457,7 @@ nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 {
   nv_assert(CONT_IS_VALID(list));
 
-  SDL_LockMutex((SDL_mutex*)list->mutex);
+  SDL_LockMutex((SDL_Mutex*)list->mutex);
 
   if (list->size == 0)
   {
@@ -486,17 +486,17 @@ nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 
     if (nv_memcmp(fwd, elem, list->type_size) == 0)
     {
-      SDL_UnlockMutex((SDL_mutex*)list->mutex);
+      SDL_UnlockMutex((SDL_Mutex*)list->mutex);
       return fwd_index;
     }
     else if (nv_memcmp(bck, elem, list->type_size) == 0)
     {
-      SDL_UnlockMutex((SDL_mutex*)list->mutex);
+      SDL_UnlockMutex((SDL_Mutex*)list->mutex);
       return bck_index;
     }
   }
 
-  SDL_UnlockMutex((SDL_mutex*)list->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return (size_t)-1;
 }
 
@@ -928,7 +928,7 @@ nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, n
   return NV_ERROR_SUCCESS;
 }
 
-SDL_mutex* atlas_resize_mutex = NULL;
+SDL_Mutex* atlas_resize_mutex = NULL;
 
 int
 nv_texture_atlas_add(nv_texture_atlas_t* atlas, const nv_image_t* img, size_t* out_x, size_t* out_y)
@@ -1152,7 +1152,7 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
 {
   nv_assert(CONT_IS_VALID(bin));
 
-  SDL_LockMutex((SDL_mutex*)bin->mutex);
+  SDL_LockMutex((SDL_Mutex*)bin->mutex);
 
   size_t max_h = 0;
   for (size_t i = x; i < x + w && i < bin->width; i++)
@@ -1163,7 +1163,7 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
     }
   }
 
-  SDL_UnlockMutex((SDL_mutex*)bin->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)bin->mutex);
   return max_h;
 }
 
@@ -1172,7 +1172,7 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
 {
   nv_assert(CONT_IS_VALID(bin));
 
-  SDL_LockMutex((SDL_mutex*)bin->mutex);
+  SDL_LockMutex((SDL_Mutex*)bin->mutex);
 
   /**
    * SIZE_MAX is used as a no find value.
@@ -1191,7 +1191,7 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
   size_t max_x = bin->width - rect->width;
   for (size_t x = 0; x <= max_x; x++)
   {
-    SDL_UnlockMutex((SDL_mutex*)bin->mutex);
+    SDL_UnlockMutex((SDL_Mutex*)bin->mutex);
     size_t y = nv_skyline_bin_max_height(bin, x, rect->width);
     if (y + rect->height <= bin->height && y < min_y)
     {
@@ -1199,10 +1199,10 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
       *best_x = x;
       *best_y = y;
     }
-    SDL_LockMutex((SDL_mutex*)bin->mutex);
+    SDL_LockMutex((SDL_Mutex*)bin->mutex);
   }
 
-  SDL_UnlockMutex((SDL_mutex*)bin->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)bin->mutex);
   return (*best_x != SIZE_MAX);
 }
 
@@ -1476,7 +1476,7 @@ nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src)
     return;
   }
   SDL_LockMutex(dst->mutex);
-  SDL_LockMutex((SDL_mutex*)src->mutex);
+  SDL_LockMutex((SDL_Mutex*)src->mutex);
   if (src->size != dst->size && dst->data)
   {
     NV_FREE(dst->alloc, dst->alloc_arg, dst->data, dst->size * sizeof(uint8_t));
@@ -1488,7 +1488,7 @@ nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src)
     nv_memcpy(dst->data, src->data, src->size);
   }
   SDL_UnlockMutex(dst->mutex);
-  SDL_UnlockMutex((SDL_mutex*)src->mutex);
+  SDL_UnlockMutex((SDL_Mutex*)src->mutex);
 }
 
 void

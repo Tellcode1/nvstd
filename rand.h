@@ -25,6 +25,7 @@
 #ifndef NOVA_RAND_H_INCLUDED_
 #define NOVA_RAND_H_INCLUDED_
 
+#include "attributes.h"
 #include "errorcodes.h"
 #include "stdafx.h"
 
@@ -56,26 +57,23 @@ struct nv_rand_info
  * For 1000000000 iterations, normal rand() takes 14.829721 seconds while this takes 3.230303 seconds at -O2.
  * Yeah, the results are skewed but shut up, blazingly fast.
  */
-extern nv_error nv_random_bulk_range(nv_rand_info_t* info, nv_rand_t* outbuf, size_t buf_num_elements, size_t min, size_t max);
+extern nv_error nv_random_bulk_range(nv_rand_info_t* info, nv_rand_t* outbuf, size_t buf_num_elements, size_t min, size_t max) NOVA_ATTR_NONNULL(1, 2);
 
-static inline nv_rand_t
-nv_random(nv_rand_info_t* info)
+static inline NOVA_ATTR_NONNULL(1) nv_rand_t nv_random(nv_rand_info_t* info)
 {
   nv_rand_t buf[1];
   nv_random_bulk_range(info, buf, 1, 0, SIZE_MAX);
   return buf[0];
 }
 
-static inline nv_rand_t
-nv_random_range(nv_rand_info_t* info, nv_rand_t min, nv_rand_t max)
+static inline NOVA_ATTR_NONNULL(1) nv_rand_t nv_random_range(nv_rand_info_t* info, nv_rand_t min, nv_rand_t max)
 {
   nv_rand_t buf[1];
   nv_random_bulk_range(info, buf, 1, min, max);
   return buf[0];
 }
 
-static inline nv_error
-nv_random_bulk(nv_rand_info_t* info, nv_rand_t* outbuf, size_t buf_num_elements)
+static inline NOVA_ATTR_NONNULL(1, 2) nv_error nv_random_bulk(nv_rand_info_t* info, nv_rand_t* outbuf, size_t buf_num_elements)
 {
   return nv_random_bulk_range(info, outbuf, buf_num_elements, 0, SIZE_MAX);
 }
@@ -85,7 +83,7 @@ nv_random_bulk(nv_rand_info_t* info, nv_rand_t* outbuf, size_t buf_num_elements)
  * Do not use constants, use something like the current time
  * or the process id or something.
  */
-extern void nv_random_seed(nv_rand_info_t* info, nv_rand_t seed);
+extern void nv_random_seed(nv_rand_info_t* info, nv_rand_t seed) NOVA_ATTR_NONNULL(1);
 
 NOVA_HEADER_END
 

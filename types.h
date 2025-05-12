@@ -53,6 +53,11 @@ extern "C"
   typedef float  f32;
   typedef double f64;
 
+  /**
+   * little easier to type
+   */
+#define null (NULL)
+
 #ifdef __cplusplus
 }
 #endif

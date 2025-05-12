@@ -31,7 +31,7 @@
 #include "../image.h"
 #include "../stdafx.h"
 #include "rectpack.h"
-#include <SDL2/SDL_mutex.h>
+#include <SDL3/SDL_mutex.h>
 
 NOVA_HEADER_START
 
@@ -65,7 +65,7 @@ struct nv_texture_atlas
 
   nv_allocator_fn alloc;
 
-  SDL_mutex* mutex;
+  SDL_Mutex* mutex;
 
   unsigned char* data;
 

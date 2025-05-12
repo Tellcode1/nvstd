@@ -31,7 +31,7 @@
 #define __NOVA_STD_VERSION_MINOR__ 2
 #define __NOVA_STD_VERSION_PATCH__ 0
 
-#include <SDL2/SDL_mutex.h>
+#include <SDL3/SDL_mutex.h>
 #include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -122,7 +122,7 @@ NOVA_HEADER_START
 #define NV_CONCAT(x, y) x##y
 
 #ifndef NV_STATIC_ASSERT
-#  define NV_STATIC_ASSERT(expr, errmsg) typedef char static_assert_failed__##errmsg[!(expr) ? -1 : 1]
+#  define NV_STATIC_ASSERT(expr, errmsg) static volatile char static_assert_failed__##errmsg[!(expr) ? -1 : 1]
 #endif
 
 /**
@@ -228,7 +228,11 @@ NOVA_HEADER_START
   _nv_core_log(__FILE__, __LINE__, __func__, preceder, is_error, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 
 #define nv_log_error(...) _NV_LOG_EXPAND_PARAMETERS(" err: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-#define nv_log_and_abort(...) _NV_LOG_EXPAND_PARAMETERS(" fatal error: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_and_abort(...)                                                                                                                                                 \
+  {                                                                                                                                                                           \
+    _NV_LOG_EXPAND_PARAMETERS(" _fatal_: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__));                                                          \
+    abort();                                                                                                                                                                  \
+  }
 #define nv_log_warning(...) _NV_LOG_EXPAND_PARAMETERS(" warning: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 #define nv_log_info(...) _NV_LOG_EXPAND_PARAMETERS(" info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 #define nv_log_debug(...) _NV_LOG_EXPAND_PARAMETERS(" debug: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))

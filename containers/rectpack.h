@@ -35,7 +35,7 @@
 
 #include "../errorcodes.h"
 #include "../stdafx.h"
-#include <SDL2/SDL_mutex.h>
+#include <SDL3/SDL_mutex.h>
 
 NOVA_HEADER_START
 
@@ -55,7 +55,7 @@ struct nv_skyline_bin
   size_t             width, height;
   size_t             allocated_rect_count;
   size_t             num_rects;
-  SDL_mutex*         mutex;
+  SDL_Mutex*         mutex;
 };
 
 extern nv_error nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* bin);

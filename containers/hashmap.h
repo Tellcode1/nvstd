@@ -109,7 +109,7 @@ struct nv_hashmap_node
 struct nv_hashmap
 {
   unsigned           canary;
-  SDL_mutex*         mutex;
+  SDL_Mutex*         mutex;
   nv_hashmap_node_t* nodes;
   nv_hash_fn         hash_fn;
   size_t             capacity;

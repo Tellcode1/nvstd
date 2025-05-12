@@ -28,6 +28,7 @@
 #ifndef __NOVA_CHRCLASS_H__
 #define __NOVA_CHRCLASS_H__
 
+#include "attributes.h"
 #include "stdafx.h"
 
 NOVA_HEADER_START
@@ -35,57 +36,57 @@ NOVA_HEADER_START
 /**
  * @brief Alphabet?
  */
-extern bool nv_chr_isalpha(int chr);
+extern bool nv_chr_isalpha(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Digit of a number?
  */
-extern bool nv_chr_isdigit(int chr);
+extern bool nv_chr_isdigit(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Alphabetical/Numerical?
  */
-extern bool nv_chr_isalnum(int chr);
+extern bool nv_chr_isalnum(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Space/Tab?
  */
-extern bool nv_chr_isblank(int chr);
+extern bool nv_chr_isblank(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Backslash control sequence?
  */
-extern bool nv_chr_iscntrl(int chr);
+extern bool nv_chr_iscntrl(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Lowercase alphabet?
  */
-extern bool nv_chr_islower(int chr);
+extern bool nv_chr_islower(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Uppercase alphabet?
  */
-extern bool nv_chr_isupper(int chr);
+extern bool nv_chr_isupper(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Space, newline or tab?
  */
-extern bool nv_chr_isspace(int chr);
+extern bool nv_chr_isspace(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Punctuation?
  */
-extern bool nv_chr_ispunct(int chr);
+extern bool nv_chr_ispunct(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Convert a character to lower. Will return the character if it does not have a lower representation.
  */
-extern int nv_chr_tolower(int chr);
+extern int nv_chr_tolower(int chr) NOVA_ATTR_CONST;
 
 /**
  * @brief Convert a character to upper. Will return the character if it does not have a lower representation.
  */
-extern int nv_chr_toupper(int chr);
+extern int nv_chr_toupper(int chr) NOVA_ATTR_CONST;
 
 NOVA_HEADER_END
 

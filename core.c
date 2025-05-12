@@ -22,6 +22,7 @@
   SOFTWARE.
   */
 
+#include "format.h"
 #include "rand.h"
 #include "stdafx.h"
 
@@ -35,12 +36,15 @@
 #include "props.h"
 #include "strconv.h"
 #include "string.h"
+#include "sysalloc.h"
 #include "types.h"
 
-#include <SDL2/SDL_image.h>
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_pixels.h>
-#include <SDL2/SDL_surface.h>
+#include <SDL3/SDL_surface.h>
+#include <SDL3_image/SDL_image.h>
+
+#include <SDL3/SDL_mutex.h>
+#include <SDL3/SDL_pixels.h>
+#include <SDL3/SDL_surface.h>
 
 #include <errno.h>
 #include <limits.h>
@@ -1455,7 +1459,9 @@ nv_calloc(size_t sz)
 {
   nv_assert_else_return(sz > 0, NULL);
 
+  // void* ptr = calloc(1, sz);
   void* ptr = calloc(1, sz);
+  nv_memset(ptr, 0, sz);
   nv_assert_else_return(ptr != NULL, NULL);
   return ptr;
 }
@@ -1563,10 +1569,6 @@ void
 nv_free(void* block)
 {
   // fuck you
-  if (block == NULL)
-  {
-    block = NULL;
-  }
   nv_assert_else_return(block != NULL, );
   free(block);
 }
@@ -2677,7 +2679,7 @@ nv_image_load(const char* path, nv_image_t* dst)
   nv_bzero(dst, sizeof(nv_image_t));
 
   SDL_Surface* surface = IMG_Load(path);
-  nv_assert_and_exec(surface != NULL, { nv_log_error("load failed $?(%s)\n", IMG_GetError()); });
+  nv_assert_and_exec(surface != NULL, { nv_log_error("load failed $?(%s)\n", SDL_GetError()); });
 
   *dst = _nv_sdl_surface_to_image(surface);
 
@@ -2857,16 +2859,8 @@ _nv_image_to_sdl_surface(const nv_image_t* tex)
   nv_assert_else_return(tex->format != NOVA_FORMAT_UNDEFINED, NULL);
   nv_assert_else_return(tex->data != NULL, NULL);
 
-  SDL_Surface* surface = SDL_CreateRGBSurfaceFrom(
-      (void*)tex->data,
-      (int)tex->width,
-      (int)tex->height,
-      nv_format_get_bytes_per_pixel(tex->format) * 8,
-      (int)(tex->width * nv_format_get_bytes_per_pixel(tex->format)),
-      0,
-      0,
-      0,
-      0);
+  SDL_Surface* surface = SDL_CreateSurfaceFrom(
+      (int)tex->width, (int)tex->height, nv_format_to_sdl_format(tex->format), tex->data, (int)(tex->width * nv_format_get_bytes_per_pixel(tex->format)));
   nv_assert_else_return(surface != NULL, NULL);
 
   return surface;
@@ -2881,7 +2875,7 @@ _nv_sdl_surface_to_image(SDL_Surface* surface)
 
   SDL_LockSurface(surface);
 
-  const size_t surface_size_bytes = surface->w * surface->h * surface->format->BytesPerPixel;
+  const size_t surface_size_bytes = surface->w * surface->h * SDL_GetPixelFormatDetails(surface->format)->bytes_per_pixel;
 
   nv_image_t image;
   image.width  = (size_t)surface->w;
@@ -2889,7 +2883,7 @@ _nv_sdl_surface_to_image(SDL_Surface* surface)
   nv_assert_else_return(image.width != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
   nv_assert_else_return(image.height != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
 
-  image.format = nv_sdl_format_to_nv_format((SDL_Format_)surface->format->format);
+  image.format = nv_sdl_format_to_nv_format((SDL_Format_)surface->format);
   nv_assert_else_return(image.format != NOVA_FORMAT_UNDEFINED, nv_zero_init(nv_image_t));
 
   image.data = nv_calloc(surface_size_bytes);
@@ -2898,7 +2892,7 @@ _nv_sdl_surface_to_image(SDL_Surface* surface)
   nv_memcpy(image.data, surface->pixels, surface_size_bytes);
 
   SDL_UnlockSurface(surface);
-  SDL_FreeSurface(surface);
+  SDL_DestroySurface(surface);
 
   return image;
 }
@@ -2916,10 +2910,10 @@ nv_image_write_png(const nv_image_t* tex, const char* path)
 
   if (IMG_SavePNG(surface, path) != 0)
   {
-    nv_log_error("Failed in writing image %s. Perhaps its parent directories do not exist?. SDL reports: %s\n", path, IMG_GetError());
+    nv_log_error("Failed in writing image %s. Perhaps its parent directories do not exist?. SDL reports: %s\n", path, SDL_GetError());
   }
 
-  SDL_FreeSurface(surface);
+  SDL_DestroySurface(surface);
 }
 
 void
@@ -2935,10 +2929,10 @@ nv_image_write_jpeg(const nv_image_t* tex, const char* path, int quality)
 
   if (IMG_SaveJPG(surface, path, quality) != 0)
   {
-    nv_log_error("Failed in writing image %s. Perhaps its parent directories do not exist?. SDL reports: %s\n", path, IMG_GetError());
+    nv_log_error("Failed in writing image %s. Perhaps its parent directories do not exist?. SDL reports: %s\n", path, SDL_GetError());
   }
 
-  SDL_FreeSurface(surface);
+  SDL_DestroySurface(surface);
 }
 
 // nv_image_t
@@ -3689,3 +3683,262 @@ nv_fs_dir_delete_recursive(const char* dpath)
 }
 
 #endif
+
+// static struct nv_sa_page* root = null;
+
+// static inline nv_error
+// nv_alloc_and_link_page(struct nv_sa_page** dstptr, size_t min_size)
+// {
+//   min_size += NOVA_SYSALLOC_PAGE_HEADER_SIZE;
+//   const size_t map_size = NV_MAX(min_size, NOVA_SYSALLOC_PAGE_HEADER_SIZE + NOVA_SYSALLOC_PAGE_CAPACITY);
+
+//   void* ptr = mmap(NULL, map_size, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+//   if (ptr == MAP_FAILED)
+//   {
+//     return NV_ERROR_EXTERNAL;
+//   }
+
+//   *dstptr = (struct nv_sa_page*)ptr;
+
+//   struct nv_sa_freeblock* new_node = malloc(sizeof(struct nv_sa_freeblock));
+//   nv_zero_structp(new_node);
+
+//   new_node->offset = NOVA_SYSALLOC_PAGE_HEADER_SIZE;
+//   new_node->size   = map_size - NOVA_SYSALLOC_PAGE_HEADER_SIZE;
+//   new_node->next   = NULL;
+
+//   (*dstptr)->root_free_block = new_node;
+//   (*dstptr)->page_size       = map_size;
+
+//   if (root != null)
+//   {
+//     struct nv_sa_page* last_page = root;
+//     while (last_page->next)
+//     {
+//       if (last_page->next == last_page)
+//       {
+//         nv_log_and_abort("Circular reference detected: page->next == page\n");
+//       }
+//       last_page = last_page->next;
+//     }
+
+//     if (last_page == *dstptr)
+//     {
+//       nv_log_and_abort("BUG: Attempt to link page to itself!\n");
+//     }
+
+//     last_page->next = *dstptr;
+//   }
+//   else
+//   {
+//     root = (*dstptr);
+//   }
+
+//   return NV_SUCCESS;
+// }
+
+// static inline void
+// nv_free_page(struct nv_sa_page* page)
+// {
+//   if (!page)
+//   {
+//     return;
+//   }
+
+//   struct nv_sa_freeblock* node = page->root_free_block;
+//   while (node)
+//   {
+//     struct nv_sa_freeblock* next = node->next;
+//     free(next);
+//     node = next;
+//   }
+
+//   // dislodge the page from the linked list
+//   struct nv_sa_page* page_it = root;
+//   while (page_it)
+//   {
+//     if (page_it->next == page)
+//     {
+//       page_it->next = page->next;
+//       break;
+//     }
+//     page_it = page_it->next;
+//   }
+
+//   if (munmap((void*)page, page->page_size) != 0)
+//   {
+//     nv_log_and_abort("munmap: %s\n", strerror(errno));
+//   }
+// }
+
+// static inline void
+// _trim_free_block(struct nv_sa_page* page, struct nv_sa_freeblock* block, size_t trim_size_trailing)
+// {
+//   if (block->size <= trim_size_trailing)
+//   {
+//     return;
+//   }
+
+//   nv_assert_else_return(trim_size_trailing > 0, );
+
+//   struct nv_sa_freeblock* new_node = malloc(sizeof(struct nv_sa_freeblock));
+//   nv_zero_structp(new_node);
+
+//   new_node->size   = trim_size_trailing;
+//   new_node->offset = block->offset + (block->size - trim_size_trailing);
+//   new_node->next   = NULL;
+
+//   // append a node
+//   new_node->next = page->root_free_block;
+//   if (page->root_free_block)
+//   {
+//     page->root_free_block = new_node;
+//   }
+
+//   block->size -= trim_size_trailing;
+// }
+
+// static inline size_t
+// _get_block_size(void* block)
+// {
+//   struct nv_sa_block* header = (struct nv_sa_block*)((uchar*)block - sizeof(struct nv_sa_block));
+//   return header->size;
+// }
+
+// void*
+// nv_sa_alloc(size_t size)
+// {
+//   if (!root)
+//   {
+//     struct nv_sa_page* tmp = NULL;
+//     nv_alloc_and_link_page(&tmp, size);
+//   }
+
+//   const size_t total_size = size + sizeof(struct nv_sa_block);
+
+//   struct nv_sa_page* page = root;
+//   while (page)
+//   {
+//     struct nv_sa_freeblock* block = page->root_free_block;
+//     while (block)
+//     {
+//       if (block->size >= total_size)
+//       {
+//         if (block->size > total_size)
+//         {
+//           _trim_free_block(page, block, block->size - total_size);
+//         }
+
+//         struct nv_sa_block* header = (struct nv_sa_block*)((uchar*)page->capacity + block->offset);
+//         void*               ptr    = (void*)(header + 1);
+
+//         // insert bookkeeping info
+//         header->page               = page;
+//         header->size               = size;
+//         header->offset             = block->offset;
+//         header->alignment_exponent = 0; // 2 ^ 0 = 1
+
+//         return ptr;
+//       }
+//       block = block->next;
+//     }
+
+//     page = page->next;
+//   }
+
+//   if (!page)
+//   {
+//     struct nv_sa_page* new_page = NULL;
+//     nv_alloc_and_link_page(&new_page, size);
+//     return nv_sa_alloc(size);
+//   }
+//   return null;
+// }
+
+// void
+// _sort_and_merge_free_blocks(struct nv_sa_page* page)
+// {
+//   // struct nv_sa_freeblock* sorted = NULL;
+//   // struct nv_sa_freeblock* curr   = page->root_free_block;
+
+//   // while (curr)
+//   // {
+//   //   struct nv_sa_freeblock* next = curr->next;
+
+//   //   if (!sorted || curr->offset < sorted->offset)
+//   //   {
+//   //     curr->next = sorted;
+//   //     sorted     = curr;
+//   //   }
+//   //   else
+//   //   {
+//   //     struct nv_sa_freeblock* s = sorted;
+//   //     while (s->next && s->next->offset < curr->offset)
+//   //     {
+//   //       s = s->next;
+//   //     }
+//   //     curr->next = s->next;
+//   //     s->next    = curr;
+//   //   }
+
+//   //   curr = next;
+//   // }
+
+//   // page->root_free_block = sorted;
+
+//   // struct nv_sa_freeblock* block = sorted;
+//   // while (block && block->next)
+//   // {
+//   //   if (block->offset + block->size == block->next->offset)
+//   //   {
+//   //     block->size += block->next->size;
+
+//   //     struct nv_sa_freeblock* to_free = block->next;
+//   //     block->next                     = to_free->next;
+
+//   //     free(to_free);
+//   //   }
+//   //   else
+//   //   {
+//   //     block = block->next;
+//   //   }
+//   // }
+// }
+
+// void*
+// nv_sa_realloc(void* old_ptr, size_t new_size)
+// {
+//   void* new_ptr = nv_sa_alloc(new_size);
+//   nv_memmove(new_ptr, old_ptr, _get_block_size(old_ptr));
+//   nv_sa_free(old_ptr);
+//   return new_ptr;
+// }
+
+// void
+// nv_sa_free(void* ptr)
+// {
+//   struct nv_sa_block* header = (struct nv_sa_block*)((uchar*)ptr - sizeof(struct nv_sa_block));
+
+//   struct nv_sa_freeblock* last_block = header->page->root_free_block;
+//   while (last_block->next)
+//   {
+//     last_block = last_block->next;
+//   }
+
+//   struct nv_sa_freeblock* new_node = malloc(sizeof(struct nv_sa_freeblock));
+//   nv_zero_structp(new_node);
+
+//   new_node->size   = header->size + sizeof(struct nv_sa_freeblock);
+//   new_node->offset = header->offset;
+//   new_node->next   = NULL;
+
+//   new_node->next                = header->page->root_free_block;
+//   header->page->root_free_block = new_node;
+
+//   _sort_and_merge_free_blocks(header->page);
+
+//   if (header->page->root_free_block == NULL)
+//   {
+//     nv_free_page(header->page);
+//   }
+// }

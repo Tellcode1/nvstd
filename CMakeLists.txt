@@ -4,10 +4,10 @@ project(nvstd)
 find_package(ZLIB REQUIRED)
 include_directories(${ZLIB_INCLUDE_DIRS})
 
-find_package(SDL2 REQUIRED)
-find_package(SDL2_image REQUIRED)
-include_directories(${SDL2_INCLUDE_DIRS})
-include_directories(${SDL2_image_INCLUDE_DIRS})
+find_package(SDL3 REQUIRED)
+find_package(SDL3_image REQUIRED)
+include_directories(${SDL3_INCLUDE_DIRS})
+include_directories(${SDL3_image_INCLUDE_DIRS})
 
 set(CORE_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/core.c
@@ -17,8 +17,8 @@ set(CORE_SOURCES
 set(CORE_LIBS
   z
   m
-  SDL2
-  SDL2_image
+  SDL3
+  SDL3_image
 )
 
 set(CMAKE_C_STANDARD 99)
