@@ -731,13 +731,6 @@ nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* __i)
   return NULL;
 }
 
-static inline nv_hashmap_node_t*
-nv_hashmap_root_node_unsafe(const nv_hashmap_t* map)
-{
-  nv_assert(CONT_IS_VALID(map));
-  return map->nodes;
-}
-
 static inline void*
 nv_hashmap_find_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key, void* hash_fn_arg)
 {
