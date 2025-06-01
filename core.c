@@ -3154,8 +3154,9 @@ nv_random_seed(nv_rand_info_t* info, nv_rand_t seed)
 #  endif
 
 int
-nv_fs_perms_to_win_perms(nv_fs_permission perms)
+nv_fs_perms_to_win_perms(nv_fs_permission perms, bool for_directory)
 {
+  (void)for_directory;
   switch (perms)
   {
     case NV_FS_PERMISSION_EXISTS: return 0;
@@ -3167,38 +3168,54 @@ nv_fs_perms_to_win_perms(nv_fs_permission perms)
 }
 
 int
-nv_fs_perms_to_unix_perms(nv_fs_permission perms)
+nv_fs_perms_to_unix_perms(nv_fs_permission perms, bool for_directory)
 {
-  int piss;
+  int mode = -1;
+
+#  ifndef _WIN32
   switch (perms)
   {
-#  ifndef _WIN32
-    case NV_FS_PERMISSION_EXISTS: piss = 0; break;
-    case NV_FS_PERMISSION_READ_ONLY: piss = S_IRUSR | S_IRGRP | S_IROTH; break;
-    case NV_FS_PERMISSION_WRITE_ONLY: piss = S_IWUSR | S_IWGRP | S_IWOTH; break;
-    case NV_FS_PERMISSION_READ_WRITE: piss = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH; break;
+    case NV_FS_PERMISSION_EXISTS: mode = S_IRUSR | S_IWUSR; break;
+    case NV_FS_PERMISSION_READ_ONLY: mode = S_IRUSR | S_IRGRP | S_IROTH; break;
+    case NV_FS_PERMISSION_WRITE_ONLY: mode = S_IWUSR | S_IWGRP | S_IWOTH; break;
+    case NV_FS_PERMISSION_READ_WRITE: mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP | S_IROTH | S_IWOTH; break;
+    default: mode = S_IRUSR | S_IWUSR; break;
+  }
+
+  if (for_directory)
+  {
+    if (mode & S_IRUSR)
+    {
+      mode |= S_IXUSR;
+    }
+    if (mode & S_IRGRP)
+    {
+      mode |= S_IXGRP;
+    }
+    if (mode & S_IROTH)
+    {
+      mode |= S_IXOTH;
+    }
+  }
 #  endif
 
-    default: return -1;
-  }
-  printf("pissing %o\n", piss);
-  return piss;
+  return mode;
 }
 
 static inline int
-_nv_fs_perms_to_sys_perms(nv_fs_permission perms)
+_nv_fs_perms_to_sys_perms(nv_fs_permission perms, bool for_directory)
 {
 #  ifdef _WIN32
-  return nv_fs_perms_to_win_perms(perms);
+  return nv_fs_perms_to_win_perms(perms, for_directory);
 #  else
-  return nv_fs_perms_to_unix_perms(perms);
+  return nv_fs_perms_to_unix_perms(perms, for_directory);
 #  endif
 }
 
 bool
 nv_fs_file_exists(const char* fpath)
 {
-  return (access(fpath, _nv_fs_perms_to_sys_perms(NV_FS_PERMISSION_EXISTS)) == 0);
+  return (access(fpath, _nv_fs_perms_to_sys_perms(NV_FS_PERMISSION_EXISTS, false)) == 0);
 }
 
 nv_error
@@ -3314,7 +3331,7 @@ nv_fs_file_create(const char* fpath)
 {
 #  ifndef _WIN32
 
-  int fd = open(fpath, O_CREAT | O_EXCL | O_WRONLY, 0755);
+  int fd = open(fpath, O_RDWR | O_CREAT | O_EXCL, 0755);
   if (fd < 0 && errno != EEXIST)
   {
     return NV_ERROR_IO_ERROR;
@@ -3357,7 +3374,7 @@ nv_error
 nv_fs_dir_create(const char* dpath, nv_fs_permission perms)
 {
 #  ifndef _WIN32
-  if (mkdir(dpath, _nv_fs_perms_to_sys_perms(perms)) != 0 && errno != EEXIST)
+  if (mkdir(dpath, _nv_fs_perms_to_sys_perms(perms, true)) != 0 && errno != EEXIST)
   {
     return NV_ERROR_IO_ERROR;
   }

@@ -61,13 +61,13 @@ extern bool nv_fs_file_exists(const char* fpath);
  * Returns -1 on invalid input.
  * Windows permissions are available even on unix
  */
-extern int nv_fs_perms_to_win_perms(nv_fs_permission perms);
+extern int nv_fs_perms_to_win_perms(nv_fs_permission perms, bool for_directory);
 
 /**
  * Returns -1 on invalid input or
  * if the platform is windows.
  */
-extern int nv_fs_perms_to_unix_perms(nv_fs_permission perms);
+extern int nv_fs_perms_to_unix_perms(nv_fs_permission perms, bool for_directory);
 
 /**
  * If file does not exist, out_size is set to 0.
