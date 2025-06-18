@@ -12,6 +12,10 @@ include_directories(${SDL3_image_INCLUDE_DIRS})
 set(CORE_SOURCES
   ${CMAKE_CURRENT_LIST_DIR}/core.c
   ${CMAKE_CURRENT_LIST_DIR}/containers.c
+  ${CMAKE_CURRENT_LIST_DIR}/file.c
+  ${CMAKE_CURRENT_LIST_DIR}/print.c
+  ${CMAKE_CURRENT_LIST_DIR}/strconv.c
+  ${CMAKE_CURRENT_LIST_DIR}/string.c
 )
 
 set(CORE_LIBS

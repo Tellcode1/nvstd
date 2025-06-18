@@ -1,12 +1,10 @@
+#include "containers/rectpack.h"
 #include "stdafx.h"
 
 #include "alloc.h"
 #include "errorcodes.h"
-#include "format.h"
-#include "image.h"
 #include "string.h"
 
-#include "containers/atlas.h"
 #include "containers/bitset.h"
 #include "containers/hashmap.h"
 #include "containers/list.h"
@@ -35,10 +33,6 @@ __shutup_compiler_errno_warning__(void)
 
 /* find last quote in a line: "([^"]+)"(?!.*") */
 
-// deadbeef is for losers
-#define CONT_CANARY 0xFEEF
-#define CONT_IS_VALID(cont) ((cont) && ((cont)->canary == CONT_CANARY))
-
 // ==============================
 // listTOR
 // ==============================
@@ -53,7 +47,7 @@ nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void
 
   list->size      = 0;
   list->type_size = type_size;
-  list->canary    = CONT_CANARY;
+  list->canary    = NOVA_CONT_CANARY;
 
   list->mutex = SDL_CreateMutex();
   if (!list->mutex)
@@ -85,7 +79,7 @@ nv_list_destroy(nv_list_t* list)
   if (list)
   {
     SDL_LockMutex(list->mutex);
-    nv_assert(CONT_IS_VALID(list));
+    nv_assert(NOVA_CONT_IS_VALID(list));
     if (list->data)
     {
       list->alloc(list->alloc_arg, list->data, list->type_size * list->capacity, NV_ALLOC_FREE);
@@ -104,7 +98,7 @@ nv_list_clear(nv_list_t* list)
   }
 
   SDL_LockMutex(list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   list->size = 0;
   SDL_UnlockMutex(list->mutex);
 }
@@ -118,7 +112,7 @@ nv_list_size(const nv_list_t* list)
   }
 
   SDL_LockMutex((SDL_Mutex*)list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   size_t sz = list->size;
   SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return sz;
@@ -133,7 +127,7 @@ nv_list_capacity(const nv_list_t* list)
   }
 
   SDL_LockMutex((SDL_Mutex*)list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   size_t cap = list->capacity;
   SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return cap;
@@ -147,7 +141,7 @@ nv_list_type_size(const nv_list_t* list)
     return 0;
   }
   SDL_LockMutex((SDL_Mutex*)list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   size_t tsize = list->type_size;
   SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return tsize;
@@ -161,7 +155,7 @@ nv_list_data(const nv_list_t* list)
     return 0;
   }
   SDL_LockMutex((SDL_Mutex*)list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   void* ptr = list->data;
   SDL_UnlockMutex((SDL_Mutex*)list->mutex);
   return ptr;
@@ -175,7 +169,7 @@ nv_list_front(nv_list_t* list)
     return 0;
   }
   SDL_LockMutex(list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   void* ptr = nv_list_get(list, 0);
   SDL_UnlockMutex(list->mutex);
   return ptr;
@@ -189,7 +183,7 @@ nv_list_back(nv_list_t* list)
     return 0;
   }
   SDL_LockMutex(list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   void* ptr = nv_list_get(list, NV_MAX(1ULL, list->size) - 1); // stupid but works
   // that's how I'd describe the entirety of this projetc
   SDL_UnlockMutex(list->mutex);
@@ -205,7 +199,7 @@ nv_list_get(const nv_list_t* list, size_t i)
   }
 
   SDL_LockMutex((SDL_Mutex*)list->mutex);
-  nv_assert_else_return(CONT_IS_VALID(list), NULL);
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), NULL);
   nv_assert_else_return(i < list->capacity, NULL);
   uchar* data      = list->data;
   size_t type_size = list->type_size;
@@ -221,7 +215,7 @@ void
 nv_list_set(nv_list_t* list, size_t i, void* elem)
 {
   SDL_LockMutex(list->mutex);
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   nv_memcpy((char*)list + (list->type_size * i), elem, list->type_size);
   SDL_UnlockMutex(list->mutex);
 }
@@ -232,8 +226,8 @@ nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
   SDL_LockMutex((SDL_Mutex*)src->mutex);
   SDL_LockMutex(dst->mutex);
 
-  nv_assert(CONT_IS_VALID(src));
-  nv_assert(CONT_IS_VALID(dst));
+  nv_assert(NOVA_CONT_IS_VALID(src));
+  nv_assert(NOVA_CONT_IS_VALID(dst));
 
   nv_assert(src->type_size == dst->type_size);
   if (src->size >= dst->capacity)
@@ -253,8 +247,8 @@ nv_list_move_from(nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
   SDL_LockMutex(src->mutex);
   SDL_LockMutex(dst->mutex);
 
-  nv_assert(CONT_IS_VALID(src));
-  nv_assert(CONT_IS_VALID(dst));
+  nv_assert(NOVA_CONT_IS_VALID(src));
+  nv_assert(NOVA_CONT_IS_VALID(dst));
 
   dst->size     = src->size;
   dst->capacity = src->capacity;
@@ -271,15 +265,15 @@ nv_list_move_from(nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
 bool
 nv_list_empty(const nv_list_t* list)
 {
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
   return (list->size == 0);
 }
 
 bool
 nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
 {
-  nv_assert(CONT_IS_VALID(list1));
-  nv_assert(CONT_IS_VALID(list2));
+  nv_assert(NOVA_CONT_IS_VALID(list1));
+  nv_assert(NOVA_CONT_IS_VALID(list2));
 
   SDL_LockMutex((SDL_Mutex*)list1->mutex);
   SDL_LockMutex((SDL_Mutex*)list2->mutex);
@@ -299,7 +293,7 @@ nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
 void
 nv_list_resize(nv_list_t* list, size_t new_size)
 {
-  nv_assert_else_return(CONT_IS_VALID(list), );
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
 
   if (list->data)
   {
@@ -317,7 +311,7 @@ nv_list_resize(nv_list_t* list, size_t new_size)
 void
 nv_list_push_back(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 {
-  nv_assert_else_return(CONT_IS_VALID(list), );
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -337,7 +331,7 @@ nv_list_push_back(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 void*
 nv_list_push_empty(nv_list_t* __restrict list)
 {
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
 
   SDL_LockMutex(list->mutex);
 
@@ -359,7 +353,7 @@ nv_list_push_empty(nv_list_t* __restrict list)
 void
 nv_list_push_set(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT arr, size_t count)
 {
-  nv_assert_else_return(CONT_IS_VALID(list), );
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -377,7 +371,7 @@ nv_list_push_set(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT arr, size_
 void
 nv_list_pop_back(nv_list_t* list)
 {
-  nv_assert_else_return(CONT_IS_VALID(list), );
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -392,7 +386,7 @@ nv_list_pop_back(nv_list_t* list)
 void
 nv_list_pop_front(nv_list_t* list)
 {
-  nv_assert_else_return(CONT_IS_VALID(list), );
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
 
   SDL_LockMutex(list->mutex);
 
@@ -408,7 +402,7 @@ nv_list_pop_front(nv_list_t* list)
 void
 nv_list_insert(nv_list_t* NV_RESTRICT list, size_t index, const void* NV_RESTRICT elem)
 {
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
 
   SDL_LockMutex(list->mutex);
 
@@ -428,7 +422,7 @@ nv_list_insert(nv_list_t* NV_RESTRICT list, size_t index, const void* NV_RESTRIC
 void
 nv_list_remove(nv_list_t* list, size_t index)
 {
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
 
   SDL_LockMutex(list->mutex);
 
@@ -455,7 +449,7 @@ nv_list_remove(nv_list_t* list, size_t index)
 size_t
 nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 {
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
 
   SDL_LockMutex((SDL_Mutex*)list->mutex);
 
@@ -503,7 +497,7 @@ nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 void
 nv_list_sort(nv_list_t* list, nv_list_compare_fn compare)
 {
-  nv_assert(CONT_IS_VALID(list));
+  nv_assert(NOVA_CONT_IS_VALID(list));
 
   SDL_LockMutex(list->mutex);
 
@@ -569,7 +563,7 @@ nv_hashmap_init(size_t init_size, size_t key_size, size_t value_size, nv_hash_fn
   dst->value_size = value_size;
   dst->capacity   = next_power_of_two(init_size);
   dst->size       = 0;
-  dst->canary     = CONT_CANARY;
+  dst->canary     = NOVA_CONT_CANARY;
 
   SDL_UnlockMutex(dst->mutex);
 
@@ -579,7 +573,7 @@ nv_hashmap_init(size_t init_size, size_t key_size, size_t value_size, nv_hash_fn
 void
 nv_hashmap_destroy(nv_hashmap_t* map)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   const size_t old_capacity = map->capacity;
 
@@ -606,7 +600,7 @@ nv_hashmap_destroy(nv_hashmap_t* map)
 static inline void
 nv_hashmap_resize_unsafe(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_arg)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   nv_hashmap_node_t* old_nodes   = map->nodes;
   const size_t       old_entries = map->capacity;
@@ -652,7 +646,7 @@ nv_hashmap_resize(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_arg)
 void
 nv_hashmap_clear(nv_hashmap_t* map)
 {
-  nv_assert_else_return(CONT_IS_VALID(map), );
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), );
 
   nv_hashmap_destroy(map);
 
@@ -666,7 +660,7 @@ nv_hashmap_clear(nv_hashmap_t* map)
 size_t
 nv_hashmap_size(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t size = map->size;
@@ -678,7 +672,7 @@ nv_hashmap_size(const nv_hashmap_t* map)
 size_t
 nv_hashmap_capacity(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t capacity = map->capacity;
@@ -690,7 +684,7 @@ nv_hashmap_capacity(const nv_hashmap_t* map)
 size_t
 nv_hashmap_keysize(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t key_size = map->key_size;
@@ -702,7 +696,7 @@ nv_hashmap_keysize(const nv_hashmap_t* map)
 size_t
 nv_hashmap_valuesize(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(CONT_IS_VALID(map), 0);
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
 
   SDL_LockMutex(map->mutex);
   size_t value_size = map->value_size;
@@ -714,7 +708,7 @@ nv_hashmap_valuesize(const nv_hashmap_t* map)
 nv_hashmap_node_t*
 nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* __i)
 {
-  nv_assert_else_return(CONT_IS_VALID(map), NULL);
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), NULL);
 
   /**
    * If map->capacity is 0, it simply jumps to returning NULL
@@ -734,7 +728,7 @@ nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* __i)
 static inline void*
 nv_hashmap_find_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key, void* hash_fn_arg)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   if (!map->nodes)
   {
@@ -778,7 +772,7 @@ nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key
 static inline void
 _nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value, bool replace_if_exists, void* hash_fn_arg)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   // the second check
   if (!map->nodes || (flt_t)map->size >= ((flt_t)map->capacity * NV_HASHMAP_LOAD_FACTOR))
@@ -838,7 +832,7 @@ nv_hashmap_insert_or_replace(nv_hashmap_t* map, const void* NV_RESTRICT key, voi
 void
 nv_hashmap_serialize(nv_hashmap_t* map, FILE* f)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   SDL_LockMutex(map->mutex);
 
@@ -863,7 +857,7 @@ nv_hashmap_serialize(nv_hashmap_t* map, FILE* f)
 void
 nv_hashmap_deserialize(nv_hashmap_t* map, FILE* f, void* hash_fn_arg)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   SDL_LockMutex(map->mutex);
 
@@ -884,210 +878,6 @@ nv_hashmap_deserialize(nv_hashmap_t* map, FILE* f, void* hash_fn_arg)
 }
 
 // ==============================
-// ATLAS
-// ==============================
-
-nv_error
-nv_texture_atlas_init(size_t width, size_t height, nv_format fmt, u32 padding, nv_texture_atlas_t* dst)
-{
-  nv_assert_else_return(dst != NULL, NV_ERROR_INVALID_ARG);
-  nv_assert_else_return(width != 0, NV_ERROR_INVALID_ARG);
-  nv_assert_else_return(height != 0, NV_ERROR_INVALID_ARG);
-  nv_assert_else_return(fmt != NOVA_FORMAT_UNDEFINED, NV_ERROR_INVALID_ARG);
-
-  *dst = nv_zero_init(nv_texture_atlas_t);
-
-  dst->canary  = CONT_CANARY;
-  dst->width   = width;
-  dst->height  = height;
-  dst->format  = fmt;
-  dst->padding = padding;
-  dst->data    = (unsigned char*)nv_calloc(width * height * nv_format_get_bytes_per_pixel(dst->format));
-  nv_assert_else_return(dst->data != NULL, NV_ERROR_MALLOC_FAILED);
-
-  dst->mutex = SDL_CreateMutex();
-  if (!dst->mutex)
-  {
-    return NV_ERROR_EXTERNAL;
-  }
-
-  if (nv_skyline_bin_init(width, height, &dst->bin) != 0)
-  {
-    return NV_ERROR_INVALID_RETVAL;
-  }
-
-  nv_assert_else_return(CONT_IS_VALID(dst), NV_ERROR_BROKEN_STATE);
-
-  return NV_ERROR_SUCCESS;
-}
-
-SDL_Mutex* atlas_resize_mutex = NULL;
-
-int
-nv_texture_atlas_add(nv_texture_atlas_t* atlas, const nv_image_t* img, size_t* out_x, size_t* out_y)
-{
-  if (!atlas || !img || img->width <= 0 || img->height <= 0 || !out_x || !out_y)
-  {
-    return 0;
-  }
-  nv_assert(CONT_IS_VALID(atlas));
-
-  if (!atlas_resize_mutex)
-  {
-    atlas_resize_mutex = SDL_CreateMutex();
-  }
-
-  SDL_LockMutex(atlas->mutex);
-
-  nv_skyline_rect_t rect = { .width = img->width + (2 * atlas->padding), .height = img->height + (2 * atlas->padding) };
-
-  size_t x, y;
-  bool   packed = nv_skyline_bin_find_best_placement(&atlas->bin, &rect, &x, &y);
-
-  while (!packed)
-  {
-    SDL_UnlockMutex(atlas->mutex);
-
-    SDL_LockMutex(atlas_resize_mutex);
-    nv_texture_atlas_resize(atlas, 2);
-    SDL_UnlockMutex(atlas_resize_mutex);
-
-    SDL_LockMutex(atlas->mutex);
-
-    packed = nv_skyline_bin_find_best_placement(&atlas->bin, &rect, &x, &y);
-  }
-
-  nv_skyline_bin_place_rect(&atlas->bin, &rect, x, y);
-  *out_x = x + atlas->padding;
-  *out_y = y + atlas->padding;
-
-  nv_image_t dst = { .width = atlas->width, .height = atlas->height, .format = NOVA_FORMAT_R8, .data = atlas->data };
-  nv_image_overlay(&dst, img, (int)*out_x, (int)*out_y, 0, 0);
-
-  SDL_UnlockMutex(atlas->mutex);
-  return 1;
-}
-
-void
-nv_texture_atlas_resize(nv_texture_atlas_t* atlas, int scale)
-{
-  nv_assert(CONT_IS_VALID(atlas));
-  SDL_LockMutex(atlas->mutex);
-
-  if (atlas->width == 0 || atlas->height == 0)
-  {
-    nv_log_error("zero size atlas? possible corruption\n");
-    SDL_UnlockMutex(atlas->mutex);
-    return;
-  }
-
-  size_t old_w    = atlas->width;
-  size_t old_h    = atlas->height;
-  size_t new_w    = atlas->width * scale;
-  size_t new_h    = atlas->height * scale;
-  size_t channels = nv_format_get_bytes_per_pixel(atlas->format);
-
-  unsigned char* new_data = nv_calloc(new_w * new_h * channels);
-  nv_assert(new_data != NULL);
-
-  if (atlas->data)
-  {
-    for (size_t y = 0; y < old_h; y++)
-    {
-      size_t src_offset = y * old_w * channels;
-      size_t dst_offset = y * new_w * channels;
-      nv_memcpy(&new_data[dst_offset], &atlas->data[src_offset], old_w * channels);
-    }
-
-    nv_free(atlas->data);
-  }
-
-  atlas->data   = new_data;
-  atlas->width  = new_w;
-  atlas->height = new_h;
-
-  nv_skyline_bin_resize(&atlas->bin, new_w, new_h);
-
-  SDL_UnlockMutex(atlas->mutex);
-}
-
-int
-nv_texture_atlas_finish(nv_texture_atlas_t* atlas)
-{
-  nv_assert(CONT_IS_VALID(atlas));
-
-  SDL_LockMutex(atlas->mutex);
-
-  size_t max_w = 0;
-  size_t max_h = 0;
-
-  for (size_t i = 0; i < atlas->bin.num_rects; i++)
-  {
-    nv_skyline_rect_t* r = &atlas->bin.rects[i];
-    max_w                = NV_MAX(max_w, r->posx + r->width);
-    max_h                = NV_MAX(max_h, r->posy + r->height);
-  }
-
-  size_t optimal_w = max_w, optimal_h = max_h;
-
-  if ((optimal_w == atlas->width && optimal_h == atlas->height) || (optimal_w == 0 || optimal_h == 0))
-  {
-    SDL_UnlockMutex(atlas->mutex);
-    return 0;
-  }
-
-  if (atlas->width > optimal_w || atlas->height > optimal_h)
-  {
-    if (max_w == 0 || max_h == 0)
-    {
-      nv_log_error("0 optimal w/h??\n");
-      return -1;
-    }
-    size_t channels = nv_format_get_bytes_per_pixel(atlas->format);
-    if (channels == 0)
-    {
-      nv_log_error("invalid format?\n");
-      return -1;
-    }
-    unsigned char* new_data = (unsigned char*)nv_calloc(max_w * max_h * channels);
-    if (new_data)
-    {
-      for (size_t y = 0; y < max_h; y++)
-      {
-        nv_memcpy(new_data + y * max_w * channels, atlas->data + y * atlas->width * channels, max_w * channels);
-      }
-      nv_free(atlas->data);
-      atlas->data   = new_data;
-      atlas->width  = max_w;
-      atlas->height = max_h;
-    }
-  }
-
-  SDL_UnlockMutex(atlas->mutex);
-  return -1;
-}
-
-void
-nv_texture_atlas_destroy(nv_texture_atlas_t* atlas)
-{
-  if (!atlas)
-  {
-    return;
-  }
-  nv_assert(CONT_IS_VALID(atlas));
-
-  SDL_LockMutex(atlas->mutex);
-  if (atlas->data)
-  {
-    nv_free(atlas->data);
-  }
-  nv_skyline_bin_destroy(&atlas->bin);
-  SDL_UnlockMutex(atlas->mutex);
-
-  SDL_DestroyMutex(atlas->mutex);
-}
-
-// ==============================
 // RECTPACK
 // ==============================
 
@@ -1100,7 +890,7 @@ nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* dst)
 
   *dst = nv_zero_init(nv_skyline_bin_t);
 
-  dst->canary = CONT_CANARY;
+  dst->canary = NOVA_CONT_CANARY;
   dst->width  = width;
   dst->height = height;
 
@@ -1114,7 +904,7 @@ nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* dst)
   dst->mutex = SDL_CreateMutex();
   nv_assert_else_return(dst->mutex != NULL, NV_ERROR_EXTERNAL);
 
-  nv_assert_else_return(CONT_IS_VALID(dst), NV_ERROR_BROKEN_STATE);
+  nv_assert_else_return(NOVA_CONT_IS_VALID(dst), NV_ERROR_BROKEN_STATE);
 
   return NV_ERROR_SUCCESS;
 }
@@ -1126,7 +916,7 @@ nv_skyline_bin_destroy(nv_skyline_bin_t* bin)
   {
     return;
   }
-  nv_assert(CONT_IS_VALID(bin));
+  nv_assert(NOVA_CONT_IS_VALID(bin));
   SDL_LockMutex(bin->mutex);
   if (bin->rects)
   {
@@ -1143,7 +933,7 @@ nv_skyline_bin_destroy(nv_skyline_bin_t* bin)
 size_t
 nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
 {
-  nv_assert(CONT_IS_VALID(bin));
+  nv_assert(NOVA_CONT_IS_VALID(bin));
 
   SDL_LockMutex((SDL_Mutex*)bin->mutex);
 
@@ -1163,7 +953,7 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
 int
 nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t* best_x, size_t* best_y)
 {
-  nv_assert(CONT_IS_VALID(bin));
+  nv_assert(NOVA_CONT_IS_VALID(bin));
 
   SDL_LockMutex((SDL_Mutex*)bin->mutex);
 
@@ -1202,7 +992,7 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
 void
 nv_skyline_bin_place_rect(nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t x, size_t y)
 {
-  nv_assert(CONT_IS_VALID(bin));
+  nv_assert(NOVA_CONT_IS_VALID(bin));
 
   SDL_LockMutex(bin->mutex);
 
@@ -1242,7 +1032,7 @@ _nv_skyline_compare_rect(const void* rect1, const void* rect2)
 void
 nv_skyline_bin_pack_rects(nv_skyline_bin_t* bin, nv_skyline_rect_t* rects, size_t nrects)
 {
-  nv_assert(CONT_IS_VALID(bin));
+  nv_assert(NOVA_CONT_IS_VALID(bin));
 
   qsort(rects, nrects, sizeof(nv_skyline_rect_t), _nv_skyline_compare_rect);
 
@@ -1268,7 +1058,7 @@ nv_skyline_bin_pack_rects(nv_skyline_bin_t* bin, nv_skyline_rect_t* rects, size_
 void
 nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
 {
-  nv_assert(CONT_IS_VALID(bin));
+  nv_assert(NOVA_CONT_IS_VALID(bin));
 
   nv_skyline_rect_t* valid_rects   = NULL;
   size_t             num_valid     = 0;
@@ -1513,7 +1303,7 @@ nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_all
 
   *dst = nv_zero_init(nv_rbmap_t);
 
-  dst->canary     = CONT_CANARY;
+  dst->canary     = NOVA_CONT_CANARY;
   dst->key_size   = key_size;
   dst->val_size   = val_size;
   dst->compare_fn = compare_fn;
@@ -1527,7 +1317,7 @@ nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_all
 void
 nv_rbmap_left_rotate(nv_rbmap_t* map, nv_rbmap_node_t* x)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
   nv_rbmap_node_t* y = x->children[1];
   x->children[1]     = y->children[0];
   if (y->children[0])
@@ -1552,7 +1342,7 @@ nv_rbmap_left_rotate(nv_rbmap_t* map, nv_rbmap_node_t* x)
 void
 nv_rbmap_right_rotate(nv_rbmap_t* map, nv_rbmap_node_t* y)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
   nv_rbmap_node_t* x = y->children[0];
   y->children[0]     = x->children[1];
   if (x->children[1])
@@ -1587,7 +1377,7 @@ nv_rbmap_minimum(nv_rbmap_node_t* node)
 void
 nv_rbmap_transplant(nv_rbmap_t* map, nv_rbmap_node_t* u, nv_rbmap_node_t* v)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
   if (u->parent == NULL)
   {
     map->root = v;
@@ -1610,7 +1400,7 @@ nv_rbmap_transplant(nv_rbmap_t* map, nv_rbmap_node_t* u, nv_rbmap_node_t* v)
 void
 nv_rbmap_delete_fixup(nv_rbmap_t* map, nv_rbmap_node_t* x)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
   while (x != map->root && (x == NULL || x->color == NOVA_RBNODE_COLOR_BLK))
   {
     if (x == x->parent->children[0])
@@ -1702,7 +1492,7 @@ nv_rbmap_delete_fixup(nv_rbmap_t* map, nv_rbmap_node_t* x)
 void
 nv_rbmap_delete(nv_rbmap_t* map, nv_rbmap_node_t* z)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
   nv_assert(z != NULL);
 
   nv_rbmap_node_t* y                = z;
@@ -1760,7 +1550,7 @@ nv_rbmap_delete(nv_rbmap_t* map, nv_rbmap_node_t* z)
 void
 nv_rbmap_insert_fixup(nv_rbmap_t* map, nv_rbmap_node_t* z)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
   nv_assert(z != NULL);
 
   while (z->parent && z->parent->color == NOVA_RBNODE_COLOR_RED)
@@ -1823,7 +1613,7 @@ void
 nv_rbmap_insert(nv_rbmap_t* map, const void* key, const void* value, void* user_hash_data)
 {
   (void)_nv_rbmap_allocate_node;
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
   nv_assert(map != NULL);
   nv_assert(key != NULL);
   nv_assert(value != NULL);
@@ -1947,7 +1737,7 @@ nv_rbmap_iterator_destroy(nv_rbmap_iterator_t* itr)
 void*
 nv_rbmap_find(const nv_rbmap_t* map, const void* key, void* user_hash_data)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   nv_rbmap_node_t* node = map->root;
   while (node != NULL)
@@ -1972,7 +1762,7 @@ nv_rbmap_find(const nv_rbmap_t* map, const void* key, void* user_hash_data)
 void
 nv_rbmap_destroy(nv_rbmap_t* map)
 {
-  nv_assert(CONT_IS_VALID(map));
+  nv_assert(NOVA_CONT_IS_VALID(map));
 
   nv_rbmap_iterator_t itr;
   nv_rbmap_iterator_init(map, &itr);

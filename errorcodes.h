@@ -63,7 +63,7 @@ typedef enum nv_error
   NV_ERROR_INVALID_CACHE = 6,
 
   /**
-   * Our stored state is now broken. This typically is the result of a buffer overflow.
+   * Our stored state is now broken. This typically is the result of a buffer overflow or memory corruption.
    */
   NV_ERROR_BROKEN_STATE = 7,
 
@@ -91,6 +91,37 @@ typedef enum nv_error
   NV_ERROR_INVALID_OPERATION = 11,
 } nv_error;
 
+/**
+ * The supplementary string is specified by the error raising function.
+ * It shall contain an extra string for the callee to specify what exactly went wrong.
+ * The supplementary string shall not be NULL even if enough information is given by the code
+ * or it is irrelevant. It shall be "" in that case.
+ * The error should be propogated throught each call.
+ */
+typedef nv_error (*nv_error_handler_fn)(nv_error error, const char* file, size_t line, const char* supplementary);
+
+extern nv_error _nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary);
+
+static nv_error_handler_fn _error_handler = _nv_default_error_handler;
+
+static inline nv_error
+_nv_raise_error(nv_error error, const char* file, size_t line, const char* supplementary)
+{
+  if (_error_handler)
+  {
+    return _error_handler(error, file, line, supplementary);
+  }
+  return error;
+}
+
+#define NV_RAISE_ERROR(code, suppl) _nv_raise_error(code, __FILE__, __LINE__, suppl)
+
+static inline void
+nv_set_error_handler(nv_error_handler_fn fn)
+{
+  _error_handler = fn;
+}
+
 static inline const char*
 nv_error_str(nv_error code)
 {
@@ -98,7 +129,7 @@ nv_error_str(nv_error code)
   {
     case NV_ERROR_SUCCESS: return "Success";
     case NV_ERROR_INVALID_ARG: return "Invalid arg";
-    case NV_ERROR_MALLOC_FAILED: return "malloc failed";
+    case NV_ERROR_MALLOC_FAILED: return "Allocation failed";
     case NV_ERROR_IO_ERROR: return "IO error";
     case NV_ERROR_EXTERNAL: return "External";
     case NV_ERROR_FILE_NOT_FOUND: return "File not found";
@@ -106,7 +137,7 @@ nv_error_str(nv_error code)
     case NV_ERROR_BROKEN_STATE: return "Broken state";
     case NV_ERROR_INVALID_INPUT: return "Invalid input";
     case NV_ERROR_INVALID_RETVAL: return "Invalid retval";
-    case NV_ERROR_UNKNOWN: return "Unknown";
+    case NV_ERROR_UNKNOWN: return "Unknown error";
     case NV_ERROR_INVALID_OPERATION: return "Invalid operation";
     default: return "(NotAnErrorCode)";
   }

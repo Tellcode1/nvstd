@@ -126,6 +126,10 @@ NOVA_HEADER_START
 #  define NV_STATIC_ASSERT(expr, errmsg) static volatile char static_assert_failed__##errmsg[!(expr) ? -1 : 1]
 #endif
 
+// deadbeef is for losers
+#define NOVA_CONT_CANARY 0xFEEF
+#define NOVA_CONT_IS_VALID(cont) ((cont) && ((cont)->canary == NOVA_CONT_CANARY))
+
 /**
  * Note that you may change these and everything should still work
  */

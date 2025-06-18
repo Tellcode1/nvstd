@@ -31,7 +31,7 @@
 
 NOVA_HEADER_START
 
-#define CONT_CANARY 0xFEEF
+#define NOVA_CONT_CANARY 0xFEEF
 
 typedef struct nv_list_s
 {
@@ -65,7 +65,7 @@ nv_list_is_valid(const nv_list_t* arr)
   {
     return false;
   }
-  if (arr->canary != CONT_CANARY)
+  if (arr->canary != NOVA_CONT_CANARY)
   {
     return false;
   }

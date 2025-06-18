@@ -86,14 +86,14 @@ NOVA_HEADER_START
  * If a free is successful, returns old_ptr
  * If NV_ALLOC_FREE or NV_ALLOC_NEW_BLOCK aren't specified, then realloc is assumed
  */
-typedef void* (*nv_allocator_fn)(void* user_data, void* old_ptr, size_t old_size, size_t new_size);
+typedef void* (*nv_allocator_fn)(void* allocator, void* old_ptr, size_t old_size, size_t new_size);
 
 typedef struct nv_alloc_estack nv_alloc_estack_t;
 
 /**
  * The C standard's allocator
  */
-extern void* nv_allocator_c(void* user_data, void* old_ptr, size_t old_size, size_t new_size);
+extern void* nv_allocator_c(void* allocator, void* old_ptr, size_t old_size, size_t new_size);
 
 struct nv_alloc_estack
 {
@@ -114,7 +114,7 @@ struct nv_alloc_estack
  * the function will simply exit and do nothing, but return old_ptr nonetheless
  * It is not legal to call new_size>old_size(realloc)
  */
-extern void* nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_size);
+extern void* nv_allocator_estack(void* allocator, void* old_ptr, size_t old_size, size_t new_size);
 
 NOVA_HEADER_END
 

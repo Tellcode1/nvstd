@@ -88,13 +88,13 @@ extern nv_error nv_fs_file_get_modified_time(const char* fpath, size_t* out_mtim
  * Read all of the data of a file into a buffer, allocated with 'alloc'
  * Note that the buffer is NULL terminated and the terminator is not included in buffer_size
  */
-extern nv_error nv_fs_file_readall(const char* fpath, nv_allocator_fn alloc, void* alloc_arg, char** buffer, size_t* buffer_size);
+extern nv_error nv_fs_file_read_all(const char* fpath, nv_allocator_fn alloc, void* alloc_arg, char** buffer, size_t* buffer_size);
 
 /**
  * If the user has passed in a directory that does not exist, this function will fail
  * and return NV_ERROR_INVALID_OPERATION. You need to create all parent directories before writing.
  */
-extern nv_error nv_fs_file_writeall(const char* fpath, const void* data, size_t data_size);
+extern nv_error nv_fs_file_write_all(const char* fpath, const void* data, size_t data_size);
 
 /**
  * Create an empty file.
