@@ -48,10 +48,12 @@
  * For more info: https://nullprogram.com/blog/2023/12/17/
  */
 
-#ifndef NOVA_ALLOC_H_INCLUDED_
-#define NOVA_ALLOC_H_INCLUDED_
+#ifndef STD_ALLOC_H
+#define STD_ALLOC_H
 
+#include "attributes.h"
 #include "stdafx.h"
+#include <stddef.h>
 
 NOVA_HEADER_START
 
@@ -88,6 +90,14 @@ NOVA_HEADER_START
  */
 typedef void* (*nv_allocator_fn)(void* allocator, void* old_ptr, size_t old_size, size_t new_size);
 
+typedef struct nv_allocator nv_allocator_t;
+
+struct nv_allocator
+{
+  void*           arg;
+  nv_allocator_fn fn;
+} NOVA_ATTR_ALIGNED(16);
+
 typedef struct nv_alloc_estack nv_alloc_estack_t;
 
 /**
@@ -106,7 +116,7 @@ struct nv_alloc_estack
   size_t         buffer_bumper;   // << MUST BE ZERO INITIALIZED >>
 
   bool using_heap_buffer; // << DO NOT MODIFY >>
-};
+} NOVA_ATTR_ALIGNED(64);
 
 /**
  * A custom, expandable stack allocator
@@ -118,4 +128,4 @@ extern void* nv_allocator_estack(void* allocator, void* old_ptr, size_t old_size
 
 NOVA_HEADER_END
 
-#endif //__NOVA_ALLOC_H__
+#endif // STD_ALLOC_H

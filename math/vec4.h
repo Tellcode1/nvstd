@@ -1,17 +1,16 @@
-#ifndef __CMATH_VEC4_H
-#define __CMATH_VEC4_H
+#ifndef STD_MATH_VEC4_H
+#define STD_MATH_VEC4_H
 
 #include "../../std/stdafx.h"
-
 #include <math.h>
 
 NOVA_HEADER_START
 
-#define _NV_DECL_VEC4(TYPE, NAME, FUNC, SQRT_FUNC)                                                                                                                            \
+#define NV_DECL_VEC4(TYPE, NAME, FUNC, SQRT_FUNC)                                                                                                                             \
   typedef struct NAME                                                                                                                                                         \
   {                                                                                                                                                                           \
     TYPE x, y, z, w;                                                                                                                                                          \
-  } NAME;                                                                                                                                                                     \
+  }(NAME);                                                                                                                                                                    \
   static inline NAME FUNC##add(const NAME v1, const NAME v2) { return (NAME){ v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, v1.w + v2.w }; }                                         \
   static inline NAME FUNC##sub(const NAME v1, const NAME v2) { return (NAME){ v1.x - v2.x, v1.y - v2.y, v1.z - v2.z, v1.w - v2.w }; }                                         \
   static inline NAME FUNC##mulv(const NAME v1, const NAME v2) { return (NAME){ v1.x * v2.x, v1.y * v2.y, v1.z * v2.z, v1.w * v2.w }; }                                        \
@@ -29,11 +28,11 @@ NOVA_HEADER_START
     return FUNC##divs(v, magnitude);                                                                                                                                          \
   }
 
-_NV_DECL_VEC4(int, vec4i, v4i, sqrt)
-_NV_DECL_VEC4(float, vec4f, v4f, sqrtf)
-_NV_DECL_VEC4(double, vec4d, v4d, sqrt)
-_NV_DECL_VEC4(flt_t, vec4, v4, sqrt)
+NV_DECL_VEC4(int, vec4i, v4i, sqrt)
+NV_DECL_VEC4(float, vec4f, v4f, sqrtf)
+NV_DECL_VEC4(double, vec4d, v4d, sqrt)
+NV_DECL_VEC4(flt_t, vec4, v4, sqrtf)
 
 NOVA_HEADER_END
 
-#endif // __CMATH_VEC4_H
+#endif // STD_MATH_VEC4_H

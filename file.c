@@ -1,7 +1,9 @@
 #include "file.h"
+#include "print.h"
 #include "stdafx.h"
 #include "string.h"
-#include "print.h"
+#include <errno.h>
+#include <stdio.h>
 
 #if (NOVA_FILE_API_AVAILABLE)
 
@@ -73,7 +75,7 @@ nv_fs_perms_to_unix_perms(nv_fs_permission perms, bool for_directory)
 }
 
 static inline int
-_nv_fs_perms_to_sys_perms(nv_fs_permission perms, bool for_directory)
+nv_fs_perms_to_sys_perms(nv_fs_permission perms, bool for_directory)
 {
 #  ifdef _WIN32
   return nv_fs_perms_to_win_perms(perms, for_directory);
@@ -85,7 +87,7 @@ _nv_fs_perms_to_sys_perms(nv_fs_permission perms, bool for_directory)
 bool
 nv_fs_file_exists(const char* fpath)
 {
-  return (access(fpath, _nv_fs_perms_to_sys_perms(NV_FS_PERMISSION_EXISTS, false)) == 0);
+  return (access(fpath, nv_fs_perms_to_sys_perms(NV_FS_PERMISSION_EXISTS, false)) == 0);
 }
 
 nv_error
@@ -139,7 +141,7 @@ nv_fs_file_read_all(const char* fpath, nv_allocator_fn alloc, void* alloc_arg, c
     *buffer_size = 0;
   }
 
-  FILE* fp = fopen(fpath, "rb");
+  FILE* fp = fopen(fpath, "rbe");
   if (!fp)
   {
     return NV_ERROR_IO_ERROR;
@@ -180,7 +182,7 @@ nv_fs_file_read_all(const char* fpath, nv_allocator_fn alloc, void* alloc_arg, c
 nv_error
 nv_fs_file_write_all(const char* fpath, const void* data, size_t data_size)
 {
-  FILE* fp = fopen(fpath, "wb");
+  FILE* fp = fopen(fpath, "wbe");
   if (!fp)
   {
     return NV_ERROR_IO_ERROR;
@@ -201,7 +203,7 @@ nv_fs_file_create(const char* fpath)
 {
 #  ifndef _WIN32
 
-  int fd = open(fpath, O_RDWR | O_CREAT | O_EXCL, 0755);
+  int fd = open(fpath, O_RDWR | O_CREAT | O_EXCL | O_CLOEXEC, 0755);
   if (fd < 0 && errno != EEXIST)
   {
     return NV_ERROR_IO_ERROR;
@@ -244,7 +246,7 @@ nv_error
 nv_fs_dir_create(const char* dpath, nv_fs_permission perms)
 {
 #  ifndef _WIN32
-  if (mkdir(dpath, _nv_fs_perms_to_sys_perms(perms, true)) != 0 && errno != EEXIST)
+  if (mkdir(dpath, nv_fs_perms_to_sys_perms(perms, true)) != 0 && errno != EEXIST)
   {
     return NV_ERROR_IO_ERROR;
   }
@@ -377,7 +379,7 @@ nv_fs_dir_delete_recursive(const char* dpath)
   char*    fullpath = nv_calloc(NV_MAX(PATH_MAX, nv_strlen(dpath)));
   nv_error code     = NV_SUCCESS;
 
-  struct dirent* entry;
+  struct dirent* entry = NULL;
   while ((entry = readdir(dir)) != NULL)
   {
     if (nv_strcmp(entry->d_name, ".") == 0 || nv_strcmp(entry->d_name, "..") == 0)

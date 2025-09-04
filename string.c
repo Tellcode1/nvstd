@@ -1,6 +1,12 @@
 #include "string.h"
+#include "alloc.h"
+#include "attributes.h"
 #include "chrclass.h"
 #include "stdafx.h"
+#include "types.h"
+#include <errno.h>
+#include <stdint.h>
+#include <stdlib.h>
 
 void*
 nv_memset(void* dst, char to, size_t sz)
@@ -67,7 +73,7 @@ nv_calloc(size_t sz)
 }
 
 static inline size_t
-_align_up(size_t sz, size_t align)
+align_up(size_t sz, size_t align)
 {
   return (sz + (align - 1)) & ~(align - 1);
 }
@@ -78,7 +84,7 @@ nv_aligned_alloc(size_t size, size_t alignment)
   nv_assert_else_return((alignment & (alignment - 1)) == 0, NULL);
   nv_assert_else_return(size > 0, NULL);
 
-  const size_t total_size = _align_up(size + sizeof(void*) + sizeof(size_t), alignment);
+  const size_t total_size = align_up(size + sizeof(void*) + sizeof(size_t), alignment);
 
   void* const orig = nv_malloc(total_size);
   if (!orig)
@@ -132,11 +138,9 @@ nv_aligned_realloc(void* orig, size_t size, size_t alignment)
 
     return new_block;
   }
-  else
-  {
-    nv_log_error("double free %p\n", orig);
-    abort();
-  }
+
+  nv_log_error("double free %p\n", orig);
+  abort();
 
   return NULL;
 }
@@ -393,7 +397,8 @@ nv_strcat_max(char* dst, const char* src, size_t dest_size)
 char*
 nv_strtrim(char* s)
 {
-  char *begin, *end;
+  char* begin = NULL;
+  char* end   = NULL;
   if (nv_strtrim_c(s, (const char**)&begin, (const char**)&end) == NULL)
   {
     return NULL;
@@ -735,7 +740,7 @@ nv_strtok(char* s, const char* delim, char** context)
   {
     s = *context;
   }
-  char* p;
+  char* p = NULL;
 
   s += nv_strspn(s, delim);
   if (!s || *s == 0)

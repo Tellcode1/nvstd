@@ -1,17 +1,16 @@
-#ifndef __CMATH_VEC3_H
-#define __CMATH_VEC3_H
+#ifndef STD_MATH_VEC3_H
+#define STD_MATH_VEC3_H
 
 #include "../../std/stdafx.h"
-
 #include <math.h>
 
 NOVA_HEADER_START
 
-#define _NV_DECL_VEC3(TYPE, NAME, FUNC, SQRT_FUNC)                                                                                                                            \
+#define NV_DECL_VEC3(TYPE, NAME, FUNC, SQRT_FUNC)                                                                                                                             \
   typedef struct NAME                                                                                                                                                         \
   {                                                                                                                                                                           \
     TYPE x, y, z;                                                                                                                                                             \
-  } NAME;                                                                                                                                                                     \
+  }(NAME);                                                                                                                                                                    \
   static inline NAME FUNC##add(const NAME v1, const NAME v2) { return (NAME){ v1.x + v2.x, v1.y + v2.y, v1.z + v2.z }; }                                                      \
   static inline NAME FUNC##sub(const NAME v1, const NAME v2) { return (NAME){ v1.x - v2.x, v1.y - v2.y, v1.z - v2.z }; }                                                      \
   static inline NAME FUNC##mulv(const NAME v1, const NAME v2) { return (NAME){ v1.x * v2.x, v1.y * v2.y, v1.z * v2.z }; }                                                     \
@@ -30,11 +29,11 @@ NOVA_HEADER_START
     return FUNC##divs(v, magnitude);                                                                                                                                          \
   }
 
-_NV_DECL_VEC3(int, vec3i, v3i, sqrt)
-_NV_DECL_VEC3(float, vec3f, v3f, sqrtf)
-_NV_DECL_VEC3(double, vec3d, v3d, sqrt)
-_NV_DECL_VEC3(flt_t, vec3, v3, sqrt)
+NV_DECL_VEC3(int, vec3i, v3i, sqrt)
+NV_DECL_VEC3(float, vec3f, v3f, sqrtf)
+NV_DECL_VEC3(double, vec3d, v3d, sqrt)
+NV_DECL_VEC3(flt_t, vec3, v3, sqrtf)
 
 NOVA_HEADER_END
 
-#endif // __CMATH_VEC3_H
+#endif // STD_MATH_VEC3_H

@@ -1,7 +1,7 @@
 /*
   MIT License
 
-  Copyright (c) 2025 Fouzan MD Ishaque (fouzanmdishaque@gmail.com)
+  Copyright (c) 2025 Tellcode
 
   Permission is hereby granted, free of charge, to any person obtaining a copy
   of this software and associated documentation files (the "Software"), to deal
@@ -22,41 +22,29 @@
   SOFTWARE.
 */
 
-#ifndef STD_TYPES_H
-#define STD_TYPES_H
+#ifndef STD_STACKALLOC_H
+#define STD_STACKALLOC_H
 
-#ifdef __cplusplus
-extern "C"
+#include "stdafx.h"
+#include "types.h"
+
+NOVA_HEADER_START
+
+#define NOVA_STACK_SIZE 4096 // bytes
+
+#define NOVA_SETUP_STACK                                                                                                                                                      \
+  uchar  _nv_stack[NOVA_STACK_SIZE] = {};                                                                                                                                     \
+  size_t _nv_stack_bumper           = 0
+#define nv_stackalloc(size_bytes) (_nv_stackalloc_actual(_nv_stack, &_nv_stack_bumper, size_bytes)) // uhh ugly but single liner :3
+
+void*
+_nv_stackalloc_actual(uchar* stack, size_t* stack_bumper, size_t size_bytes)
 {
-#endif
-
-#include <stdint.h>
-
-  typedef uint64_t u64;
-  typedef uint32_t u32;
-  typedef uint16_t u16;
-  typedef uint8_t  u8;
-  typedef int8_t   sbyte;
-  typedef uint8_t  ubyte;
-
-  typedef unsigned char uchar;
-
-  typedef int64_t i64;
-  typedef int32_t i32;
-  typedef int16_t i16;
-  typedef int8_t  i8;
-
-  // They ARE 32 and 64 bits by IEEE-754 but aren't set by the standard
-  // But there is a 99.9% chance that they will be
-  typedef float  f32;
-  typedef double f64;
-
-  /**
-   * little easier to type
-   */
-#define null (NULL)
-
-#ifdef __cplusplus
+  void* ptr = stack + *stack_bumper;
+  *stack_bumper += size_bytes;
+  return ptr;
 }
-#endif
-#endif // STD_TYPES_HS_H
+
+NOVA_HEADER_END
+
+#endif // STD_STACKALLOC_H

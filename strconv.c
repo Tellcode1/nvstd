@@ -1,8 +1,11 @@
 #include "strconv.h"
+#include "attributes.h"
+#include "chrclass.h"
 #include "stdafx.h"
 #include "string.h"
-#include "chrclass.h"
+#include "types.h"
 #include <math.h>
+#include <stdint.h>
 
 size_t
 nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas)
@@ -312,7 +315,7 @@ nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros)
   return itr - out;
 }
 
-#define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &s, NULL);
+#define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &(s), NULL);
 
 intmax_t
 nv_atoi(const char in_string[], size_t max)

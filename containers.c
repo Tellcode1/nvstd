@@ -1,4 +1,5 @@
 #include "containers/rectpack.h"
+#include "hash.h"
 #include "stdafx.h"
 
 #include "alloc.h"
@@ -9,9 +10,9 @@
 #include "containers/hashmap.h"
 #include "containers/list.h"
 #include "containers/rbmap.h"
+#include "types.h"
 
 #include <SDL3/SDL.h>
-#include <SDL3/SDL_mutex.h>
 
 #include <errno.h>
 #include <limits.h>
@@ -23,10 +24,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-void __shutup_compiler_errno_warning__(void);
+void shutup_compiler_errno_warning_(void);
 
 void
-__shutup_compiler_errno_warning__(void)
+shutup_compiler_errno_warning_(void)
 {
   (void)(errno);
 }
@@ -111,10 +112,10 @@ nv_list_size(const nv_list_t* list)
     return 0;
   }
 
-  SDL_LockMutex((SDL_Mutex*)list->mutex);
+  SDL_LockMutex(list->mutex);
   nv_assert(NOVA_CONT_IS_VALID(list));
   size_t sz = list->size;
-  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+  SDL_UnlockMutex(list->mutex);
   return sz;
 }
 
@@ -126,10 +127,10 @@ nv_list_capacity(const nv_list_t* list)
     return 0;
   }
 
-  SDL_LockMutex((SDL_Mutex*)list->mutex);
+  SDL_LockMutex(list->mutex);
   nv_assert(NOVA_CONT_IS_VALID(list));
   size_t cap = list->capacity;
-  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+  SDL_UnlockMutex(list->mutex);
   return cap;
 }
 
@@ -140,10 +141,10 @@ nv_list_type_size(const nv_list_t* list)
   {
     return 0;
   }
-  SDL_LockMutex((SDL_Mutex*)list->mutex);
+  SDL_LockMutex(list->mutex);
   nv_assert(NOVA_CONT_IS_VALID(list));
   size_t tsize = list->type_size;
-  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+  SDL_UnlockMutex(list->mutex);
   return tsize;
 }
 
@@ -154,10 +155,10 @@ nv_list_data(const nv_list_t* list)
   {
     return 0;
   }
-  SDL_LockMutex((SDL_Mutex*)list->mutex);
+  SDL_LockMutex(list->mutex);
   nv_assert(NOVA_CONT_IS_VALID(list));
   void* ptr = list->data;
-  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+  SDL_UnlockMutex(list->mutex);
   return ptr;
 }
 
@@ -198,12 +199,12 @@ nv_list_get(const nv_list_t* list, size_t i)
     return NULL;
   }
 
-  SDL_LockMutex((SDL_Mutex*)list->mutex);
+  SDL_LockMutex(list->mutex);
   nv_assert_else_return(NOVA_CONT_IS_VALID(list), NULL);
   nv_assert_else_return(i < list->capacity, NULL);
   uchar* data      = list->data;
   size_t type_size = list->type_size;
-  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+  SDL_UnlockMutex(list->mutex);
   if (!data)
   {
     return NULL;
@@ -223,7 +224,7 @@ nv_list_set(nv_list_t* list, size_t i, void* elem)
 void
 nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
 {
-  SDL_LockMutex((SDL_Mutex*)src->mutex);
+  SDL_LockMutex(src->mutex);
   SDL_LockMutex(dst->mutex);
 
   nv_assert(NOVA_CONT_IS_VALID(src));
@@ -232,12 +233,12 @@ nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
   nv_assert(src->type_size == dst->type_size);
   if (src->size >= dst->capacity)
   {
-    nv_list_resize(dst, src->size);
+    nv_list_reserve(dst, src->size);
   }
   dst->size = src->size;
   nv_memcpy(dst->data, src->data, src->size * src->type_size);
 
-  SDL_UnlockMutex((SDL_Mutex*)src->mutex);
+  SDL_UnlockMutex(src->mutex);
   SDL_UnlockMutex(dst->mutex);
 }
 
@@ -275,8 +276,8 @@ nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
   nv_assert(NOVA_CONT_IS_VALID(list1));
   nv_assert(NOVA_CONT_IS_VALID(list2));
 
-  SDL_LockMutex((SDL_Mutex*)list1->mutex);
-  SDL_LockMutex((SDL_Mutex*)list2->mutex);
+  SDL_LockMutex(list1->mutex);
+  SDL_LockMutex(list2->mutex);
 
   bool equal = 1;
   if ((list1->size != list2->size || list1->type_size != list2->type_size) || (nv_memcmp(list1->data, list2->data, list1->size * list1->type_size) != 0))
@@ -284,8 +285,8 @@ nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
     equal = 0;
   }
 
-  SDL_UnlockMutex((SDL_Mutex*)list1->mutex);
-  SDL_UnlockMutex((SDL_Mutex*)list2->mutex);
+  SDL_UnlockMutex(list1->mutex);
+  SDL_UnlockMutex(list2->mutex);
 
   return equal;
 }
@@ -295,17 +296,40 @@ nv_list_resize(nv_list_t* list, size_t new_size)
 {
   nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
 
+  if (NV_UNLIKELY(new_size == 0))
+  {
+    nv_list_clear(list);
+    return;
+  }
+  else if (new_size > list->capacity)
+  {
+    nv_list_reserve(list, NV_MAX(new_size, list->capacity * 2));
+  }
+
+  list->size = new_size;
+}
+
+void
+nv_list_reserve(nv_list_t* list, size_t new_capacity)
+{
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
+  if (NV_UNLIKELY(new_capacity == 0))
+  {
+    nv_list_clear(list);
+    return;
+  }
+
   if (list->data)
   {
-    list->data = NV_REALLOC(list->alloc, list->alloc_arg, list->data, list->type_size * list->capacity, list->type_size * new_size);
+    list->data = NV_REALLOC(list->alloc, list->alloc_arg, list->data, list->type_size * list->capacity, list->type_size * new_capacity);
   }
   else
   {
-    list->data = NV_ALLOC(list->alloc, list->alloc_arg, list->type_size * new_size);
+    list->data = NV_ALLOC(list->alloc, list->alloc_arg, list->type_size * new_capacity);
   }
   nv_assert(list->data != NULL);
 
-  list->capacity = new_size;
+  list->capacity = new_capacity;
 }
 
 void
@@ -317,7 +341,7 @@ nv_list_push_back(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 
   if (list->size >= list->capacity)
   {
-    nv_list_resize(list, NV_MAX(1, list->capacity * 2));
+    nv_list_reserve(list, NV_MAX(1, list->capacity * 2));
   }
 
   nv_assert(list->data != NULL);
@@ -337,7 +361,7 @@ nv_list_push_empty(nv_list_t* __restrict list)
 
   if (list->size >= list->capacity)
   {
-    nv_list_resize(list, NV_MAX(1, list->capacity * 2));
+    nv_list_reserve(list, NV_MAX(1, list->capacity * 2));
   }
 
   nv_assert(list->data != NULL);
@@ -360,7 +384,7 @@ nv_list_push_set(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT arr, size_
   size_t required_capacity = list->size + count;
   if (required_capacity >= list->capacity)
   {
-    nv_list_resize(list, required_capacity);
+    nv_list_reserve(list, required_capacity);
   }
   nv_memcpy((uchar*)list->data + (list->size * list->type_size), arr, count * list->type_size);
   list->size += count;
@@ -408,7 +432,7 @@ nv_list_insert(nv_list_t* NV_RESTRICT list, size_t index, const void* NV_RESTRIC
 
   if (index >= list->capacity)
   {
-    nv_list_resize(list, NV_MAX(1, index * 2));
+    nv_list_reserve(list, NV_MAX(1, index * 2));
   }
   if (index >= list->size)
   {
@@ -451,22 +475,20 @@ nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 {
   nv_assert(NOVA_CONT_IS_VALID(list));
 
-  SDL_LockMutex((SDL_Mutex*)list->mutex);
+  SDL_LockMutex(list->mutex);
 
   if (list->size == 0)
   {
     return SIZE_MAX;
   }
-  else if (list->size == 1)
+  if (list->size == 1)
   {
     if (nv_memcmp(list->data, elem, list->type_size) == 0)
     {
       return 0;
     }
-    else
-    {
-      return SIZE_MAX;
-    }
+
+    return SIZE_MAX;
   }
 
   /* start two probes, one from the front and one from behind */
@@ -480,17 +502,17 @@ nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 
     if (nv_memcmp(fwd, elem, list->type_size) == 0)
     {
-      SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+      SDL_UnlockMutex(list->mutex);
       return fwd_index;
     }
-    else if (nv_memcmp(bck, elem, list->type_size) == 0)
+    if (nv_memcmp(bck, elem, list->type_size) == 0)
     {
-      SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+      SDL_UnlockMutex(list->mutex);
       return bck_index;
     }
   }
 
-  SDL_UnlockMutex((SDL_Mutex*)list->mutex);
+  SDL_UnlockMutex(list->mutex);
   return (size_t)-1;
 }
 
@@ -550,7 +572,7 @@ nv_hashmap_init(size_t init_size, size_t key_size, size_t value_size, nv_hash_fn
     return NV_ERROR_EXTERNAL;
   }
 
-  // TODO: Is this needed?
+  // TODO(bird): Is this needed?
   SDL_LockMutex(dst->mutex);
 
   dst->alloc     = allocator;
@@ -706,19 +728,19 @@ nv_hashmap_valuesize(const nv_hashmap_t* map)
 }
 
 nv_hashmap_node_t*
-nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* __i)
+nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* _i)
 {
   nv_assert_else_return(NOVA_CONT_IS_VALID(map), NULL);
 
   /**
    * If map->capacity is 0, it simply jumps to returning NULL
    */
-  for (; (*__i) < map->capacity; (*__i)++)
+  for (; (*_i) < map->capacity; (*_i)++)
   {
-    size_t i = *__i;
+    size_t i = *_i;
     if (NV_NODE_OCCUPIED(map->nodes[i]))
     {
-      (*__i)++;
+      (*_i)++;
       return &map->nodes[i];
     }
   }
@@ -770,7 +792,7 @@ nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key
 }
 
 static inline void
-_nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value, bool replace_if_exists, void* hash_fn_arg)
+nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value, bool replace_if_exists, void* hash_fn_arg)
 {
   nv_assert(NOVA_CONT_IS_VALID(map));
 
@@ -816,8 +838,8 @@ void
 nv_hashmap_insert(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value, void* hash_fn_arg)
 {
   SDL_LockMutex(map->mutex);
-  // TODO: This should not be structured like this????
-  _nv_hashmap_insert_internal_unsafe(map, key, value, 0, hash_fn_arg);
+  // TODO(bird): This should not be structured like this????
+  nv_hashmap_insert_internal_unsafe(map, key, value, 0, hash_fn_arg);
   SDL_UnlockMutex(map->mutex);
 }
 
@@ -825,7 +847,7 @@ void
 nv_hashmap_insert_or_replace(nv_hashmap_t* map, const void* NV_RESTRICT key, void* NV_RESTRICT value, void* hash_fn_arg)
 {
   SDL_LockMutex(map->mutex);
-  _nv_hashmap_insert_internal_unsafe(map, key, value, 1, hash_fn_arg);
+  nv_hashmap_insert_internal_unsafe(map, key, value, 1, hash_fn_arg);
   SDL_UnlockMutex(map->mutex);
 }
 
@@ -935,7 +957,7 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
 
-  SDL_LockMutex((SDL_Mutex*)bin->mutex);
+  SDL_LockMutex(bin->mutex);
 
   size_t max_h = 0;
   for (size_t i = x; i < x + w && i < bin->width; i++)
@@ -946,7 +968,7 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
     }
   }
 
-  SDL_UnlockMutex((SDL_Mutex*)bin->mutex);
+  SDL_UnlockMutex(bin->mutex);
   return max_h;
 }
 
@@ -955,7 +977,7 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
 
-  SDL_LockMutex((SDL_Mutex*)bin->mutex);
+  SDL_LockMutex(bin->mutex);
 
   /**
    * SIZE_MAX is used as a no find value.
@@ -974,7 +996,7 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
   size_t max_x = bin->width - rect->width;
   for (size_t x = 0; x <= max_x; x++)
   {
-    SDL_UnlockMutex((SDL_Mutex*)bin->mutex);
+    SDL_UnlockMutex(bin->mutex);
     size_t y = nv_skyline_bin_max_height(bin, x, rect->width);
     if (y + rect->height <= bin->height && y < min_y)
     {
@@ -982,10 +1004,10 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
       *best_x = x;
       *best_y = y;
     }
-    SDL_LockMutex((SDL_Mutex*)bin->mutex);
+    SDL_LockMutex(bin->mutex);
   }
 
-  SDL_UnlockMutex((SDL_Mutex*)bin->mutex);
+  SDL_UnlockMutex(bin->mutex);
   return (*best_x != SIZE_MAX);
 }
 
@@ -1002,7 +1024,7 @@ nv_skyline_bin_place_rect(nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, 
 
     if (bin->rects)
     {
-      bin->rects = nv_realloc(bin->rects, new_alloc * sizeof(nv_skyline_rect_t));
+      bin->rects = (nv_skyline_rect_t*)nv_realloc(bin->rects, new_alloc * sizeof(nv_skyline_rect_t));
     }
     else
     {
@@ -1022,7 +1044,7 @@ nv_skyline_bin_place_rect(nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, 
 }
 
 static int
-_nv_skyline_compare_rect(const void* rect1, const void* rect2)
+nv_skyline_compare_rect(const void* rect1, const void* rect2)
 {
   size_t rect2_height = ((const nv_skyline_rect_t*)rect2)->height;
   size_t rect1_height = ((const nv_skyline_rect_t*)rect1)->height;
@@ -1034,11 +1056,12 @@ nv_skyline_bin_pack_rects(nv_skyline_bin_t* bin, nv_skyline_rect_t* rects, size_
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
 
-  qsort(rects, nrects, sizeof(nv_skyline_rect_t), _nv_skyline_compare_rect);
+  qsort(rects, nrects, sizeof(nv_skyline_rect_t), nv_skyline_compare_rect);
 
   for (size_t i = 0; i < nrects; i++)
   {
-    size_t x, y;
+    size_t x = 0;
+    size_t y = 0;
     if (nv_skyline_bin_find_best_placement(bin, &rects[i], &x, &y))
     {
       nv_skyline_bin_place_rect(bin, &rects[i], x, y);
@@ -1158,7 +1181,8 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
 
   for (size_t i = 0; i < num_invalid; i++)
   {
-    size_t x, y;
+    size_t x = 0;
+    size_t y = 0;
     if (nv_skyline_bin_find_best_placement(bin, &invalid_rects[i], &x, &y))
     {
       nv_skyline_bin_place_rect(bin, &invalid_rects[i], x, y);
@@ -1259,7 +1283,7 @@ nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src)
     return;
   }
   SDL_LockMutex(dst->mutex);
-  SDL_LockMutex((SDL_Mutex*)src->mutex);
+  SDL_LockMutex(src->mutex);
   if (src->size != dst->size && dst->data)
   {
     NV_FREE(dst->alloc, dst->alloc_arg, dst->data, dst->size * sizeof(uint8_t));
@@ -1271,7 +1295,7 @@ nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src)
     nv_memcpy(dst->data, src->data, src->size);
   }
   SDL_UnlockMutex(dst->mutex);
-  SDL_UnlockMutex((SDL_Mutex*)src->mutex);
+  SDL_UnlockMutex(src->mutex);
 }
 
 void
@@ -1497,7 +1521,7 @@ nv_rbmap_delete(nv_rbmap_t* map, nv_rbmap_node_t* z)
 
   nv_rbmap_node_t* y                = z;
   int              y_original_color = y->color;
-  nv_rbmap_node_t* x;
+  nv_rbmap_node_t* x                = NULL;
 
   if (z->children[0] == NULL)
   {
@@ -1604,7 +1628,7 @@ nv_rbmap_insert_fixup(nv_rbmap_t* map, nv_rbmap_node_t* z)
 }
 
 static inline nv_rbmap_node_t*
-_nv_rbmap_allocate_node(nv_rbmap_t* map)
+nv_rbmap_allocate_node(nv_rbmap_t* map)
 {
   return (nv_rbmap_node_t*)map;
 }
@@ -1612,7 +1636,7 @@ _nv_rbmap_allocate_node(nv_rbmap_t* map)
 void
 nv_rbmap_insert(nv_rbmap_t* map, const void* key, const void* value, void* user_hash_data)
 {
-  (void)_nv_rbmap_allocate_node;
+  (void)nv_rbmap_allocate_node;
   nv_assert(NOVA_CONT_IS_VALID(map));
   nv_assert(map != NULL);
   nv_assert(key != NULL);
@@ -1767,11 +1791,12 @@ nv_rbmap_destroy(nv_rbmap_t* map)
   nv_rbmap_iterator_t itr;
   nv_rbmap_iterator_init(map, &itr);
 
-  nv_rbmap_node_t** nodes = NULL;
-  size_t            count = 0, capacity = 16;
-  nodes = (nv_rbmap_node_t**)nv_calloc(capacity * sizeof(nv_rbmap_node_t*));
+  nv_rbmap_node_t** nodes    = NULL;
+  size_t            count    = 0;
+  size_t            capacity = 16;
+  nodes                      = (nv_rbmap_node_t**)nv_calloc(capacity * sizeof(nv_rbmap_node_t*));
 
-  nv_rbmap_node_t* node;
+  nv_rbmap_node_t* node = NULL;
   while ((node = nv_rbmap_iterator_next(&itr)) != NULL)
   {
     if (count >= capacity)

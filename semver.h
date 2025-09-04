@@ -27,11 +27,12 @@
  * https://semver.org/
  */
 
-#ifndef NOVA_SEMANTIC_VERSIONING_H_INCLUDED_
-#define NOVA_SEMANTIC_VERSIONING_H_INCLUDED_
+#ifndef STD_SEMVER_H
+#define STD_SEMVER_H
 
-#include "stdafx.h"
 #include "attributes.h"
+#include "stdafx.h"
+#include <stdint.h>
 
 NOVA_HEADER_START
 
@@ -40,12 +41,13 @@ NOVA_HEADER_START
 #define NV_SEMVER_PATCH_VERSION_NUMBER_MAX 4095
 
 #ifndef __NOVA_SEMVER_MAJOR_SHIFT
-#  define __NOVA_SEMVER_MAJOR_SHIFT (22)
-#  define __NOVA_SEMVER_MINOR_SHIFT (12)
-#  define __NOVA_SEMVER_PATCH_SHIFT (0)
+#  define NOVA_SEMVER_MAJOR_SHIFT (22)
+#  define NOVA_SEMVER_MINOR_SHIFT (12)
+#  define NOVA_SEMVER_PATCH_SHIFT (0)
 #endif
 
-#define NV_SEMVER_PACK_VERSION_DEF(major, minor, patch) ((major << __NOVA_SEMVER_MAJOR_SHIFT) | (minor << __NOVA_SEMVER_MINOR_SHIFT) | (patch << __NOVA_SEMVER_PATCH_SHIFT))
+#define NV_SEMVER_PACK_VERSION_DEF(major, minor, patch)                                                                                                                       \
+  (((major) << __NOVA_SEMVER_MAJOR_SHIFT) | ((minor) << __NOVA_SEMVER_MINOR_SHIFT) | ((patch) << __NOVA_SEMVER_PATCH_SHIFT))
 #define NV_SEMVER_UNPACK_VERSION_MAJOR_DEF(packed) ((version >> __NOVA_SEMVER_MAJOR_SHIFT) & 0x3FF)
 #define NV_SEMVER_UNPACK_VERSION_MINOR_DEF(packed) ((version >> __NOVA_SEMVER_MINOR_SHIFT) & 0x3FF)
 #define NV_SEMVER_UNPACK_VERSION_PATCH_DEF(packed) ((version >> __NOVA_SEMVER_PATCH_SHIFT) & 0xFFF)
@@ -59,17 +61,17 @@ nv_semver_pack_version(version_t major, version_t minor, version_t patch)
   nv_assert(minor <= NV_SEMVER_MINOR_VERSION_NUMBER_MAX);
   nv_assert(patch <= NV_SEMVER_PATCH_VERSION_NUMBER_MAX);
 
-  return (major << __NOVA_SEMVER_MAJOR_SHIFT) | (minor << __NOVA_SEMVER_MINOR_SHIFT) | (patch << __NOVA_SEMVER_PATCH_SHIFT);
+  return (major << NOVA_SEMVER_MAJOR_SHIFT) | (minor << NOVA_SEMVER_MINOR_SHIFT) | (patch << NOVA_SEMVER_PATCH_SHIFT);
 }
 
 static inline void
 nv_semver_unpack_version(version_t version, version_t* major, version_t* minor, version_t* patch)
 {
-  *major = (version >> __NOVA_SEMVER_MAJOR_SHIFT) & 0x3FF;
-  *minor = (version >> __NOVA_SEMVER_MINOR_SHIFT) & 0x3FF;
-  *patch = (version >> __NOVA_SEMVER_PATCH_SHIFT) & 0xFFF;
+  *major = (version >> NOVA_SEMVER_MAJOR_SHIFT) & 0x3FF;
+  *minor = (version >> NOVA_SEMVER_MINOR_SHIFT) & 0x3FF;
+  *patch = (version >> NOVA_SEMVER_PATCH_SHIFT) & 0xFFF;
 }
 
 NOVA_HEADER_END
 
-#endif //__NOVA_SEMVER_H__
+#endif // STD_SEMVER_H

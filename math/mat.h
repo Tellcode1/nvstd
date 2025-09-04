@@ -1,23 +1,23 @@
-#ifndef __MAT_H__
-#define __MAT_H__
+#ifndef STD_MATH_MAT_H
+#define STD_MATH_MAT_H
 
 #include "../../std/stdafx.h"
-#include "vec2.h"
 #include "vec3.h"
 #include "vec4.h"
+#include <math.h>
 
 NOVA_HEADER_START
 
-#define _NV_DECL_MAT4(NAME, FUNC, SIZE, TYPE, TYPE_PREFIX)                                                                                                                    \
+#define NV_DECL_MAT4(NAME, FUNC, SIZE, TYPE, TYPE_PREFIX)                                                                                                                     \
   typedef struct NAME                                                                                                                                                         \
   {                                                                                                                                                                           \
     vec##SIZE##TYPE_PREFIX data[SIZE];                                                                                                                                        \
-  } NAME;                                                                                                                                                                     \
+  }(NAME);                                                                                                                                                                    \
                                                                                                                                                                               \
   static inline NAME FUNC##init(TYPE diag)                                                                                                                                    \
   {                                                                                                                                                                           \
     NAME result = nv_zero_init(NAME);                                                                                                                                         \
-    for (int i = 0; i < SIZE; i++)                                                                                                                                            \
+    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
     {                                                                                                                                                                         \
       result.data[i]              = (vec##SIZE##TYPE_PREFIX){ 0 };                                                                                                            \
       ((TYPE*)&result.data[i])[i] = diag;                                                                                                                                     \
@@ -28,7 +28,7 @@ NOVA_HEADER_START
   static inline NAME FUNC##add(const NAME m1, const NAME m2)                                                                                                                  \
   {                                                                                                                                                                           \
     NAME result;                                                                                                                                                              \
-    for (int i = 0; i < SIZE; i++)                                                                                                                                            \
+    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
     {                                                                                                                                                                         \
       result.data[i] = v##SIZE##TYPE_PREFIX##add(m1.data[i], m2.data[i]);                                                                                                     \
     }                                                                                                                                                                         \
@@ -38,7 +38,7 @@ NOVA_HEADER_START
   static inline NAME FUNC##sub(const NAME m1, const NAME m2)                                                                                                                  \
   {                                                                                                                                                                           \
     NAME result;                                                                                                                                                              \
-    for (int i = 0; i < SIZE; i++)                                                                                                                                            \
+    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
     {                                                                                                                                                                         \
       result.data[i] = v##SIZE##TYPE_PREFIX##sub(m1.data[i], m2.data[i]);                                                                                                     \
     }                                                                                                                                                                         \
@@ -48,10 +48,10 @@ NOVA_HEADER_START
   static inline NAME FUNC##mul(const NAME m1, const NAME m2)                                                                                                                  \
   {                                                                                                                                                                           \
     NAME result = nv_zero_init(NAME);                                                                                                                                         \
-    for (int i = 0; i < SIZE; i++)                                                                                                                                            \
+    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
     {                                                                                                                                                                         \
       result.data[i] = (vec##SIZE##TYPE_PREFIX){ 0 };                                                                                                                         \
-      for (int j = 0; j < SIZE; j++)                                                                                                                                          \
+      for (int j = 0; j < (SIZE); j++)                                                                                                                                        \
       {                                                                                                                                                                       \
         result.data[i] = v##SIZE##TYPE_PREFIX##add(result.data[i], v##SIZE##TYPE_PREFIX##muls(m1.data[j], ((TYPE*)&m2.data[j])[i]));                                          \
       }                                                                                                                                                                       \
@@ -62,7 +62,7 @@ NOVA_HEADER_START
   static inline vec##SIZE##TYPE_PREFIX FUNC##mulv(const NAME m, const vec##SIZE##TYPE_PREFIX v)                                                                               \
   {                                                                                                                                                                           \
     vec##SIZE##TYPE_PREFIX result = nv_zero_init(vec##SIZE##TYPE_PREFIX);                                                                                                     \
-    for (int i = 0; i < SIZE; i++)                                                                                                                                            \
+    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
     {                                                                                                                                                                         \
       ((TYPE*)&result)[i] = v##SIZE##TYPE_PREFIX##dot(m.data[i], v);                                                                                                          \
     }                                                                                                                                                                         \
@@ -183,14 +183,14 @@ NOVA_HEADER_START
                    (vec4##TYPE_PREFIX){ -(right + left) / (right - left), -(bottom + top) / (bottom - top), near / (near - far), 1.0f } };                                    \
   }
 
-_NV_DECL_MAT4(mat4f, m4f, 4, float, f)
-_NV_DECL_MAT4(mat4d, m4d, 4, double, d)
-_NV_DECL_MAT4(mat4, m4, 4, flt_t, )
+NV_DECL_MAT4(mat4f, m4f, 4, float, f)
+NV_DECL_MAT4(mat4d, m4d, 4, double, d)
+NV_DECL_MAT4(mat4, m4, 4, flt_t, )
 
 #define NV_MATRIX_COPY(m1, m2)                                                                                                                                                \
   do                                                                                                                                                                          \
   {                                                                                                                                                                           \
-    const int size = nv_arrlen(m1.data);                                                                                                                                      \
+    const int size = nv_arrlen((m1).data);                                                                                                                                    \
     for (int __nv_matrix_copy_i = 0; __nv_matrix_copy_i < (size); __nv_matrix_copy_i++)                                                                                       \
       for (int __nv_matrix_copy_j = 0; __nv_matrix_copy_j < (size); __nv_matrix_copy_j++)                                                                                     \
         ((&(m1).data[__nv_matrix_copy_i].x)[__nv_matrix_copy_j] = (&(m2).data[__nv_matrix_copy_i].x)[__nv_matrix_copy_j]);                                                    \

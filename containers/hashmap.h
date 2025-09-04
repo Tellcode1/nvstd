@@ -22,12 +22,18 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_HASHMAP_H__
-#define __NOVA_HASHMAP_H__
+#ifndef STD_CONTAINERS_HASHMAP_H
+#define STD_CONTAINERS_HASHMAP_H
 
 #include "../alloc.h"
+#include "../attributes.h"
 #include "../errorcodes.h"
 #include "../hash.h"
+#include "../stdafx.h"
+#include "../types.h"
+#include <SDL3/SDL_mutex.h>
+#include <stddef.h>
+#include <stdio.h>
 
 NOVA_HEADER_START
 
@@ -63,7 +69,7 @@ extern size_t nv_hashmap_valuesize(const nv_hashmap_t* map);
  *  __i needs to point to an integer initialized to 0
  * Note that this function is MT-Unsafe and the caller must use SDL_LockMutex to ensure MT safeness.
  */
-extern nv_hashmap_node_t* nv_hashmap_iterate_unsafe(const nv_hashmap_t* NV_RESTRICT map, size_t* NV_RESTRICT __i);
+extern nv_hashmap_node_t* nv_hashmap_iterate_unsafe(const nv_hashmap_t* NV_RESTRICT map, size_t* NV_RESTRICT _i);
 
 extern nv_hashmap_node_t* nv_hashmap_root_node(const nv_hashmap_t* map);
 
@@ -104,7 +110,7 @@ struct nv_hashmap_node
   void* key;
   void* value;
   u32   hash;
-};
+} NOVA_ATTR_ALIGNED(32);
 
 struct nv_hashmap
 {
@@ -118,8 +124,8 @@ struct nv_hashmap
   size_t             value_size;
   nv_allocator_fn    alloc;
   void*              alloc_arg;
-};
+} NOVA_ATTR_ALIGNED(128);
 
 NOVA_HEADER_END
 
-#endif //__NOVA_HASHMAP_H__
+#endif // STD_CONTAINERS_HASHMAP_H

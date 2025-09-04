@@ -22,16 +22,16 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_TIMER_H_INCLUDED_
-#define NOVA_TIMER_H_INCLUDED_
+#ifndef STD_TIMER_H
+#define STD_TIMER_H
 
 // implementation: none
 
+#include "attributes.h"
 #include "stdafx.h"
 #include <SDL3/SDL_timer.h>
-#include <bits/time.h>
+#include <bits/types.h>
 #include <stdbool.h>
-#include <time.h>
 
 NOVA_HEADER_START
 
@@ -43,10 +43,10 @@ typedef struct nv_timer_s
 {
   NV_TIMER_TIME_TYPE start;
   NV_TIMER_TIME_TYPE end;
-} nv_timer_t;
+} NOVA_ATTR_ALIGNED(16) nv_timer_t;
 
 static inline NV_TIMER_TIME_TYPE
-_nv_timer_get_currtime(void)
+nv_timer_get_currtime(void)
 {
   struct timespec tp;
   clock_gettime(CLOCK_MONOTONIC, &tp);
@@ -63,9 +63,9 @@ nv_timer_begin(NV_TIMER_TIME_TYPE duration_seconds)
     nv_log_error("Timer duration passed as negative or zero. What do you even want the timer to do????\n");
     return (nv_timer_t){ -1, -1 };
   }
-  nv_timer_t tmr;
-  tmr.start = _nv_timer_get_currtime();
-  tmr.end   = tmr.start + duration_seconds;
+  nv_timer_t tmr = nv_zero_init(nv_timer_t);
+  tmr.start      = nv_timer_get_currtime();
+  tmr.end        = tmr.start + duration_seconds;
   return tmr;
 }
 
@@ -88,21 +88,21 @@ nv_timer_is_done(const nv_timer_t* tmr)
     return false;
   }
 
-  return _nv_timer_get_currtime() >= tmr->end;
+  return nv_timer_get_currtime() >= tmr->end;
 }
 
 static inline NV_TIMER_TIME_TYPE
 nv_timer_time_since_start(const nv_timer_t* tmr)
 {
-  return (_nv_timer_get_currtime() - tmr->start);
+  return (nv_timer_get_currtime() - tmr->start);
 }
 
 static inline NV_TIMER_TIME_TYPE
 nv_timer_time_since_done(const nv_timer_t* tmr)
 {
-  return (_nv_timer_get_currtime() - tmr->end);
+  return (nv_timer_get_currtime() - tmr->end);
 }
 
 NOVA_HEADER_END
 
-#endif //__TIMER_H__
+#endif // STD_TIMER_H

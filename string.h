@@ -25,12 +25,13 @@
 /* An overlayer of standard string.h */
 /* This library though, contains many differences than the standard. Like memcpy has been abolished in favour of memmove. */
 
-#ifndef NOVA_STRING_H_INCLUDED_
-#define NOVA_STRING_H_INCLUDED_
+#ifndef STD_STRING_H
+#define STD_STRING_H
 
 // implementation: core.c
 
 #include "alloc.h"
+#include "attributes.h"
 #include "stdafx.h"
 #include <stddef.h>
 #include <stdint.h>
@@ -44,9 +45,9 @@ NOVA_HEADER_START
 #  define NOVA_STRING_USE_BUILTIN false
 #endif
 
-#define nv_alloc_struct(struc) (nv_calloc(sizeof(struc)))
-#define nv_zero_struct(struc) (nv_memset(&struc, 0, sizeof(struc)))
-#define nv_zero_structp(struc) (nv_memset(struc, 0, sizeof(*struc)))
+#define nv_alloc_struct(struc) ((struc*)nv_calloc(sizeof(struc)))
+#define nv_zero_struct(struc) (nv_memset(&(struc), 0, sizeof(struc)))
+#define nv_zero_structp(struc) (nv_memset(struc, 0, sizeof(*(struc))))
 
 /* two strings are equal, returned by all nv_str*cmp functions */
 static const int nv_strequal = 0;
@@ -362,4 +363,4 @@ extern char* nv_strnrev(char* str, size_t max);
 
 NOVA_HEADER_END
 
-#endif //__NOVA_STRING_H__
+#endif // STD_STRING_H

@@ -24,11 +24,14 @@
 
 /* Utilities to accessing bits in bitmaps and making them. */
 
-#ifndef NOVA_BIT_H_INCLUDED_
-#define NOVA_BIT_H_INCLUDED_
+#ifndef STD_BIT_H
+#define STD_BIT_H
 
+#include "attributes.h"
 #include "stdafx.h"
+#include "types.h"
 #include <stdbool.h>
+#include <stddef.h>
 
 NOVA_HEADER_START
 
@@ -67,7 +70,7 @@ nv_get_equivalent_bitmap_size(size_t buffer_size)
 }
 
 static inline nv_bit_t
-nv_bitmap_check_bit(nv_bitmap_t bitmap, size_t index)
+nv_bitmap_check_bit(const nv_bitmap_t bitmap, size_t index)
 {
   return (nv_bit_t)((bitmap[index / 8] & (1 << (index % 8))) != 0);
 }
@@ -99,4 +102,4 @@ nv_bitmap_set_bit_to(nv_bitmap_t bitmap, size_t index, nv_bit_t to)
 
 NOVA_HEADER_END
 
-#endif //__NOVA_BIT_H__
+#endif // STD_BIT_H

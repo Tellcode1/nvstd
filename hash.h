@@ -22,13 +22,13 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_HASH_H_INCLUDED_
-#define NOVA_HASH_H_INCLUDED_
+#ifndef STD_HASH_H
+#define STD_HASH_H
 
 #include "attributes.h"
 #include "stdafx.h"
 #include "string.h"
-#include <stdio.h>
+#include "types.h"
 
 NOVA_HEADER_START
 
@@ -152,4 +152,4 @@ nv_compare_string(const void* key1, const void* key2, size_t size, void* user_da
 
 NOVA_HEADER_END
 
-#endif //__NOVA_HASH_H__
+#endif // STD_HASH_H

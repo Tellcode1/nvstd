@@ -1,7 +1,10 @@
-#ifndef __C_MATH_H__
-#define __C_MATH_H__
+#ifndef STD_MATH_MATH_H
+#define STD_MATH_MATH_H
 
+#include "../attributes.h"
+#include "../stdafx.h"
 #include "vec2.h"
+#include <math.h>
 #include <stdbool.h>
 
 NOVA_HEADER_START
@@ -13,7 +16,7 @@ static const real_t NVM_2PI = 6.283185307179586;
 static const real_t NVM_DEG2RAD_CONSTANT = 0.017453292519943295; // 2Pi / 360.0
 static const real_t NVM_RAD2DEG_CONSTANT = 57.29577951308232;    // 1.0 / DEG2RAD_CONSTANT -> rad / DEG2RAD_CONSTANT
 
-#define NVM_LERP(a, b, t) (a + ((b - a) * t))
+#define NVM_LERP(a, b, t) ((a) + (((b) - (a)) * (t)))
 
 /* Unneeded, defined in stdafx.h as NV_MIN,NV_MAX */
 // #define NVM_MAX(a, b) ((a) > ((NV_TYPEOF(a))(b)) ? (a) : ((NV_TYPEOF(a))(b)))
@@ -34,13 +37,13 @@ typedef struct nvm_rect2d
   // The CENTER of the rect
   vec2 position;
   vec2 size;
-} nvm_rect2d;
+} NOVA_ATTR_ALIGNED(16) nvm_rect2d;
 
 static inline bool
-nvm_aabb(const nvm_rect2d* r1, const nvm_rect2d* r2)
+nvm_aabb(const struct nvm_rect2d* r1, const struct nvm_rect2d* r2)
 {
-  const vec2 r1_half_size = v2muls(r1->size, 0.5f);
-  const vec2 r2_half_size = v2muls(r2->size, 0.5f);
+  const vec2 r1_half_size = v2muls(r1->size, 0.5F);
+  const vec2 r2_half_size = v2muls(r2->size, 0.5F);
 
   const vec2 r1_min = v2sub(r1->position, r1_half_size);
   const vec2 r1_max = v2add(r1->position, r1_half_size);
@@ -56,9 +59,9 @@ nvm_aabb(const nvm_rect2d* r1, const nvm_rect2d* r2)
 
 // Checks if a point is inside the rect
 static inline bool
-nvm_is_point_inside_rect(const vec2* point, const nvm_rect2d* r)
+nvm_is_point_inside_rect(const vec2* point, const struct nvm_rect2d* r)
 {
-  const vec2 r_half_size = v2muls(r->size, 0.5f);
+  const vec2 r_half_size = v2muls(r->size, 0.5F);
 
   const vec2 r_min = v2sub(r->position, r_half_size);
   const vec2 r_max = v2add(r->position, r_half_size);
@@ -71,4 +74,4 @@ nvm_is_point_inside_rect(const vec2* point, const nvm_rect2d* r)
 
 NOVA_HEADER_END
 
-#endif //__C_MATH_H__
+#endif // STD_MATH_MATH_H

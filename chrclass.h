@@ -25,8 +25,8 @@
 /* Utilities to classify characters in strings. */
 /* An implementation to ctype.h, Notably missing isgraph and ishex(or whatever its called) */
 
-#ifndef __NOVA_CHRCLASS_H__
-#define __NOVA_CHRCLASS_H__
+#ifndef STD_CHRCLASS_H
+#define STD_CHRCLASS_H
 
 #include "attributes.h"
 #include "stdafx.h"
@@ -90,4 +90,4 @@ extern int nv_chr_toupper(int chr) NOVA_ATTR_CONST;
 
 NOVA_HEADER_END
 
-#endif //__NOVA_CHRCLASS_H__
+#endif // STD_CHRCLASS_H

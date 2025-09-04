@@ -22,10 +22,12 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_ERROR_CODES_H_INCLUDED_
-#define NOVA_ERROR_CODES_H_INCLUDED_
+#ifndef STD_ERRORCODES_H
+#define STD_ERRORCODES_H
 
+#include "attributes.h"
 #include "stdafx.h"
+#include <stddef.h>
 
 NOVA_HEADER_START
 
@@ -100,16 +102,16 @@ typedef enum nv_error
  */
 typedef nv_error (*nv_error_handler_fn)(nv_error error, const char* file, size_t line, const char* supplementary);
 
-extern nv_error _nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary);
+extern nv_error nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary);
 
-static nv_error_handler_fn _error_handler = _nv_default_error_handler;
+static nv_error_handler_fn error_handler = nv_default_error_handler;
 
 static inline nv_error
-_nv_raise_error(nv_error error, const char* file, size_t line, const char* supplementary)
+nv_raise_error(nv_error error, const char* file, size_t line, const char* supplementary)
 {
-  if (_error_handler)
+  if (error_handler)
   {
-    return _error_handler(error, file, line, supplementary);
+    return error_handler(error, file, line, supplementary);
   }
   return error;
 }
@@ -119,7 +121,7 @@ _nv_raise_error(nv_error error, const char* file, size_t line, const char* suppl
 static inline void
 nv_set_error_handler(nv_error_handler_fn fn)
 {
-  _error_handler = fn;
+  error_handler = fn;
 }
 
 static inline const char*
@@ -147,4 +149,4 @@ NV_STATIC_ASSERT(sizeof(nv_error) == sizeof(int), sizeof_erroc_must_be_sizeof_in
 
 NOVA_HEADER_END
 
-#endif //__NOVA_ERROR_CODES_H__
+#endif // STD_ERRORCODES_H

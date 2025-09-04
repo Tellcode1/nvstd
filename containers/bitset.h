@@ -22,18 +22,20 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_BITSET_H__
-#define __NOVA_BITSET_H__
+#ifndef STD_CONTAINERS_BITSET_H
+#define STD_CONTAINERS_BITSET_H
 
 #include "../alloc.h"
+#include "../attributes.h"
 #include "../errorcodes.h"
 #include "../stdafx.h"
-#include <SDL3/SDL_mutex.h>
+#include "../types.h"
+#include <stddef.h>
 
 NOVA_HEADER_START
 
 typedef struct nv_bitset nv_bitset_t;
-typedef unsigned char      nv_bitset_bit;
+typedef unsigned char    nv_bitset_bit;
 
 extern nv_error nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set);
 extern void     nv_bitset_set_bit(nv_bitset_t* set, int bitindex);
@@ -52,8 +54,8 @@ struct nv_bitset
   nv_allocator_fn alloc;
   void*           alloc_arg;
   SDL_Mutex*      mutex;
-};
+} NOVA_ATTR_ALIGNED(64);
 
 NOVA_HEADER_END
 
-#endif //__NOVA_BITSET_H__
+#endif // STD_CONTAINERS_BITSET_H

@@ -22,13 +22,15 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_PROGRAM_OPTIONS_H_INCLUDED_
-#define NOVA_PROGRAM_OPTIONS_H_INCLUDED_
+#ifndef STD_PROPS_H
+#define STD_PROPS_H
 
 // implementation: core.c
 
+#include "attributes.h"
 #include "errorcodes.h"
 #include "stdafx.h"
+#include <stddef.h>
 
 NOVA_HEADER_START
 
@@ -59,7 +61,7 @@ struct nv_option
 
   // The size of the char buffer when option type is string
   size_t buffer_size;
-};
+} NOVA_ATTR_ALIGNED(64);
 
 /**
  * @brief parse command-line options.
@@ -78,4 +80,4 @@ extern void nv_props_gen_help(const nv_option_t* options, int noptions, char* bu
 
 NOVA_HEADER_END
 
-#endif //__NOVA_PROGRAM_OPTIONS_H__
+#endif // STD_PROPS_H

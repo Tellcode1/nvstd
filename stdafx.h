@@ -22,25 +22,21 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_STDAFX_H_INCLUDED_
-#define NOVA_STDAFX_H_INCLUDED_
+#ifndef STD_STDAFX_H
+#define STD_STDAFX_H
 
 // implementation: core.c
 
-#define __NOVA_STD_VERSION_MAJOR__ 0
-#define __NOVA_STD_VERSION_MINOR__ 2
-#define __NOVA_STD_VERSION_PATCH__ 0
+#include <stddef.h>
+#define NOVA_STD_VERSION_MAJOR_ 0
+#define NOVA_STD_VERSION_MINOR_ 2
+#define NOVA_STD_VERSION_PATCH_ 0
 
 #include <SDL3/SDL_mutex.h>
-#include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <time.h>
-
-#include "types.h"
 
 #ifdef __cplusplus
 #  define NOVA_HEADER_START                                                                                                                                                   \
@@ -141,7 +137,7 @@ NOVA_HEADER_START
 #  define flt_t float
 #endif
 
-#define DEBUG
+#define DEBUG 1
 
 #if defined NV_TYPEOF
 #  define NV_MAX(a, b) ((a) > (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))
@@ -251,10 +247,10 @@ extern void nv_log_va(const char* file, size_t line, const char* fn, const char*
 extern void nv_print_time_as_string(FILE* stream);
 
 static inline struct tm*
-_nv_get_time(void)
+nv_get_time(void)
 {
-  time_t     now;
-  struct tm* tm;
+  time_t     now = 0;
+  struct tm* tm  = NULL;
 
   now = time(NULL);
   if ((tm = localtime(&now)) == NULL)

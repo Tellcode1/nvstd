@@ -22,11 +22,13 @@
   SOFTWARE.
 */
 
-#ifndef NV_ATOMIC_H_INCLUDED_
-#define NV_ATOMIC_H_INCLUDED_
+#ifndef STD_ATOMIC_H
+#define STD_ATOMIC_H
 
+#include "attributes.h"
 #include "stdafx.h"
 #include <stdbool.h>
+#include <stdint.h>
 
 NOVA_HEADER_START
 
@@ -89,4 +91,4 @@ typedef volatile bool     nv_atomic_bool;
 
 NOVA_HEADER_END
 
-#endif // NV_ATOMIC_H_INCLUDED_
+#endif // STD_ATOMIC_H

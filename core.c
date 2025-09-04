@@ -22,6 +22,7 @@
   SOFTWARE.
   */
 
+#include "attributes.h"
 #include "rand.h"
 #include "stdafx.h"
 
@@ -43,9 +44,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 nv_error
-_nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary)
+nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary)
 {
   nv_printf("[%s:%zu] raised %s +$(%s)\n", file, line, nv_error_str(error), supplementary);
   return error;
@@ -64,21 +66,19 @@ nv_allocator_c(void* user_data, void* old_ptr, size_t old_size, size_t new_size)
   {
     return nv_calloc(new_size);
   }
-  else if (ALLOC_FREE_CONDITION)
+  if (ALLOC_FREE_CONDITION)
   {
     nv_free(old_ptr);
     return NULL;
   }
-  else if (ALLOC_REALLOC_CONDITION)
+  if (ALLOC_REALLOC_CONDITION)
   {
     nv_assert_else_return(new_size != 0, NULL);
     return nv_realloc(old_ptr, new_size);
   }
-  else
-  {
-    nv_log_error("Invalid operation\n");
-    return NULL;
-  }
+
+  nv_log_error("Invalid operation\n");
+  return NULL;
 
   return NULL;
 }
@@ -157,7 +157,7 @@ nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_
 
     return allocation;
   }
-  else if (ALLOC_FREE_CONDITION)
+  if (ALLOC_FREE_CONDITION)
   {
     if ((unsigned char*)old_ptr == estack->last_allocation)
     {
@@ -165,7 +165,7 @@ nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_
     }
     return NULL;
   }
-  else if (ALLOC_REALLOC_CONDITION)
+  if (ALLOC_REALLOC_CONDITION)
   {
     if ((unsigned char*)old_ptr != estack->last_allocation)
     {
@@ -184,7 +184,7 @@ nv_allocator_estack(void* user_data, void* old_ptr, size_t old_size, size_t new_
       estack->buffer_bumper += (new_size - old_size);
       return old_ptr; // memory is contiguous, extended
     }
-    else if (new_size < old_size)
+    if (new_size < old_size)
     {
       estack->buffer_bumper -= (old_size - new_size);
       return old_ptr; // shrunk in place
@@ -222,65 +222,68 @@ nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, b
 
   /* Two fprintf calls, good. */
 
-  struct tm* time = _nv_get_time();
+  struct tm* time = nv_get_time();
   nv_fprintf(out, "[%d:%d:%d] [%s:%zu]%s%s(): ", time->tm_hour % 12, time->tm_min, time->tm_sec, nv_basename(file), line, preceder, fn);
 
   nv_vfprintf(args, out, fmt);
 }
 
-#include <zlib.h>
-
 int
 nv_bufcompress(const void* NV_RESTRICT input, size_t input_size, void* NV_RESTRICT output, size_t* NV_RESTRICT output_size)
 {
-  z_stream stream = nv_zero_init(z_stream);
+  // z_stream stream = nv_zero_init(z_stream);
 
-  if (deflateInit(&stream, Z_BEST_COMPRESSION) != Z_OK)
-  {
-    return -1;
-  }
+  // if (deflateInit(&stream, Z_BEST_COMPRESSION) != Z_OK)
+  // {
+  //   return -1;
+  // }
 
-  stream.next_in  = (uchar*)input;
-  stream.avail_in = input_size;
+  // strcat.next_in  = (uchar*)input;
+  // strcat.avail_in = input_size;
 
-  stream.next_out  = output;
-  stream.avail_out = *output_size;
+  // strcat.next_out  = output;
+  // strcat.avail_out = *output_size;
 
-  if (deflate(&stream, Z_FINISH) != Z_STREAM_END)
-  {
-    deflateEnd(&stream);
-    return -1;
-  }
+  // if (deflate(&stream, Z_FINISH) != Z_STREAM_END)
+  // {
+  //   deflateEnd(&stream);
+  //   return -1;
+  // }
 
-  *output_size = stream.total_out;
+  // *output_size = stream.total_out;
 
-  deflateEnd(&stream);
+  // deflateEnd(&stream);
+  // return 0;
+  *output_size = input_size;
+  nv_memcpy(output, input, input_size);
   return 0;
 }
 
 size_t
 nv_bufdecompress(const void* NV_RESTRICT compressed_data, size_t compressed_size, void* NV_RESTRICT o_buf, size_t o_buf_sz)
 {
-  z_stream strm  = { 0 };
-  strm.next_in   = (uchar*)compressed_data;
-  strm.avail_in  = compressed_size;
-  strm.next_out  = o_buf;
-  strm.avail_out = o_buf_sz;
+  // z_stream strm  = { 0 };
+  // strm.next_in   = (uchar*)compressed_data;
+  // strm.avail_in  = compressed_size;
+  // strm.next_out  = o_buf;
+  // strm.avail_out = o_buf_sz;
 
-  if (inflateInit(&strm) != Z_OK)
-  {
-    return 0;
-  }
+  // if (inflateInit(&strm) != Z_OK)
+  // {
+  //   return 0;
+  // }
 
-  int ret = inflate(&strm, Z_FINISH);
-  if (ret != Z_STREAM_END)
-  {
-    inflateEnd(&strm);
-    return 0;
-  }
+  // int ret = inflate(&strm = 0 = 0, Z_FINISH);
+  // if (ret != Z_STREAM_END)
+  // {
+  //   inflateEnd(&strm);
+  //   return 0;
+  // }
 
-  inflateEnd(&strm);
-  return strm.total_out;
+  // inflateEnd(&strm);
+  // return strm.total_out;
+  nv_memmove(o_buf, compressed_data, compressed_size);
+  return compressed_size;
 }
 
 static inline const nv_option_t*
@@ -350,7 +353,7 @@ nv_props_gen_help(const nv_option_t* options, int noptions, char* buf, size_t bu
 }
 
 static inline nv_error
-_nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size, int* i)
+nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int noptions, char* error, size_t error_size, int* i)
 {
   nv_assert_else_return(argc != 0, NV_ERROR_INVALID_ARG);
 
@@ -471,7 +474,7 @@ nv_props_parse(int argc, char* argv[], const nv_option_t* options, int noptions,
     char* arg = argv[i];
     if (arg[0] == '-')
     {
-      nv_error result = _nv_props_parse_arg(argc, argv, options, noptions, error, error_size, &i);
+      nv_error result = nv_props_parse_arg(argc, argv, options, noptions, error, error_size, &i);
       if (result != 0)
       {
         errcode = false;
@@ -533,7 +536,7 @@ nv_random_bulk_range(nv_rand_info_t* info, nv_rand_t* outbuf, size_t outbuf_size
 }
 
 static inline nv_rand_t
-_splitmix(nv_rand_t* state)
+splitmix(nv_rand_t* state)
 {
   nv_rand_t tmp = (*state += 0x9E3779B97f4A7C15);
   tmp           = (tmp ^ (tmp >> 30)) * 0xBF58476D1CE4E5B9;
@@ -547,6 +550,6 @@ nv_random_seed(nv_rand_info_t* info, nv_rand_t seed)
   nv_rand_t splitmixstate = seed;
   for (size_t i = 0; i < 4; i++)
   {
-    info->state[i] = _splitmix(&splitmixstate);
+    info->state[i] = splitmix(&splitmixstate);
   }
 }

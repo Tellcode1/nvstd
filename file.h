@@ -24,12 +24,14 @@
 
 /* Utilities for handling files that should have been part of the standard library. */
 
-#ifndef NOVA_FILE_H_INCLUDED_
-#define NOVA_FILE_H_INCLUDED_
+#ifndef STD_FILE_H
+#define STD_FILE_H
 
 #include "alloc.h"
+#include "attributes.h"
 #include "errorcodes.h"
 #include "stdafx.h"
+#include <stddef.h>
 
 #if !defined(_WIN32)
 #  include <unistd.h>
@@ -136,4 +138,4 @@ extern nv_error nv_fs_dir_delete_recursive(const char* dpath);
 
 NOVA_HEADER_END
 
-#endif //__NOVA_FILE_H__
+#endif // STD_FILE_H

@@ -1,8 +1,13 @@
 #include "print.h"
+#include "attributes.h"
+#include "chrclass.h"
 #include "stdafx.h"
 #include "strconv.h"
 #include "string.h"
-#include "chrclass.h"
+#include <errno.h>
+#include <stdarg.h>
+#include <stdint.h>
+#include <stdio.h>
 
 // Moral of the story? FU@# SIZE_MAX
 // I spent an HOUR trying to figure out what's going wrong
@@ -15,7 +20,7 @@ nv_printf(const char* fmt, ...)
   va_start(args, fmt);
 
   // size_t chars_written = nv_vnprintf(NOVA_WBUF_SIZE, args, fmt);
-  size_t chars_written = _nv_vsfnprintf(args, stdout, 1, SIZE_MAX, fmt);
+  size_t chars_written = nv_vsfnprintf(args, stdout, 1, SIZE_MAX, fmt);
 
   va_end(args);
 
@@ -28,7 +33,7 @@ nv_fprintf(FILE* f, const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  size_t chars_written = _nv_vsfnprintf(args, f, 1, SIZE_MAX, fmt);
+  size_t chars_written = nv_vsfnprintf(args, f, 1, SIZE_MAX, fmt);
 
   va_end(args);
 
@@ -41,7 +46,7 @@ nv_sprintf(char* dst, const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  size_t chars_written = _nv_vsfnprintf(args, dst, 0, SIZE_MAX, fmt);
+  size_t chars_written = nv_vsfnprintf(args, dst, 0, SIZE_MAX, fmt);
 
   va_end(args);
 
@@ -51,13 +56,13 @@ nv_sprintf(char* dst, const char* fmt, ...)
 size_t
 nv_vprintf(va_list args, const char* fmt)
 {
-  return _nv_vsfnprintf(args, stdout, 1, SIZE_MAX, fmt);
+  return nv_vsfnprintf(args, stdout, 1, SIZE_MAX, fmt);
 }
 
 size_t
 nv_vfprintf(va_list args, FILE* f, const char* fmt)
 {
-  return _nv_vsfnprintf(args, f, 1, SIZE_MAX, fmt);
+  return nv_vsfnprintf(args, f, 1, SIZE_MAX, fmt);
 }
 
 size_t
@@ -79,7 +84,7 @@ nv_nprintf(size_t max_chars, const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  size_t chars_written = _nv_vsfnprintf(args, stdout, 1, max_chars, fmt);
+  size_t chars_written = nv_vsfnprintf(args, stdout, 1, max_chars, fmt);
 
   va_end(args);
 
@@ -89,13 +94,13 @@ nv_nprintf(size_t max_chars, const char* fmt, ...)
 size_t
 nv_vnprintf(va_list args, size_t max_chars, const char* fmt)
 {
-  return _nv_vsfnprintf(args, stdout, 1, max_chars, fmt);
+  return nv_vsfnprintf(args, stdout, 1, max_chars, fmt);
 }
 
 size_t
 nv_vsnprintf(va_list src, char* dst, size_t max_chars, const char* fmt)
 {
-  return _nv_vsfnprintf(src, dst, 0, max_chars, fmt);
+  return nv_vsfnprintf(src, dst, 0, max_chars, fmt);
 }
 
 #define NV_PRINTF_PEEK_FMT() ((info->itr < info->fmt_str_end) ? *info->itr : 0)
@@ -145,10 +150,10 @@ typedef struct nv_format_info_t
   bool        wbuffer_used;
   bool        precision_specified;
   char*       pad_buf;
-} nv_format_info_t;
+} NOVA_ATTR_ALIGNED(128) nv_format_info_t;
 
 static inline void
-_nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written)
+nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written)
 {
   if (info->chars_written >= info->max_chars)
   {
@@ -181,7 +186,7 @@ _nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t writte
 }
 
 static inline void
-_nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
+nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
 {
   if (!NV_PRINTF_PEEK_FMT())
   {
@@ -250,7 +255,7 @@ _nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
 }
 
 static inline void
-_nv_printf_format_process_char(nv_format_info_t* info)
+nv_printf_format_process_char(nv_format_info_t* info)
 {
   if (info->chars_written >= info->max_chars - 1)
   {
@@ -273,7 +278,7 @@ _nv_printf_format_process_char(nv_format_info_t* info)
 }
 
 static inline void
-_nv_printf_handle_long_type(nv_format_info_t* info)
+nv_printf_handle_long_type(nv_format_info_t* info)
 {
   if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != 'l')
   {
@@ -312,7 +317,7 @@ _nv_printf_handle_long_type(nv_format_info_t* info)
 }
 
 static inline void
-_nv_printf_handle_size_type(nv_format_info_t* info)
+nv_printf_handle_size_type(nv_format_info_t* info)
 {
   if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != 'z')
   {
@@ -335,7 +340,7 @@ _nv_printf_handle_size_type(nv_format_info_t* info)
 }
 
 static inline void
-_nv_printf_handle_hash_prefix_and_children(nv_format_info_t* info)
+nv_printf_handle_hash_prefix_and_children(nv_format_info_t* info)
 {
   if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != '#')
   {
@@ -356,7 +361,7 @@ _nv_printf_handle_hash_prefix_and_children(nv_format_info_t* info)
 }
 
 static inline void
-_nv_printf_format_parse_string(nv_format_info_t* info)
+nv_printf_format_parse_string(nv_format_info_t* info)
 {
   if (!NV_PRINTF_PEEK_FMT() || NV_PRINTF_PEEK_FMT() != 's')
   {
@@ -380,12 +385,12 @@ _nv_printf_format_parse_string(nv_format_info_t* info)
     string_length = nv_strlen(string);
   }
 
-  _nv_printf_write(info, string, string_length);
+  nv_printf_write(info, string, string_length);
   info->wbuffer_used = false;
 }
 
 static inline void
-_nv_printf_format_parse_format(nv_format_info_t* info)
+nv_printf_format_parse_format(nv_format_info_t* info)
 {
   if (!NV_PRINTF_PEEK_FMT())
   {
@@ -398,16 +403,16 @@ _nv_printf_format_parse_format(nv_format_info_t* info)
   {
     /* By default, ftoa should not trim trailing zeroes. */
     case 'f': info->written = nv_ftoa2(va_arg(info->args, real_t), info->tmp_writebuffer, info->precision, remaining, false); break;
-    case 'l': _nv_printf_handle_long_type(info); break;
+    case 'l': nv_printf_handle_long_type(info); break;
     case 'd':
     case 'i': info->written = nv_itoa2(va_arg(info->args, int), info->tmp_writebuffer, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
     case 'u': info->written = nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
 
     /* size_t based formats. This is standard. */
-    case 'z': _nv_printf_handle_size_type(info); break;
+    case 'z': nv_printf_handle_size_type(info); break;
 
     /* hash tells us that we need to have the 0x prefix (or the 0X prefix) */
-    case '#': _nv_printf_handle_hash_prefix_and_children(info); break;
+    case '#': nv_printf_handle_hash_prefix_and_children(info); break;
 
     /* hex integer */
     case 'x': info->written = nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer, 16, info->max_chars - info->chars_written, false); break;
@@ -418,17 +423,17 @@ _nv_printf_format_parse_format(nv_format_info_t* info)
     /* bytes, custom */
     case 'b': info->written = nv_btoa2(va_arg(info->args, size_t), 1, info->tmp_writebuffer, remaining); break;
 
-    case 's': _nv_printf_format_parse_string(info); break;
+    case 's': nv_printf_format_parse_string(info); break;
 
     case 'c':
     /* If there are two % symbols in a row */
     case '%':
-    default: _nv_printf_format_process_char(info); break;
+    default: nv_printf_format_process_char(info); break;
   }
 }
 
 static inline void
-_nv_printf_write_padding(nv_format_info_t* info)
+nv_printf_write_padding(nv_format_info_t* info)
 {
   info->padding = info->padding_w - (int)info->written;
   char pad_char = info->pad_zero ? '0' : ' ';
@@ -443,43 +448,43 @@ _nv_printf_write_padding(nv_format_info_t* info)
   while (info->padding > 0)
   {
     int chunk = (info->padding > (int)sizeof(info->pad_buf)) ? (int)sizeof(info->pad_buf) : info->padding;
-    _nv_printf_write(info, info->pad_buf, chunk);
+    nv_printf_write(info, info->pad_buf, chunk);
     info->padding -= chunk;
   }
 }
 
 static inline void
-_nv_printf_format_upload_to_destination(nv_format_info_t* info)
+nv_printf_format_upload_to_destination(nv_format_info_t* info)
 {
   if (!info->wbuffer_used)
   {
     return;
   }
 
-  _nv_printf_write_padding(info);
+  nv_printf_write_padding(info);
 
-  _nv_printf_write(info, info->tmp_writebuffer, info->written);
+  nv_printf_write(info, info->tmp_writebuffer, info->written);
 
-  _nv_printf_write_padding(info);
+  nv_printf_write_padding(info);
 }
 
 static inline void
-_nv_printf_format_parse_format_specifier(nv_format_info_t* info)
+nv_printf_format_parse_format_specifier(nv_format_info_t* info)
 {
   info->wbuffer_used        = true;
   info->padding_w           = 0;
   info->precision           = 6;
   info->precision_specified = 0;
 
-  _nv_printf_get_padding_and_precision_if_given(info);
+  nv_printf_get_padding_and_precision_if_given(info);
 
-  _nv_printf_format_parse_format(info);
+  nv_printf_format_parse_format(info);
 
-  _nv_printf_format_upload_to_destination(info);
+  nv_printf_format_upload_to_destination(info);
 }
 
 static inline void
-_nv_printf_write_iterated_char(nv_format_info_t* info)
+nv_printf_write_iterated_char(nv_format_info_t* info)
 {
   if (info->chars_written >= info->max_chars - 1)
   {
@@ -520,24 +525,24 @@ _nv_printf_write_iterated_char(nv_format_info_t* info)
 }
 
 static inline void
-_nv_printf_loop(nv_format_info_t* info)
+nv_printf_loop(nv_format_info_t* info)
 {
   for (; NV_PRINTF_PEEK_FMT() && info->chars_written < info->max_chars; info->itr++)
   {
     if (NV_PRINTF_PEEK_FMT() == '%')
     {
       NV_PRINTF_ADVANCE_FMT();
-      _nv_printf_format_parse_format_specifier(info);
+      nv_printf_format_parse_format_specifier(info);
     }
     else
     {
-      _nv_printf_write_iterated_char(info);
+      nv_printf_write_iterated_char(info);
     }
   }
 }
 
 size_t
-_nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt)
+nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt)
 {
   if (max_chars == 0)
   {
@@ -563,7 +568,7 @@ _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const ch
 
   va_copy(info.args, args);
 
-  _nv_printf_loop(&info);
+  nv_printf_loop(&info);
 
   if (!is_file && info.dst_string && max_chars > 0)
   {

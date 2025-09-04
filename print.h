@@ -22,13 +22,13 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_PRINT_H_INCLUDED_
-#define NOVA_PRINT_H_INCLUDED_
+#ifndef STD_PRINT_H
+#define STD_PRINT_H
 
 #include "attributes.h"
 #include "stdafx.h"
 #include <stdarg.h>
-#include <stdio.h>
+#include <stddef.h>
 
 NOVA_HEADER_START
 
@@ -130,8 +130,8 @@ extern size_t nv_vsnprintf(va_list args, char* dst, size_t max_chars, const char
  * @param dst destination buffer or FILE ptr. It is safe to pass NULL.
  * @return The number of characters that WOULD be written, even if dst is NULL, but truncated to max_chars.
  */
-extern size_t _nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 5);
+extern size_t nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 5);
 
 NOVA_HEADER_END
 
-#endif // __NOVA_PRINT_H__
+#endif // STD_PRINT_H

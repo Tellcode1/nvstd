@@ -22,11 +22,14 @@
   SOFTWARE.
 */
 
-#ifndef NOVA_STRING_CONVERT_H_INCLUDED_
-#define NOVA_STRING_CONVERT_H_INCLUDED_
+#ifndef STD_STRCONV_H
+#define STD_STRCONV_H
 
+#include "attributes.h"
 #include "stdafx.h"
 #include <limits.h>
+#include <stddef.h>
+#include <stdint.h>
 
 NOVA_HEADER_START
 
@@ -127,4 +130,4 @@ nv_btoa(size_t x, bool upgrade, char* buf, size_t max)
 
 NOVA_HEADER_END
 
-#endif //__NOVA_STRING_CONV_H__
+#endif // STD_STRCONV_H

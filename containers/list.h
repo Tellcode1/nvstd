@@ -22,12 +22,15 @@
   SOFTWARE.
 */
 
-#ifndef __NOVA_LIST_H__
-#define __NOVA_LIST_H__
+#ifndef STD_CONTAINERS_LIST_H
+#define STD_CONTAINERS_LIST_H
 
 #include "../alloc.h"
+#include "../attributes.h"
 #include "../errorcodes.h"
-#include <SDL3/SDL_mutex.h>
+#include "../stdafx.h"
+#include "../types.h"
+#include <stddef.h>
 
 NOVA_HEADER_START
 
@@ -43,7 +46,7 @@ typedef struct nv_list_s
   SDL_Mutex*      mutex;
   nv_allocator_fn alloc;
   void*           alloc_arg;
-} nv_list_t;
+} NOVA_ATTR_ALIGNED(64) nv_list_t;
 
 /**
  * A comparison function for a sort.
@@ -55,8 +58,8 @@ typedef int (*nv_list_compare_fn)(const void* obj1, const void* obj2);
 /**
  * init_capacity may be 0
  */
-extern nv_error nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void* alloc_arg, nv_list_t* vec);
-extern void     nv_list_destroy(nv_list_t* vec);
+extern nv_error nv_list_init(size_t type_size, size_t init_capacity, nv_allocator_fn alloc, void* alloc_arg, nv_list_t* list);
+extern void     nv_list_destroy(nv_list_t* list);
 
 static inline bool
 nv_list_is_valid(const nv_list_t* arr)
@@ -80,20 +83,21 @@ nv_list_is_valid(const nv_list_t* arr)
   return true;
 }
 
-extern void nv_list_resize(nv_list_t* vec, size_t new_size);
-extern void nv_list_clear(nv_list_t* vec);
+extern void nv_list_resize(nv_list_t* list, size_t new_size);
+extern void nv_list_reserve(nv_list_t* list, size_t new_capacity);
+extern void nv_list_clear(nv_list_t* list);
 
-extern size_t nv_list_size(const nv_list_t* vec);
-extern size_t nv_list_capacity(const nv_list_t* vec);
-extern size_t nv_list_type_size(const nv_list_t* vec);
-extern void*  nv_list_data(const nv_list_t* vec);
+extern size_t nv_list_size(const nv_list_t* list);
+extern size_t nv_list_capacity(const nv_list_t* list);
+extern size_t nv_list_type_size(const nv_list_t* list);
+extern void*  nv_list_data(const nv_list_t* list);
 
-extern void* nv_list_front(nv_list_t* vec);
+extern void* nv_list_front(nv_list_t* list);
 
-extern void* nv_list_back(nv_list_t* vec);
+extern void* nv_list_back(nv_list_t* list);
 
-extern void* nv_list_get(const nv_list_t* vec, size_t i);
-extern void  nv_list_set(nv_list_t* vec, size_t i, void* elem);
+extern void* nv_list_get(const nv_list_t* list, size_t i);
+extern void  nv_list_set(nv_list_t* list, size_t i, void* elem);
 
 // Overrides contents
 extern void nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst);
@@ -101,13 +105,13 @@ extern void nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RE
 // src is destroyed and unusable after this call!
 extern void nv_list_move_from(nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst);
 
-extern bool nv_list_empty(const nv_list_t* vec);
+extern bool nv_list_empty(const nv_list_t* list);
 
 /**
  * Doesn't mean that the two vectors ptrs are pointing to the same vector
  * This'll check the size and the data only, not the capacity (why would you?)
  */
-extern bool nv_list_equal(const nv_list_t* vec1, const nv_list_t* vec2);
+extern bool nv_list_equal(const nv_list_t* list1, const nv_list_t* list2);
 
 /**
  * WARNING: sizeof(*elem) != vec->type_size is UNDEFINED!
@@ -122,19 +126,19 @@ extern void* nv_list_push_empty(nv_list_t* NV_RESTRICT vec);
 
 extern void nv_list_push_set(nv_list_t* NV_RESTRICT vec, const void* NV_RESTRICT arr, size_t count);
 
-extern void nv_list_pop_back(nv_list_t* vec);
-extern void nv_list_pop_front(nv_list_t* vec); // expensive
+extern void nv_list_pop_back(nv_list_t* list);
+extern void nv_list_pop_front(nv_list_t* list); // expensive
 
 extern void nv_list_insert(nv_list_t* NV_RESTRICT vec, size_t index, const void* NV_RESTRICT elem);
-extern void nv_list_remove(nv_list_t* vec, size_t index);
+extern void nv_list_remove(nv_list_t* list, size_t index);
 
 extern size_t nv_list_find(const nv_list_t* NV_RESTRICT vec, const void* NV_RESTRICT elem);
 
 /**
  * Internally calls qsort.
  */
-extern void nv_list_sort(nv_list_t* vec, nv_list_compare_fn compare);
+extern void nv_list_sort(nv_list_t* list, nv_list_compare_fn compare);
 
 NOVA_HEADER_END
 
-#endif //__NOVA_LIST_H__
+#endif // STD_CONTAINERS_LIST_H
