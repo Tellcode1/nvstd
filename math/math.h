@@ -4,7 +4,6 @@
 #include "../attributes.h"
 #include "../stdafx.h"
 #include "vec2.h"
-#include <math.h>
 #include <stdbool.h>
 
 NOVA_HEADER_START

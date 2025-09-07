@@ -27,6 +27,7 @@
 
 #include "stdafx.h"
 #include "types.h"
+#include <stddef.h>
 
 NOVA_HEADER_START
 
@@ -38,7 +39,7 @@ NOVA_HEADER_START
 #define nv_stackalloc(size_bytes) (_nv_stackalloc_actual(_nv_stack, &_nv_stack_bumper, size_bytes)) // uhh ugly but single liner :3
 
 void*
-_nv_stackalloc_actual(uchar* stack, size_t* stack_bumper, size_t size_bytes)
+nv_stackalloc_actual(uchar* stack, size_t* stack_bumper, size_t size_bytes)
 {
   void* ptr = stack + *stack_bumper;
   *stack_bumper += size_bytes;

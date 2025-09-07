@@ -29,9 +29,9 @@
 
 #include "attributes.h"
 #include "stdafx.h"
-#include <SDL3/SDL_timer.h>
-#include <bits/types.h>
+#include <bits/time.h>
 #include <stdbool.h>
+#include <time.h>
 
 NOVA_HEADER_START
 

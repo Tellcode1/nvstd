@@ -25,7 +25,6 @@
 #ifndef STD_STRCONV_H
 #define STD_STRCONV_H
 
-#include "attributes.h"
 #include "stdafx.h"
 #include <limits.h>
 #include <stddef.h>
@@ -34,7 +33,7 @@
 NOVA_HEADER_START
 
 #ifndef NOVA_MAX_IGNORE
-#  define NOVA_MAX_IGNORE __SIZE_MAX__
+#  define NOVA_MAX_IGNORE SIZE_MAX
 #endif
 
 #ifndef NOVA_SEPERATOR_CHAR

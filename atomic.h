@@ -25,7 +25,6 @@
 #ifndef STD_ATOMIC_H
 #define STD_ATOMIC_H
 
-#include "attributes.h"
 #include "stdafx.h"
 #include <stdbool.h>
 #include <stdint.h>

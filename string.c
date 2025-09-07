@@ -1,10 +1,8 @@
 #include "string.h"
 #include "alloc.h"
-#include "attributes.h"
 #include "chrclass.h"
 #include "stdafx.h"
 #include "types.h"
-#include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
 

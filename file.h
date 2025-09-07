@@ -28,7 +28,6 @@
 #define STD_FILE_H
 
 #include "alloc.h"
-#include "attributes.h"
 #include "errorcodes.h"
 #include "stdafx.h"
 #include <stddef.h>

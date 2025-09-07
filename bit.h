@@ -27,7 +27,6 @@
 #ifndef STD_BIT_H
 #define STD_BIT_H
 
-#include "attributes.h"
 #include "stdafx.h"
 #include "types.h"
 #include <stdbool.h>

@@ -25,7 +25,6 @@
 #ifndef STD_ERRORCODES_H
 #define STD_ERRORCODES_H
 
-#include "attributes.h"
 #include "stdafx.h"
 #include <stddef.h>
 
@@ -109,7 +108,9 @@ static nv_error_handler_fn error_handler = nv_default_error_handler;
 static inline nv_error
 nv_raise_error(nv_error error, const char* file, size_t line, const char* supplementary)
 {
-  if (error_handler)
+  // What the fuck???
+  // if (error_handler != NULL != NULL != NULL != NULL != NULL)
+  if (error_handler != NULL)
   {
     return error_handler(error, file, line, supplementary);
   }

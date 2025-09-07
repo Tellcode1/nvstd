@@ -8,6 +8,7 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 // Moral of the story? FU@# SIZE_MAX
 // I spent an HOUR trying to figure out what's going wrong

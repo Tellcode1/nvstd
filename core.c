@@ -22,7 +22,6 @@
   SOFTWARE.
   */
 
-#include "attributes.h"
 #include "rand.h"
 #include "stdafx.h"
 
@@ -33,8 +32,6 @@
 #include "strconv.h"
 #include "string.h"
 #include "types.h"
-
-#include <SDL3/SDL_mutex.h>
 
 #include <limits.h>
 #include <stdarg.h>
@@ -262,6 +259,7 @@ nv_bufcompress(const void* NV_RESTRICT input, size_t input_size, void* NV_RESTRI
 size_t
 nv_bufdecompress(const void* NV_RESTRICT compressed_data, size_t compressed_size, void* NV_RESTRICT o_buf, size_t o_buf_sz)
 {
+  (void)(o_buf_sz);
   // z_stream strm  = { 0 };
   // strm.next_in   = (uchar*)compressed_data;
   // strm.avail_in  = compressed_size;
@@ -514,12 +512,12 @@ nv_random_bulk_range(nv_rand_info_t* info, nv_rand_t* outbuf, size_t outbuf_size
      * xoshiro 256 random number generator
      * https://prng.di.unimi.it/xoshiro256plusplus.c
      */
-    const _NOVA_RAND_TMP_CONVERT_TYPE bound = max - min + 1;
+    const NOVA_RAND_TMP_CONVERT_TYPE bound = max - min + 1;
 
     const nv_rand_t result = rotl(info->state[0] + info->state[3], 23) + info->state[0];
 
-    _NOVA_RAND_TMP_CONVERT_TYPE tmp = ((_NOVA_RAND_TMP_CONVERT_TYPE)result * bound);
-    outbuf[i]                       = min + (tmp >> (sizeof(nv_rand_t) * 8));
+    NOVA_RAND_TMP_CONVERT_TYPE tmp = ((NOVA_RAND_TMP_CONVERT_TYPE)result * bound);
+    outbuf[i]                      = min + (tmp >> (sizeof(nv_rand_t) * 8));
 
     const nv_rand_t t = info->state[1] << 17;
 

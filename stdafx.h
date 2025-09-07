@@ -27,16 +27,16 @@
 
 // implementation: core.c
 
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <time.h>
+
 #define NOVA_STD_VERSION_MAJOR_ 0
 #define NOVA_STD_VERSION_MINOR_ 2
 #define NOVA_STD_VERSION_PATCH_ 0
-
-#include <SDL3/SDL_mutex.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <time.h>
 
 #ifdef __cplusplus
 #  define NOVA_HEADER_START                                                                                                                                                   \
@@ -138,6 +138,7 @@ NOVA_HEADER_START
 #endif
 
 #define DEBUG 1
+#define JUST_LOG_EVERYTHING_MAN 0
 
 #if defined NV_TYPEOF
 #  define NV_MAX(a, b) ((a) > (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))
@@ -238,9 +239,22 @@ NOVA_HEADER_START
 #define nv_log_info(...) _NV_LOG_EXPAND_PARAMETERS(" info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 #define nv_log_debug(...) _NV_LOG_EXPAND_PARAMETERS(" debug: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 #define nv_log_verbose(...) _NV_LOG_EXPAND_PARAMETERS(" verbose: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+
+#if JUST_LOG_EVERYTHING_MAN
+#  define nv_log_too_much_info(...) _NV_LOG_EXPAND_PARAMETERS(" +info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#else
+#  define nv_log_too_much_info(...) ((void)(__VA_ARGS__))
+#endif
+
 #define nv_log_custom(...) _NV_LOG_EXPAND_PARAMETERS(preceder, false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 
-extern void _nv_core_log(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, ...);
+#if defined(__has_attribute) && __has_attribute(format)
+#  define NV_FORMAT_ATTR(...) __attribute__((format(__VA_ARGS__)))
+#else
+#  define NV_FORMAT_ATTR(...)
+#endif
+
+extern void _nv_core_log(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, ...) NV_FORMAT_ATTR(printf, 6, 7);
 extern void nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, va_list args);
 
 /* printf's the time to stdout. yep. [hour:minute:second]*/

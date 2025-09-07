@@ -30,6 +30,7 @@
 #include "../errorcodes.h"
 #include "../stdafx.h"
 #include "../types.h"
+#include <SDL3/SDL_mutex.h>
 #include <stddef.h>
 
 NOVA_HEADER_START

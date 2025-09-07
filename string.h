@@ -31,7 +31,6 @@
 // implementation: core.c
 
 #include "alloc.h"
-#include "attributes.h"
 #include "stdafx.h"
 #include <stddef.h>
 #include <stdint.h>

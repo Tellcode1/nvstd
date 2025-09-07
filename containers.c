@@ -1,19 +1,17 @@
+#include "alloc.h"
 #include "containers/rectpack.h"
+#include "errorcodes.h"
 #include "hash.h"
 #include "stdafx.h"
-
-#include "alloc.h"
-#include "errorcodes.h"
 #include "string.h"
+#include "types.h"
 
 #include "containers/bitset.h"
 #include "containers/hashmap.h"
 #include "containers/list.h"
 #include "containers/rbmap.h"
-#include "types.h"
 
-#include <SDL3/SDL.h>
-
+#include <SDL3/SDL_mutex.h>
 #include <errno.h>
 #include <limits.h>
 #include <stdarg.h>
@@ -24,9 +22,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-void shutup_compiler_errno_warning_(void);
-
-void
+inline void
 shutup_compiler_errno_warning_(void)
 {
   (void)(errno);

@@ -71,7 +71,7 @@ static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_fnv1a_string(cons
 
   u32 hash = OFFSET_BASIS;
 
-  while (*string)
+  while ((unsigned)*string != 0)
   {
     hash ^= *string; // xor
     hash *= FNV_PRIME;
@@ -96,7 +96,7 @@ static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_murmur3(const voi
   // nblocks may hahve been floored so we still use that
   const u32* blocks = (const u32*)(data + (nblocks * 4));
 
-  for (long i = -nblocks; i; i++)
+  for (long i = -nblocks; i != 0; i++)
   {
     u32 k1 = blocks[i];
     k1 *= constant1;

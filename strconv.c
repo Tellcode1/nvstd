@@ -1,5 +1,4 @@
 #include "strconv.h"
-#include "attributes.h"
 #include "chrclass.h"
 #include "stdafx.h"
 #include "string.h"

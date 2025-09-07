@@ -37,8 +37,8 @@ NOVA_HEADER_START
 /**
  * Must be larger than nv_rand_t
  */
-#ifndef _NOVA_RAND_TMP_CONVERT_TYPE
-#  define _NOVA_RAND_TMP_CONVERT_TYPE __uint128_t
+#ifndef NOVA_RAND_TMP_CONVERT_TYPE
+#  define NOVA_RAND_TMP_CONVERT_TYPE __uint128_t
 #endif
 
 /**
