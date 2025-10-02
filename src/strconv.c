@@ -1,8 +1,8 @@
-#include "strconv.h"
-#include "chrclass.h"
-#include "stdafx.h"
-#include "string.h"
-#include "types.h"
+#include "../include/strconv.h"
+#include "../include/chrclass.h"
+#include "../include/stdafx.h"
+#include "../include/string.h"
+#include "../include/types.h"
 #include <math.h>
 #include <stdint.h>
 

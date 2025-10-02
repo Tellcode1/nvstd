@@ -1,12 +1,10 @@
-#include "file.h"
-#include "errorcodes.h"
-#include "alloc.h"
-#include "print.h"
-#include "stdafx.h"
-#include "string.h"
-#include <asm-generic/errno-base.h>
+#include "../include/file.h"
+#include "../include/alloc.h"
+#include "../include/errorcodes.h"
+#include "../include/print.h"
+#include "../include/stdafx.h"
+#include "../include/string.h"
 #include <errno.h>
-#include <linux/limits.h>
 #include <stdio.h>
 
 #if (NOVA_FILE_API_AVAILABLE)

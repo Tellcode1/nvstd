@@ -1,25 +1,28 @@
 cmake_minimum_required(VERSION 3.16)
 project(nvstd)
 
-find_package(ZLIB REQUIRED)
-include_directories(${ZLIB_INCLUDE_DIRS})
-
 find_package(SDL3 REQUIRED)
 find_package(SDL3_image REQUIRED)
 include_directories(${SDL3_INCLUDE_DIRS})
 include_directories(${SDL3_image_INCLUDE_DIRS})
 
+set(NVSTD_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
+
 set(CORE_SOURCES
-  ${CMAKE_CURRENT_LIST_DIR}/core.c
-  ${CMAKE_CURRENT_LIST_DIR}/containers.c
-  ${CMAKE_CURRENT_LIST_DIR}/file.c
-  ${CMAKE_CURRENT_LIST_DIR}/print.c
-  ${CMAKE_CURRENT_LIST_DIR}/strconv.c
-  ${CMAKE_CURRENT_LIST_DIR}/string.c
+  ${NVSTD_SRC_DIR}/core.c
+  ${NVSTD_SRC_DIR}/file.c
+  ${NVSTD_SRC_DIR}/print.c
+  ${NVSTD_SRC_DIR}/strconv.c
+  ${NVSTD_SRC_DIR}/string.c
+
+  ${NVSTD_SRC_DIR}/containers/bitset.c
+  ${NVSTD_SRC_DIR}/containers/hashmap.c
+  ${NVSTD_SRC_DIR}/containers/list.c
+  ${NVSTD_SRC_DIR}/containers/rbmap.c
+  ${NVSTD_SRC_DIR}/containers/rectpack.c
 )
 
 set(CORE_LIBS
-  z
   m
   SDL3
   SDL3_image

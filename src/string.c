@@ -1,8 +1,8 @@
-#include "string.h"
-#include "alloc.h"
-#include "chrclass.h"
-#include "stdafx.h"
-#include "types.h"
+#include "../include/string.h"
+#include "../include/alloc.h"
+#include "../include/chrclass.h"
+#include "../include/stdafx.h"
+#include "../include/types.h"
 #include <stdint.h>
 #include <stdlib.h>
 

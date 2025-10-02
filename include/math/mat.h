@@ -1,7 +1,7 @@
 #ifndef STD_MATH_MAT_H
 #define STD_MATH_MAT_H
 
-#include "../../std/stdafx.h"
+#include "..//stdafx.h"
 #include "vec3.h"
 #include "vec4.h"
 #include <math.h>
@@ -187,7 +187,7 @@ NV_DECL_MAT4(mat4f, m4f, 4, float, f)
 NV_DECL_MAT4(mat4d, m4d, 4, double, d)
 NV_DECL_MAT4(mat4, m4, 4, flt_t, )
 
-#define NV_MATRIX_COPY(m1, m2)                                                                                                                                                \
+#define NVM_MATRIX_COPY(m1, m2)                                                                                                                                               \
   do                                                                                                                                                                          \
   {                                                                                                                                                                           \
     const int size = nv_arrlen((m1).data);                                                                                                                                    \

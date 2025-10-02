@@ -1,7 +1,7 @@
 #ifndef STD_MATH_VEC3_H
 #define STD_MATH_VEC3_H
 
-#include "../../std/stdafx.h"
+#include "../stdafx.h"
 #include <math.h>
 
 NOVA_HEADER_START
@@ -11,6 +11,9 @@ NOVA_HEADER_START
   {                                                                                                                                                                           \
     TYPE x, y, z;                                                                                                                                                             \
   }(NAME);                                                                                                                                                                    \
+  static const NAME  FUNC##zero = (NAME){ (TYPE)0, (TYPE)0, (TYPE)0 };                                                                                                        \
+  static const NAME  FUNC##one  = (NAME){ (TYPE)1, (TYPE)1, (TYPE)1 };                                                                                                        \
+  static inline NAME FUNC##init(const TYPE x, const TYPE y, const TYPE z) { return (NAME){ x, y, z }; }                                                                       \
   static inline NAME FUNC##add(const NAME v1, const NAME v2) { return (NAME){ v1.x + v2.x, v1.y + v2.y, v1.z + v2.z }; }                                                      \
   static inline NAME FUNC##sub(const NAME v1, const NAME v2) { return (NAME){ v1.x - v2.x, v1.y - v2.y, v1.z - v2.z }; }                                                      \
   static inline NAME FUNC##mulv(const NAME v1, const NAME v2) { return (NAME){ v1.x * v2.x, v1.y * v2.y, v1.z * v2.z }; }                                                     \

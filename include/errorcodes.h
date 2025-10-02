@@ -30,6 +30,21 @@
 
 NOVA_HEADER_START
 
+#define nv_raise_error(code, ...) _nv_raise_error(code, __FILE__, __LINE__, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+
+/**
+ * Assert that an expression must return NV_SUCCESS. If it does not, return the 2nd parameter
+ */
+#define nv_return_error_if_fail(expr)                                                                                                                                         \
+  do                                                                                                                                                                          \
+  {                                                                                                                                                                           \
+    nv_error __tmp_error_code_eval = (expr);                                                                                                                                  \
+    if (__tmp_error_code_eval != NV_SUCCESS)                                                                                                                                  \
+    {                                                                                                                                                                         \
+      return __tmp_error_code_eval;                                                                                                                                           \
+    }                                                                                                                                                                         \
+  } while (0);
+
 typedef enum nv_error
 {
   /* A shorthand alternative to NV_ERROR_SUCCESS */
@@ -99,14 +114,14 @@ typedef enum nv_error
  * or it is irrelevant. It shall be "" in that case.
  * The error should be propogated throught each call.
  */
-typedef nv_error (*nv_error_handler_fn)(nv_error error, const char* file, size_t line, const char* supplementary);
+typedef nv_error (*nv_error_handler_fn)(nv_error error, const char* file, size_t line, const char* supplementary, ...);
 
-extern nv_error nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary);
+extern nv_error nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary, ...);
 
 static nv_error_handler_fn error_handler = nv_default_error_handler;
 
 static inline nv_error
-nv_raise_error(nv_error error, const char* file, size_t line, const char* supplementary)
+_nv_raise_error(nv_error error, const char* file, size_t line, const char* supplementary, ...)
 {
   // What the fuck???
   // if (error_handler != NULL != NULL != NULL != NULL != NULL)
@@ -116,8 +131,6 @@ nv_raise_error(nv_error error, const char* file, size_t line, const char* supple
   }
   return error;
 }
-
-#define NV_RAISE_ERROR(code, suppl) _nv_raise_error(code, __FILE__, __LINE__, suppl)
 
 static inline void
 nv_set_error_handler(nv_error_handler_fn fn)

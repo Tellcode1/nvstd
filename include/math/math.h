@@ -8,6 +8,15 @@
 
 NOVA_HEADER_START
 
+#define NVM_VEC_COPY(v1, v2)                                                                                                                                                  \
+  do                                                                                                                                                                          \
+  {                                                                                                                                                                           \
+    for (int i = 0; i < (sizeof(v1) / sizeof((v1).x)); i++)                                                                                                                   \
+    {                                                                                                                                                                         \
+      (&v1.x)[i] = (NV_TYPEOF(v1.x))((&v2.x)[i]);                                                                                                                             \
+    }                                                                                                                                                                         \
+  } while (0)
+
 static const real_t NVM_PI  = 3.1415926535897932385;
 static const real_t NVM_2PI = 6.283185307179586;
 

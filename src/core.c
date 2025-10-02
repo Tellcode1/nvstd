@@ -22,16 +22,16 @@
   SOFTWARE.
   */
 
-#include "rand.h"
-#include "stdafx.h"
+#include "../include/rand.h"
+#include "../include/stdafx.h"
 
-#include "alloc.h"
-#include "errorcodes.h"
-#include "print.h"
-#include "props.h"
-#include "strconv.h"
-#include "string.h"
-#include "types.h"
+#include "../include/alloc.h"
+#include "../include/errorcodes.h"
+#include "../include/print.h"
+#include "../include/props.h"
+#include "../include/strconv.h"
+#include "../include/string.h"
+#include "../include/types.h"
 
 #include <limits.h>
 #include <stdarg.h>
@@ -44,9 +44,15 @@
 #include <time.h>
 
 nv_error
-nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary)
+nv_default_error_handler(nv_error error, const char* file, size_t line, const char* supplementary, ...)
 {
-  nv_printf("[%s:%zu] raised %s +$(%s)\n", file, line, nv_error_str(error), supplementary);
+  va_list args;
+  va_start(args, supplementary);
+
+  nv_printf("[%s:%zu] raised %s: \n", file, line, nv_error_str(error));
+  nv_vprintf(args, supplementary);
+
+  va_end(args);
   return error;
 }
 
@@ -220,7 +226,7 @@ nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, b
   /* Two fprintf calls, good. */
 
   struct tm* time = nv_get_time();
-  nv_fprintf(out, "[%d:%d:%d] [%s:%zu]%s%s(): ", time->tm_hour % 12, time->tm_min, time->tm_sec, nv_basename(file), line, preceder, fn);
+  nv_fprintf(out, "[%s:%zu]%s%s(): ", nv_basename(file), line, preceder, fn);
 
   nv_vfprintf(args, out, fmt);
 }

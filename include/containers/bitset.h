@@ -31,22 +31,13 @@
 #include "../stdafx.h"
 #include "../types.h"
 #include <SDL3/SDL_mutex.h>
+#include <stdbool.h>
 #include <stddef.h>
 
 NOVA_HEADER_START
 
 typedef struct nv_bitset nv_bitset_t;
 typedef unsigned char    nv_bitset_bit;
-
-extern nv_error nv_bitset_init(int init_capacity, nv_allocator_fn allocator, nv_bitset_t* set);
-extern void     nv_bitset_set_bit(nv_bitset_t* set, int bitindex);
-extern void     nv_bitset_set_bit_to(nv_bitset_t* set, int bitindex, nv_bitset_bit to);
-extern void     nv_bitset_clear_bit(nv_bitset_t* set, int bitindex);
-extern void     nv_bitset_toggle_bit(nv_bitset_t* set, int bitindex);
-extern void     nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src);
-extern void     nv_bitset_destroy(nv_bitset_t* set);
-
-nv_bitset_bit nv_bitset_access_bit(nv_bitset_t* set, int bitindex);
 
 struct nv_bitset
 {
@@ -56,6 +47,19 @@ struct nv_bitset
   void*           alloc_arg;
   SDL_Mutex*      mutex;
 } NOVA_ATTR_ALIGNED(64);
+
+extern nv_error nv_bitset_init(size_t init_capacity, nv_allocator_fn allocator, nv_bitset_t* set);
+extern void     nv_bitset_destroy(nv_bitset_t* set);
+
+extern void nv_bitset_set_bit(nv_bitset_t* set, size_t bitindex);
+extern void nv_bitset_set_bit_to(nv_bitset_t* set, size_t bitindex, nv_bitset_bit to);
+extern void nv_bitset_clear_bit(nv_bitset_t* set, size_t bitindex);
+extern void nv_bitset_toggle_bit(nv_bitset_t* set, size_t bitindex);
+extern void nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src);
+
+extern nv_bitset_bit nv_bitset_access_bit(const nv_bitset_t* set, size_t bitindex);
+
+extern void nv_bitset_copy_from_bool_array(nv_bitset_t* set, const bool* array, size_t array_size);
 
 NOVA_HEADER_END
 

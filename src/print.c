@@ -1,9 +1,9 @@
-#include "print.h"
-#include "attributes.h"
-#include "chrclass.h"
-#include "stdafx.h"
-#include "strconv.h"
-#include "string.h"
+#include "../include/print.h"
+#include "../include/attributes.h"
+#include "../include/chrclass.h"
+#include "../include/stdafx.h"
+#include "../include/strconv.h"
+#include "../include/string.h"
 #include <errno.h>
 #include <stdarg.h>
 #include <stdint.h>
