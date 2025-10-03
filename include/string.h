@@ -34,6 +34,7 @@
 #include "stdafx.h"
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 NOVA_HEADER_START
 
@@ -47,9 +48,6 @@ NOVA_HEADER_START
 #define nv_alloc_struct(struc) ((struc*)nv_calloc(sizeof(struc)))
 #define nv_zero_struct(struc) (nv_memset(&(struc), 0, sizeof(struc)))
 #define nv_zero_structp(struc) (nv_memset(struc, 0, sizeof(*(struc))))
-
-/* two strings are equal, returned by all nv_str*cmp functions */
-static const int nv_strequal = 0;
 
 #if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin)
 #  define NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(fn, ...)                                                                                                               \
@@ -81,7 +79,7 @@ extern void* nv_memmove(void* dst, const void* src, size_t sz);
  * memcpy is marginally faster than memmove, but also has issues on overlapping regions of memory
  * So, we ditch memcpy for memmove for the sake of safety.
  */
-#define nv_memcpy nv_memmove
+#define nv_memcpy memmove
 
 /**
  *  @return a pointer to the first occurance of chr in p

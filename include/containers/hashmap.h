@@ -39,7 +39,7 @@ NOVA_HEADER_START
 
 #ifndef NV_HASHMAP_LOAD_FACTOR
 /* If the size of the hashmap grows to more than this, it will resize */
-#  define NV_HASHMAP_LOAD_FACTOR (3.0f / 4.0f)
+#  define NV_HASHMAP_LOAD_FACTOR (3.0 / 4.0)
 #endif
 
 typedef struct nv_hashmap      nv_hashmap_t;

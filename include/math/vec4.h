@@ -11,8 +11,8 @@ NOVA_HEADER_START
   {                                                                                                                                                                           \
     TYPE x, y, z, w;                                                                                                                                                          \
   }(NAME);                                                                                                                                                                    \
-  static const NAME  FUNC##zero = (NAME){ (TYPE)0, (TYPE)0, (TYPE)0, (TYPE)0 };                                                                                               \
-  static const NAME  FUNC##one  = (NAME){ (TYPE)1, (TYPE)1, (TYPE)1, (TYPE)1 };                                                                                               \
+  static const NAME  FUNC##zero = { 0, 0, 0, 0 };                                                                                                                             \
+  static const NAME  FUNC##one  = { 1, 1, 1, 1 };                                                                                                                             \
   static inline NAME FUNC##init(const TYPE x, const TYPE y, const TYPE z, const TYPE w) { return (NAME){ x, y, z, w }; }                                                      \
   static inline NAME FUNC##add(const NAME v1, const NAME v2) { return (NAME){ v1.x + v2.x, v1.y + v2.y, v1.z + v2.z, v1.w + v2.w }; }                                         \
   static inline NAME FUNC##sub(const NAME v1, const NAME v2) { return (NAME){ v1.x - v2.x, v1.y - v2.y, v1.z - v2.z, v1.w - v2.w }; }                                         \
@@ -31,10 +31,11 @@ NOVA_HEADER_START
     return FUNC##divs(v, magnitude);                                                                                                                                          \
   }
 
-NV_DECL_VEC4(int, vec4i, v4i, sqrt)
+NV_DECL_VEC4(int, vec4i, v4i, (int)sqrtf)
+NV_DECL_VEC4(unsigned, vec4u, v4u, (unsigned)sqrtf)
 NV_DECL_VEC4(float, vec4f, v4f, sqrtf)
 NV_DECL_VEC4(double, vec4d, v4d, sqrt)
-NV_DECL_VEC4(flt_t, vec4, v4, sqrtf)
+NV_DECL_VEC4(double, vec4, v4, sqrt)
 
 NOVA_HEADER_END
 

@@ -6,13 +6,13 @@
 
 NOVA_HEADER_START
 
-#define NV_DEC_VEC2(TYPE, FUNC, NAME, SQRT_FUNC)                                                                                                                              \
+#define NV_DECL_VEC2(TYPE, NAME, FUNC, SQRT_FUNC)                                                                                                                             \
   typedef struct NAME                                                                                                                                                         \
   {                                                                                                                                                                           \
     TYPE x, y;                                                                                                                                                                \
   }(NAME);                                                                                                                                                                    \
-  static const NAME  FUNC##zero = (NAME){ (TYPE)0, (TYPE)0 };                                                                                                                 \
-  static const NAME  FUNC##one  = (NAME){ (TYPE)1, (TYPE)1 };                                                                                                                 \
+  static const NAME  FUNC##zero = { 0, 0 };                                                                                                                                   \
+  static const NAME  FUNC##one  = { 1, 1 };                                                                                                                                   \
   static inline NAME FUNC##init(const TYPE x, const TYPE y) { return (NAME){ x, y }; }                                                                                        \
   static inline NAME FUNC##add(const NAME v1, const NAME v2) { return (NAME){ v1.x + v2.x, v1.y + v2.y }; }                                                                   \
   static inline NAME FUNC##sub(const NAME v1, const NAME v2) { return (NAME){ v1.x - v2.x, v1.y - v2.y }; }                                                                   \
@@ -31,11 +31,11 @@ NOVA_HEADER_START
     return FUNC##divs(v, magnitude);                                                                                                                                          \
   }
 
-NV_DEC_VEC2(int, v2i, vec2i, sqrt)
-NV_DEC_VEC2(unsigned, v2u, vec2u, sqrt)
-NV_DEC_VEC2(float, v2f, vec2f, sqrtf)
-NV_DEC_VEC2(double, v2d, vec2d, sqrt)
-NV_DEC_VEC2(flt_t, v2, vec2, sqrtf)
+NV_DECL_VEC2(int, vec2i, v2i, (int)sqrtf)
+NV_DECL_VEC2(unsigned, vec2u, v2u, (unsigned)sqrtf)
+NV_DECL_VEC2(float, vec2f, v2f, sqrtf)
+NV_DECL_VEC2(double, vec2d, v2d, sqrt)
+NV_DECL_VEC2(double, vec2, v2, sqrt)
 
 NOVA_HEADER_END
 

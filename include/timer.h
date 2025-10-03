@@ -35,28 +35,24 @@
 
 NOVA_HEADER_START
 
-#ifndef NV_TIMER_TIME_TYPE
-#  define NV_TIMER_TIME_TYPE real_t
-#endif
-
 typedef struct nv_timer_s
 {
-  NV_TIMER_TIME_TYPE start;
-  NV_TIMER_TIME_TYPE end;
+  double start;
+  double end;
 } NOVA_ATTR_ALIGNED(16) nv_timer_t;
 
-static inline NV_TIMER_TIME_TYPE
+static inline double
 nv_timer_get_currtime(void)
 {
   struct timespec tp;
   clock_gettime(CLOCK_MONOTONIC, &tp);
-  return (float)tp.tv_nsec * 1.000000e-09;
+  return (double)tp.tv_sec + (double)tp.tv_nsec * 1e-9;
 }
 
 // the timer will finish after 's' seconds
 // pass __FLT_MAX__ for duration for it to just not end
 static inline nv_timer_t
-nv_timer_begin(NV_TIMER_TIME_TYPE duration_seconds)
+nv_timer_begin(double duration_seconds)
 {
   if (duration_seconds <= 0.0F)
   {
@@ -91,13 +87,13 @@ nv_timer_is_done(const nv_timer_t* tmr)
   return nv_timer_get_currtime() >= tmr->end;
 }
 
-static inline NV_TIMER_TIME_TYPE
+static inline double
 nv_timer_time_since_start(const nv_timer_t* tmr)
 {
   return (nv_timer_get_currtime() - tmr->start);
 }
 
-static inline NV_TIMER_TIME_TYPE
+static inline double
 nv_timer_time_since_done(const nv_timer_t* tmr)
 {
   return (nv_timer_get_currtime() - tmr->end);

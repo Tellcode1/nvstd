@@ -66,6 +66,7 @@ extern void     nv_skyline_bin_destroy(nv_skyline_bin_t* bin);
 /**
  * @brief The maximum height of a skyline in the bin
  */
+extern size_t nv_skyline_bin_max_height_nolock(const nv_skyline_bin_t* bin, size_t x, size_t w);
 extern size_t nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w);
 
 /**

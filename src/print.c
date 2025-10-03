@@ -10,6 +10,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#define PADBUF_SIZE 64
+
 // Moral of the story? FU@# SIZE_MAX
 // I spent an HOUR trying to figure out what's going wrong
 // and I didn't even bat an eye towards it
@@ -403,7 +405,7 @@ nv_printf_format_parse_format(nv_format_info_t* info)
   switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
   {
     /* By default, ftoa should not trim trailing zeroes. */
-    case 'f': info->written = nv_ftoa2(va_arg(info->args, real_t), info->tmp_writebuffer, info->precision, remaining, false); break;
+    case 'f': info->written = nv_ftoa2(va_arg(info->args, double), info->tmp_writebuffer, info->precision, remaining, false); break;
     case 'l': nv_printf_handle_long_type(info); break;
     case 'd':
     case 'i': info->written = nv_itoa2(va_arg(info->args, int), info->tmp_writebuffer, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
@@ -445,10 +447,10 @@ nv_printf_write_padding(nv_format_info_t* info)
 
   /* No, we cannot run out of padding buffer space, because we write it in chunks. */
 
-  nv_memset(info->pad_buf, pad_char, sizeof(info->pad_buf));
+  nv_memset(info->pad_buf, pad_char, PADBUF_SIZE);
   while (info->padding > 0)
   {
-    int chunk = (info->padding > (int)sizeof(info->pad_buf)) ? (int)sizeof(info->pad_buf) : info->padding;
+    int chunk = (info->padding > PADBUF_SIZE) ? PADBUF_SIZE : info->padding;
     nv_printf_write(info, info->pad_buf, chunk);
     info->padding -= chunk;
   }
@@ -553,7 +555,7 @@ nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const cha
   nv_format_info_t info = nv_zero_init(nv_format_info_t);
 
   /* Aligned to 64 bytes for fast writing and reading access */
-  NV_ALIGN_TO(64) char pad_buf[64];
+  NV_ALIGN_TO(64) char pad_buf[PADBUF_SIZE];
 
   char wbuf[NOVA_WBUF_SIZE];
 

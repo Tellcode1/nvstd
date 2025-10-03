@@ -185,7 +185,7 @@ NOVA_HEADER_START
 
 NV_DECL_MAT4(mat4f, m4f, 4, float, f)
 NV_DECL_MAT4(mat4d, m4d, 4, double, d)
-NV_DECL_MAT4(mat4, m4, 4, flt_t, )
+NV_DECL_MAT4(mat4, m4, 4, double, )
 
 #define NVM_MATRIX_COPY(m1, m2)                                                                                                                                               \
   do                                                                                                                                                                          \

@@ -216,7 +216,7 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
 // WARNING::: I didn't write most of this, stole it from stack overflow.
 // if it explodes your computer its your fault!!!
 size_t
-nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros)
+nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
 {
   if (max == 0)
   {
@@ -249,14 +249,14 @@ nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros)
     num /= pow(10.0, exponent);
   }
 
-  real_t rounding = pow(10.0, -precision) * 0.5;
+  double rounding = pow(10.0, -precision) * 0.5;
   num += rounding;
 
   /* n has been absoluted before so we can expect that it won't be negative */
   uintmax_t int_part = (uintmax_t)num;
 
   // int part is now floored
-  real_t frac_part = num - (real_t)int_part;
+  double frac_part = num - (double)int_part;
 
   itr += nv_utoa2(int_part, itr, 10, max - 1, false);
 
@@ -365,7 +365,7 @@ nv_atoi(const char in_string[], size_t max)
   return ret;
 }
 
-real_t
+double
 nv_atof(const char in_string[], size_t max)
 {
   if (!in_string)
@@ -373,11 +373,12 @@ nv_atof(const char in_string[], size_t max)
     return 0.0;
   }
 
-  real_t      result = 0.0, fraction = 0.0;
-  int         divisor = 1;
-  bool        neg     = 0;
-  const char* c       = in_string;
-  size_t      i       = 0;
+  double      result   = 0.0;
+  double      fraction = 0.0;
+  int         divisor  = 1;
+  bool        neg      = 0;
+  const char* c        = in_string;
+  size_t      i        = 0;
 
   NV_SKIP_WHITSPACE(c);
 
@@ -500,7 +501,7 @@ nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max)
   if (upgrade)
   {
     const char* stages[] = { " B", " KB", " MB", " GB", " TB", " PB", " Comically large number of bytes" };
-    real_t      b        = (real_t)num_bytes;
+    double      b        = (double)num_bytes;
     u32         stagei   = 0;
 
     const size_t num_stages = nv_arrlen(stages) - 1;

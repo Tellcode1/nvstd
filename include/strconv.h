@@ -54,13 +54,13 @@ extern size_t nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_
 extern size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas);
 
 /**
- * @brief Converts a real_t to ASCII.
+ * @brief Converts a double to ASCII.
  *
  * @param precision Number of digits after the decimal point.
  * @param remove_zeroes If true, trailing zeroes are removed.
  * @return number of characters written. (excluding null terminator)
  */
-extern size_t nv_ftoa2(real_t num, char out[], int precision, size_t max, bool remove_zeros);
+extern size_t nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros);
 
 /**
  * @brief Converts a pointer to ASCII.
@@ -83,9 +83,9 @@ extern size_t nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max);
 extern intmax_t nv_atoi(const char in_string[], size_t max);
 
 /**
- * @brief Converts a string to a real_t.
+ * @brief Converts a string to a double.
  */
-extern real_t nv_atof(const char in_string[], size_t max);
+extern double nv_atof(const char in_string[], size_t max);
 
 /**
  * @brief Converts a string to a boolean.
@@ -107,7 +107,7 @@ nv_utoa(uintmax_t x, char out[], int base, size_t max, bool add_commas)
 }
 
 static inline char*
-nv_ftoa(real_t x, char out[], int precision, size_t max, bool remove_zeroes)
+nv_ftoa(double x, char out[], int precision, size_t max, bool remove_zeroes)
 {
   nv_ftoa2(x, out, precision, max, remove_zeroes);
   return out;

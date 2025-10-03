@@ -128,17 +128,6 @@ NOVA_HEADER_START
 #define NOVA_CONT_CANARY 0xFEEF
 #define NOVA_CONT_IS_VALID(cont) ((cont) && ((cont)->canary == NOVA_CONT_CANARY))
 
-/**
- * Note that you may change these and everything should still work
- */
-#ifndef real_t
-#  define real_t double
-#endif
-
-#ifndef flt_t
-#  define flt_t float
-#endif
-
 #if defined NV_TYPEOF
 #  define NV_MAX(a, b) ((a) > (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))
 #  define NV_MIN(a, b) ((a) < (NV_TYPEOF(a))(b) ? (a) : (NV_TYPEOF(a))(b))

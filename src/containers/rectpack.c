@@ -64,11 +64,9 @@ nv_skyline_bin_destroy(nv_skyline_bin_t* bin)
 }
 
 size_t
-nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
+nv_skyline_bin_max_height_nolock(const nv_skyline_bin_t* bin, size_t x, size_t w)
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
-
-  SDL_LockMutex(bin->mutex);
 
   size_t max_h = 0;
   for (size_t i = x; i < x + w && i < bin->width; i++)
@@ -79,8 +77,20 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
     }
   }
 
-  SDL_UnlockMutex(bin->mutex);
   return max_h;
+}
+
+size_t
+nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
+{
+  nv_assert(NOVA_CONT_IS_VALID(bin));
+
+  SDL_LockMutex(bin->mutex);
+
+  size_t ret = nv_skyline_bin_max_height_nolock(bin, x, w);
+
+  SDL_UnlockMutex(bin->mutex);
+  return ret;
 }
 
 int
@@ -107,15 +117,14 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
   size_t max_x = bin->width - rect->width;
   for (size_t x = 0; x <= max_x; x++)
   {
-    SDL_UnlockMutex(bin->mutex);
-    size_t y = nv_skyline_bin_max_height(bin, x, rect->width);
+    size_t y = nv_skyline_bin_max_height_nolock(bin, x, rect->width);
     if (y + rect->height <= bin->height && y < min_y)
     {
       min_y   = y;
       *best_x = x;
       *best_y = y;
+      break;
     }
-    SDL_LockMutex(bin->mutex);
   }
 
   SDL_UnlockMutex(bin->mutex);

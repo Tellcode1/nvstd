@@ -81,7 +81,6 @@ nv_allocator_c(void* user_data, void* old_ptr, size_t old_size, size_t new_size)
   }
 
   nv_log_error("Invalid operation\n");
-  return NULL;
 
   return NULL;
 }
@@ -225,7 +224,6 @@ nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, b
 
   /* Two fprintf calls, good. */
 
-  struct tm* time = nv_get_time();
   nv_fprintf(out, "[%s:%zu]%s%s(): ", nv_basename(file), line, preceder, fn);
 
   nv_vfprintf(args, out, fmt);
@@ -258,7 +256,7 @@ nv_bufcompress(const void* NV_RESTRICT input, size_t input_size, void* NV_RESTRI
   // deflateEnd(&stream);
   // return 0;
   *output_size = input_size;
-  nv_memcpy(output, input, input_size);
+  nv_memmove(output, input, input_size);
   return 0;
 }
 
@@ -452,8 +450,8 @@ nv_props_parse_arg(int argc, char* argv[], const nv_option_t* options, int nopti
     {
       case NV_OP_TYPE_STRING: nv_strlcpy((char*)opt->value, value, opt->buffer_size); break;
       case NV_OP_TYPE_INT: *(int*)opt->value = (int)nv_atoi(value, NOVA_MAX_IGNORE); break;
-      case NV_OP_TYPE_FLOAT: *(flt_t*)opt->value = (flt_t)nv_atof(value, NOVA_MAX_IGNORE); break;
-      case NV_OP_TYPE_DOUBLE: *(real_t*)opt->value = nv_atof(value, NOVA_MAX_IGNORE); break;
+      case NV_OP_TYPE_FLOAT: *(float*)opt->value = (float)nv_atof(value, NOVA_MAX_IGNORE); break;
+      case NV_OP_TYPE_DOUBLE: *(double*)opt->value = nv_atof(value, NOVA_MAX_IGNORE); break;
       default: break;
     }
   }

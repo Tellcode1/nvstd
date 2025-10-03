@@ -281,7 +281,7 @@ nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key
   nv_assert(NOVA_CONT_IS_VALID(map));
 
   // the second check
-  if (!map->nodes || (flt_t)map->size >= ((flt_t)map->capacity * NV_HASHMAP_LOAD_FACTOR))
+  if (!map->nodes || (double)map->size >= ((double)map->capacity * NV_HASHMAP_LOAD_FACTOR))
   {
     // The check to whether map->entries is greater than 0 is already done in
     // resize();

@@ -8,21 +8,37 @@
 
 NOVA_HEADER_START
 
-#define NVM_VEC_COPY(v1, v2)                                                                                                                                                  \
-  do                                                                                                                                                                          \
-  {                                                                                                                                                                           \
-    for (int i = 0; i < (sizeof(v1) / sizeof((v1).x)); i++)                                                                                                                   \
-    {                                                                                                                                                                         \
-      (&v1.x)[i] = (NV_TYPEOF(v1.x))((&v2.x)[i]);                                                                                                                             \
-    }                                                                                                                                                                         \
-  } while (0)
+#define NVM_VEC_INDEX(v, i) (&((v).x))[i]
 
-static const real_t NVM_PI  = 3.1415926535897932385;
-static const real_t NVM_2PI = 6.283185307179586;
+#ifdef NV_TYPEOF
+#  define NVM_VEC_COPY(dst, src)                                                                                                                                              \
+    do                                                                                                                                                                        \
+    {                                                                                                                                                                         \
+      (dst) = nv_zero_init(NV_TYPEOF(dst));                                                                                                                                   \
+      for (size_t vec_copy_it = 0; vec_copy_it < NV_MIN((sizeof(dst) / sizeof((dst).x)), (sizeof(src) / sizeof((src).x))); vec_copy_it++)                                     \
+      {                                                                                                                                                                       \
+        *((NV_TYPEOF(dst.x)*)(&((dst).x)) + vec_copy_it) = (NV_TYPEOF(dst.x))(*((NV_TYPEOF(src.x)*)(&((src).x)) + vec_copy_it));                                              \
+      }                                                                                                                                                                       \
+    } while (0)
+
+#else
+#  define NVM_VEC_COPY(dst, src)                                                                                                                                              \
+    do                                                                                                                                                                        \
+    {                                                                                                                                                                         \
+      dst = {};                                                                                                                                                               \
+      for (size_t i = 0; i < NV_MIN((sizeof(dst) / sizeof((dst).x)), (sizeof(src) / sizeof((src).x))); i++)                                                                   \
+      {                                                                                                                                                                       \
+        NVM_VEC_INDEX(dst, i) = NVM_VEC_INDEX(src, i);                                                                                                                        \
+      }                                                                                                                                                                       \
+    } while (0)
+#endif
+
+static const double NVM_PI  = 3.1415926535897932385;
+static const double NVM_2PI = 6.283185307179586;
 
 // Multiply these to convert degrees to radians or vice versa
-static const real_t NVM_DEG2RAD_CONSTANT = 0.017453292519943295; // 2Pi / 360.0
-static const real_t NVM_RAD2DEG_CONSTANT = 57.29577951308232;    // 1.0 / DEG2RAD_CONSTANT -> rad / DEG2RAD_CONSTANT
+static const double NVM_DEG2RAD_CONSTANT = 0.017453292519943295; // 2Pi / 360.0
+static const double NVM_RAD2DEG_CONSTANT = 57.29577951308232;    // 1.0 / DEG2RAD_CONSTANT -> rad / DEG2RAD_CONSTANT
 
 #define NVM_LERP(a, b, t) ((a) + (((b) - (a)) * (t)))
 

@@ -3,56 +3,83 @@
 #include "../include/chrclass.h"
 #include "../include/stdafx.h"
 #include "../include/types.h"
+#include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 void*
-nv_memset(void* dst, char to, size_t sz)
+nv_memset(void* dst, char to, size_t nbytes)
 {
-  nv_assert(dst != NULL);
-  nv_assert(sz != 0);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(nbytes != 0, NULL);
 
-  NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memset, dst, to, sz);
+  NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memset, dst, to, nbytes);
 
-  uchar* byte_write = (uchar*)dst;
-  while ((sz--) > 0)
+#if defined(__x86_64__) || defined(__i386__)
+  //   // No matter what the foof I do, this instruction is always faster for some ungodly reason.
+  //   // No, not even mixing stosq for quad word writes.
+  //   // >:C
+  asm volatile("rep stosb" : : "D"(dst), "a"((unsigned char)to), "c"(nbytes) : "memory");
+#else
+  // Pick a god and pray this optimizes to anything good
+  char* bytep = dst;
+  for (size_t i = 0; i < nbytes; i++)
   {
-    *byte_write = to;
-    byte_write++;
+    bytep[i] = to;
   }
+#endif
 
   return dst;
 }
 
 void*
-nv_memmove(void* dst, const void* src, size_t sz)
+nv_memmove(void* dst, const void* src, size_t nbytes)
 {
-  nv_assert_else_return(sz > 0, NULL);
+  nv_assert_else_return(dst != NULL, NULL);
+  nv_assert_else_return(src != NULL, NULL);
+  nv_assert_else_return(nbytes > 0, NULL);
 
-  NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memmove, dst, src, sz);
+  NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memmove, dst, src, nbytes);
 
-  uchar*       d = (uchar*)dst;
-  const uchar* s = (const uchar*)src;
+  uchar*       dstp = (uchar*)dst;
+  const uchar* srcp = (const uchar*)src;
 
-  if (d > s && d < s + sz)
+  if (dstp > srcp && dstp < srcp + nbytes)
   {
-    d += sz;
-    s += sz;
-    while ((sz--) > 0)
+    dstp += nbytes;
+    srcp += nbytes;
+
+#if defined(__x86_64__) || defined(__i386__)
+    asm volatile(
+        // we first use the std instruction, which reverses direction of increment in d and s
+        // then use cld instruction to restore increment state
+        "std\n\t"
+        "rep movsb\n\t"
+        "cld\n\t"
+        :
+        : "D"(dstp), "S"(srcp), "c"(nbytes)
+        : "memory");
+#else
+    while ((nbytes--) > 0)
     {
-      d--;
-      s--;
-      *d = *s;
+      dstp--;
+      srcp--;
+      *dstp = *srcp;
     }
+#endif
   }
   else
   {
-    while ((sz--) > 0)
+#if defined(__x86_64__) || defined(__i386__)
+    asm volatile("rep movsb;" : : "D"(dstp), "S"(srcp), "c"(nbytes) : "memory");
+#else
+    while ((nbytes--) > 0)
     {
-      *d = *s;
-      d++;
-      s++;
+      *dstp = *srcp;
+      dstp++;
+      srcp++;
     }
+#endif
   }
 
   return dst;
@@ -63,9 +90,8 @@ nv_calloc(size_t sz)
 {
   nv_assert_else_return(sz > 0, NULL);
 
-  // void* ptr = calloc(1, sz);
-  void* ptr = calloc(1, sz);
-  nv_memset(ptr, 0, sz);
+  void* ptr = calloc(sz, 1);
+  // nv_memset(ptr, 0, sz);
 
   return ptr;
 }
@@ -95,7 +121,7 @@ nv_aligned_alloc(size_t size, size_t alignment)
    * aligned block of memory.
    */
   uchar* ptr     = (uchar*)orig + sizeof(void*) + sizeof(size_t);
-  uchar* aligned = (uchar*)((uintptr_t)(ptr + alignment - 1) & ~(alignment - 1));
+  uchar* aligned = (uchar*)align_up((size_t)ptr, alignment);
 
   size_t* store_size = (size_t*)(aligned - sizeof(void*) - sizeof(size_t));
   *store_size        = size;
@@ -123,21 +149,30 @@ nv_aligned_realloc(void* orig, size_t size, size_t alignment)
   void* absolute = nv_aligned_get_absolute_ptr(orig);
   if (NV_LIKELY(absolute))
   {
-    size_t prev_size = *(size_t*)((uchar*)orig - sizeof(void*) - sizeof(size_t));
+    size_t prev_size = nv_aligned_ptr_get_size(orig);
 
     if (prev_size == size)
     {
       return orig;
     }
 
+    // size_t const new_aligned_size = align_up(size, alignment);
+    // void*        new_block        = nv_realloc(absolute, new_aligned_size);
+
+    // uchar* return_block = (uchar*)new_block + sizeof(void*) + sizeof(size_t);
+
+    // *(size_t*)(new_block) = size;
+    // void** store_ptr      = (void**)(return_block - sizeof(void*));
+    // *store_ptr            = orig;
+
+    // return return_block;
     void* new_block = nv_aligned_alloc(size, alignment);
     nv_memmove(new_block, orig, NV_MIN(prev_size, size));
-    nv_aligned_free(orig);
-
+    nv_free(absolute);
     return new_block;
   }
 
-  nv_log_error("double free %p\n", orig);
+  nv_log_error("=== double free %p ===\n", orig);
   abort();
 
   return NULL;
