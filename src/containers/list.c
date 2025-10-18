@@ -310,10 +310,10 @@ nv_list_reserve(nv_list_t* list, size_t new_capacity)
   list->capacity = new_capacity;
 }
 
-void
+void*
 nv_list_push_back(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 {
-  nv_assert_else_return(NOVA_CONT_IS_VALID(list), );
+  nv_assert_else_return(NOVA_CONT_IS_VALID(list), NULL);
 
   SDL_LockMutex(list->mutex);
 
@@ -323,11 +323,15 @@ nv_list_push_back(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
   }
 
   nv_assert(list->data != NULL);
+
+  void* elem_space = (uchar*)list->data + (list->size * list->type_size);
   nv_assert(!(elem >= list->data && (unsigned char*)elem <= ((unsigned char*)list->data + list->size))); // breaks restriction rules
-  nv_memcpy((uchar*)list->data + (list->size * list->type_size), elem, list->type_size);
+  nv_memcpy(elem_space, elem, list->type_size);
   list->size++;
 
   SDL_UnlockMutex(list->mutex);
+
+  return elem_space;
 }
 
 void*

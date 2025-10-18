@@ -64,7 +64,7 @@ nv_hashmap_init(size_t init_size, size_t key_size, size_t value_size, nv_hash_fn
   dst->nodes     = init_size == 0 ? NULL : (nv_hashmap_node_t*)NV_ALLOC(allocator, alloc_arg, init_size * sizeof(nv_hashmap_node_t));
   nv_assert_else_return(dst->nodes != NULL, NV_ERROR_MALLOC_FAILED);
 
-  dst->hash_fn    = hash_fn ? hash_fn : nv_hash_murmur3;
+  dst->hash_fn    = hash_fn ? hash_fn : nv_hash_fnv1a;
   dst->key_size   = key_size;
   dst->value_size = value_size;
   dst->capacity   = next_power_of_two(init_size);
@@ -104,7 +104,7 @@ nv_hashmap_destroy(nv_hashmap_t* map)
 }
 
 static inline void
-nv_hashmap_resize_unsafe(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_arg)
+nv_hashmap_resize_unsafe(nv_hashmap_t* map, size_t new_capacity)
 {
   nv_assert(NOVA_CONT_IS_VALID(map));
 
@@ -132,7 +132,7 @@ nv_hashmap_resize_unsafe(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_a
       nv_hashmap_node_t* old_node = &old_nodes[i];
       if (NV_NODE_OCCUPIED(*old_node))
       {
-        nv_hashmap_insert(map, old_node->key, old_node->value, hash_fn_arg);
+        nv_hashmap_insert(map, old_node->key, old_node->value);
         NV_FREE(map->alloc, map->alloc_arg, old_node->key, map->key_size + map->value_size);
       }
     }
@@ -142,10 +142,10 @@ nv_hashmap_resize_unsafe(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_a
 }
 
 void
-nv_hashmap_resize(nv_hashmap_t* map, size_t new_capacity, void* hash_fn_arg)
+nv_hashmap_resize(nv_hashmap_t* map, size_t new_capacity)
 {
   SDL_LockMutex(map->mutex);
-  nv_hashmap_resize_unsafe(map, new_capacity, hash_fn_arg);
+  nv_hashmap_resize_unsafe(map, new_capacity);
   SDL_UnlockMutex(map->mutex);
 }
 
@@ -232,16 +232,16 @@ nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* _i)
 }
 
 static inline void*
-nv_hashmap_find_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key, void* hash_fn_arg)
+nv_hashmap_find_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key)
 {
-  nv_assert(NOVA_CONT_IS_VALID(map));
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), NULL);
 
   if (!map->nodes)
   {
     return NULL;
   }
 
-  const u32 hash  = map->hash_fn(key, map->key_size, hash_fn_arg);
+  const u32 hash  = map->hash_fn(key, map->key_size, map->hash_fn_arg);
   const u32 begin = power_of_two_mod(hash, map->capacity);
 
   u32 index = begin;
@@ -267,28 +267,28 @@ nv_hashmap_find_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTR
 }
 
 void*
-nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key, void* hash_fn_arg)
+nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key)
 {
   SDL_LockMutex(map->mutex);
-  void* found = nv_hashmap_find_unsafe(map, key, hash_fn_arg);
+  void* found = nv_hashmap_find_unsafe(map, key);
   SDL_UnlockMutex(map->mutex);
   return found;
 }
 
 static inline void
-nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value, bool replace_if_exists, void* hash_fn_arg)
+nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value, bool replace_if_exists)
 {
-  nv_assert(NOVA_CONT_IS_VALID(map));
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), );
 
   // the second check
   if (!map->nodes || (double)map->size >= ((double)map->capacity * NV_HASHMAP_LOAD_FACTOR))
   {
     // The check to whether map->entries is greater than 0 is already done in
     // resize();
-    nv_hashmap_resize(map, map->capacity * 2, hash_fn_arg);
+    nv_hashmap_resize(map, map->capacity * 2);
   }
 
-  const u32 hash  = map->hash_fn(key, map->key_size, hash_fn_arg);
+  const u32 hash  = map->hash_fn(key, map->key_size, map->hash_fn_arg);
   const u32 begin = power_of_two_mod(hash, map->capacity);
 
   u32 index = begin;
@@ -296,8 +296,7 @@ nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key
 
   while (NV_NODE_OCCUPIED(map->nodes[index]))
   {
-    index = power_of_two_mod((hash + probe + (probe * probe)), map->capacity);
-    if (hash == map->nodes[index].hash && nv_memcmp(map->nodes[index].key, key, map->key_size) == 0 && replace_if_exists)
+    if (hash == map->nodes[index].hash && replace_if_exists)
     {
       nv_memcpy(map->nodes[index].value, value, map->value_size);
       return;
@@ -306,6 +305,7 @@ nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key
     {
       return;
     }
+    index = power_of_two_mod((begin + (probe * probe)), map->capacity);
     probe++;
   }
 
@@ -319,20 +319,50 @@ nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key
 }
 
 void
-nv_hashmap_insert(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value, void* hash_fn_arg)
+nv_hashmap_insert(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value)
 {
   SDL_LockMutex(map->mutex);
   // TODO(bird): This should not be structured like this????
-  nv_hashmap_insert_internal_unsafe(map, key, value, 0, hash_fn_arg);
+  nv_hashmap_insert_internal_unsafe(map, key, value, false);
   SDL_UnlockMutex(map->mutex);
 }
 
 void
-nv_hashmap_insert_or_replace(nv_hashmap_t* map, const void* NV_RESTRICT key, void* NV_RESTRICT value, void* hash_fn_arg)
+nv_hashmap_insert_or_replace(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value)
 {
   SDL_LockMutex(map->mutex);
-  nv_hashmap_insert_internal_unsafe(map, key, value, 1, hash_fn_arg);
+  nv_hashmap_insert_internal_unsafe(map, key, value, true);
   SDL_UnlockMutex(map->mutex);
+}
+
+bool
+nv_hashmap_delete(nv_hashmap_t* map, const void* NV_RESTRICT key)
+{
+  const u32 hash  = map->hash_fn(key, map->key_size, map->hash_fn_arg);
+  const u32 begin = power_of_two_mod(hash, map->capacity);
+
+  u32 index = begin;
+  u32 probe = 1;
+
+  while (NV_NODE_OCCUPIED(map->nodes[index]))
+  {
+    if (hash == map->nodes[index].hash)
+    {
+      void* node_key_and_value_allocation = (void*)map->nodes[index].key;
+      NV_FREE(map->alloc, map->alloc_arg, node_key_and_value_allocation, map->key_size + map->value_size);
+      nv_bzero(&map->nodes[index], sizeof(nv_hashmap_node_t));
+      return true;
+    }
+    if (index == begin)
+    {
+      return false;
+    }
+    index = power_of_two_mod((begin + (probe * probe)), map->capacity);
+    probe++;
+  }
+
+  return false;
+  ;
 }
 
 void
@@ -361,7 +391,7 @@ nv_hashmap_serialize(nv_hashmap_t* map, FILE* f)
 }
 
 void
-nv_hashmap_deserialize(nv_hashmap_t* map, FILE* f, void* hash_fn_arg)
+nv_hashmap_deserialize(nv_hashmap_t* map, FILE* f)
 {
   nv_assert(NOVA_CONT_IS_VALID(map));
 
@@ -372,9 +402,7 @@ nv_hashmap_deserialize(nv_hashmap_t* map, FILE* f, void* hash_fn_arg)
 
   while (fread(value, map->value_size, 1, f) == 1 && fread(key, map->key_size, 1, f) == 1)
   {
-    SDL_UnlockMutex(map->mutex);
-    nv_hashmap_insert(map, key, value, hash_fn_arg);
-    SDL_LockMutex(map->mutex);
+    nv_hashmap_insert_internal_unsafe(map, key, value, true);
   }
 
   nv_free(key);

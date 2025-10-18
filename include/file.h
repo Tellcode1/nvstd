@@ -56,6 +56,14 @@ typedef enum nv_fs_permission
   NV_FS_PERMISSION_READ_WRITE = 6,
 } nv_fs_permission;
 
+typedef struct nv_fs_dir_contents
+{
+  const char** files;
+  size_t       num_files;
+  const char** dirs;
+  size_t       num_dirs;
+} nv_fs_dir_contents_t;
+
 extern bool nv_fs_file_exists(const char* fpath);
 
 /**
@@ -122,11 +130,6 @@ extern nv_error nv_fs_dir_create(const char* dpath, nv_fs_permission perms);
 extern nv_error nv_fs_dir_create_recursive(const char* dpath, nv_fs_permission perms);
 
 /**
- * Create the directories for a file, but not the file itself.
- */
-extern nv_error nv_fs_dir_create_recursive_for_file(const char* fpath, nv_fs_permission perms);
-
-/**
  * Though confusing, returns NV_ERROR_FILE_NOT_FOUND if the directory does not
  * exist.
  * WARNING: Removes everything from the directory. (Of which we have permission to delete)
@@ -134,6 +137,16 @@ extern nv_error nv_fs_dir_create_recursive_for_file(const char* fpath, nv_fs_per
  * not be deleted and NV_ERROR_INVALID_OPERATION is returned.
  */
 extern nv_error nv_fs_dir_delete_recursive(const char* dpath);
+
+/**
+ * Create the directories for a file, but not the file itself.
+ */
+extern nv_error nv_fs_dir_create_recursive_for_file(const char* fpath, nv_fs_permission perms);
+
+/**
+ * TODO: What if the number of files changes in between the calls?
+ */
+extern nv_error nv_fs_dir_list_files(const char* dpath, nv_fs_dir_contents_t* dst);
 
 NOVA_HEADER_END
 

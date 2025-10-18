@@ -504,6 +504,21 @@ nv_strchr(const char* s, int chr)
 }
 
 char*
+nv_strnchr(const char* s, int chr, size_t max)
+{
+  size_t i = 0;
+  while (s[i] && i < max)
+  {
+    if (s[i] == chr)
+    {
+      return (char*)(s + i);
+    }
+    i++;
+  }
+  return NULL;
+}
+
+char*
 nv_strchr_n(const char* s, int chr, int n)
 {
   while (*s)

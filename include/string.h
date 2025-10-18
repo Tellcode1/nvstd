@@ -235,9 +235,15 @@ extern int nv_strcasecmp(const char* s1, const char* s2);
 
 /**
  *  @brief find the first occurence of a character in a string
- *  @return NULL if chr is not in s or there is no n-th occurence of chr.
+ *  @return NULL if chr is not in s
  */
 extern char* nv_strchr(const char* s, int chr);
+
+/**
+ *  @brief find the first occurence of a character in a string, checking only up to 'max' characters
+ *  @return NULL if chr is not in s within 'max' characters
+ */
+extern char* nv_strnchr(const char* s, int chr, size_t max);
 
 /**
  *  @brief Find the n-th occurence of a character in a string.

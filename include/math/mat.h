@@ -1,7 +1,8 @@
 #ifndef STD_MATH_MAT_H
 #define STD_MATH_MAT_H
 
-#include "..//stdafx.h"
+#include "../stdafx.h"
+#include "math.h"
 #include "vec3.h"
 #include "vec4.h"
 #include <math.h>
@@ -47,13 +48,14 @@ NOVA_HEADER_START
                                                                                                                                                                               \
   static inline NAME FUNC##mul(const NAME m1, const NAME m2)                                                                                                                  \
   {                                                                                                                                                                           \
-    NAME result = nv_zero_init(NAME);                                                                                                                                         \
-    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
+    NAME result = { 0 };                                                                                                                                                      \
+                                                                                                                                                                              \
+    for (int i = 0; i < 4; i++)                                                                                                                                               \
     {                                                                                                                                                                         \
-      result.data[i] = (vec##SIZE##TYPE_PREFIX){ 0 };                                                                                                                         \
-      for (int j = 0; j < (SIZE); j++)                                                                                                                                        \
+      for (int j = 0; j < 4; j++)                                                                                                                                             \
       {                                                                                                                                                                       \
-        result.data[i] = v##SIZE##TYPE_PREFIX##add(result.data[i], v##SIZE##TYPE_PREFIX##muls(m1.data[j], ((TYPE*)&m2.data[j])[i]));                                          \
+        NVM_VEC_INDEX(result.data[i], j) = m1.data[i].x * NVM_VEC_INDEX(m2.data[0], j) + m1.data[i].y * NVM_VEC_INDEX(m2.data[1], j)                                          \
+            + m1.data[i].z * NVM_VEC_INDEX(m2.data[2], j) + m1.data[i].w * NVM_VEC_INDEX(m2.data[3], j);                                                                      \
       }                                                                                                                                                                       \
     }                                                                                                                                                                         \
     return result;                                                                                                                                                            \

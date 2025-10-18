@@ -465,3 +465,35 @@ nv_fs_dir_delete_recursive(const char* dpath)
 }
 
 #endif
+
+nv_error
+nv_fs_dir_list_files(const char* dpath, nv_fs_dir_contents_t* dst)
+{
+#ifndef _WIN32
+  DIR*           d;
+  struct dirent* dir;
+
+  d = opendir(dpath);
+
+  if (!d)
+  {
+    return NV_ERROR_IO_ERROR;
+  }
+
+  while ((dir = readdir(d)) != NULL)
+  {
+    if (dir->d_type == DT_DIR)
+    {
+      dst->dirs[dst->num_dirs++] = nv_strdup(nv_allocator_c, NULL, dir->d_name);
+    }
+    else if (dir->d_type == DT_REG)
+    {
+      dst->files[dst->num_files++] = nv_strdup(nv_allocator_c, NULL, dir->d_name);
+    }
+  }
+  closedir(d);
+
+#endif
+
+  return NV_SUCCESS;
+}

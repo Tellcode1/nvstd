@@ -117,7 +117,7 @@ extern bool nv_list_equal(const nv_list_t* list1, const nv_list_t* list2);
 /**
  * WARNING: sizeof(*elem) != vec->type_size is UNDEFINED!
  */
-extern void nv_list_push_back(nv_list_t* NV_RESTRICT vec, const void* NV_RESTRICT elem);
+extern void* nv_list_push_back(nv_list_t* NV_RESTRICT vec, const void* NV_RESTRICT elem);
 
 /**
  * @brief Push a zero initialized member to the vec
