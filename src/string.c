@@ -504,6 +504,25 @@ nv_strchr(const char* s, int chr)
 }
 
 char*
+nv_strnchr(const char* s, size_t n, int chr)
+{
+  uchar  c = (uchar)chr;
+  size_t i = 0;
+
+  while (*s && i < n)
+  {
+    if (*s == c)
+    {
+      return (char*)s;
+    }
+    s++;
+    i++;
+  }
+
+  return (c == 0) ? (char*)s : NULL;
+}
+
+char*
 nv_strchr_n(const char* s, int chr, int n)
 {
   while (*s)
@@ -821,15 +840,25 @@ nv_basename(const char* path)
 }
 
 char*
-nv_strdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s)
+nv_strdup(const char* s)
 {
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strdup, s);
 
-  size_t slen = nv_strlen(s);
-
-  char* new_s = alloc(alloc_user_data, NULL, NV_ALLOC_NEW_BLOCK, slen + 1);
-
+  size_t slen  = nv_strlen(s);
+  char*  new_s = nv_malloc(slen + 1);
   nv_strlcpy(new_s, s, slen + 1);
+
+  return new_s;
+}
+
+char*
+nv_strndup(const char* s, size_t n)
+{
+  size_t slen    = nv_strlen(s);
+  size_t dup_len = NV_MIN(slen, n);
+
+  char* new_s = nv_malloc(dup_len + 1);
+  nv_strlcpy(new_s, s, dup_len + 1);
 
   return new_s;
 }

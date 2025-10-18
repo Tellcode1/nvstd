@@ -78,14 +78,36 @@ extern size_t nv_ptoa2(void* ptr, char out[], size_t max);
 extern size_t nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max);
 
 /**
+ * @brief Converts a string to an integer and if not NULL, store a pointer
+ * to the last successfully converted character in endptr
+ * If an error occurs, endptr will be set to NULL and INTMAX_MAX will be returned
+ */
+extern intmax_t nv_atoi2(const char in_string[], size_t max, char** endptr);
+
+/**
+ * @brief Converts a string to a double and if not NULL, store a pointer
+ * to the last successfully converted character in endptr
+ * If an error occurs, endptr will be set to NULL and DBL_MAX will be returned
+ */
+extern double nv_atof2(const char in_string[], size_t max, char** endptr);
+
+/**
  * @brief Converts a string to an integer.
  */
-extern intmax_t nv_atoi(const char in_string[], size_t max);
+static inline intmax_t
+nv_atoi(const char in_string[], size_t max)
+{
+  return nv_atoi2(in_string, max, NULL);
+}
 
 /**
  * @brief Converts a string to a double.
  */
-extern double nv_atof(const char in_string[], size_t max);
+static inline double
+nv_atof(const char in_string[], size_t max)
+{
+  return nv_atof2(in_string, max, NULL);
+}
 
 /**
  * @brief Converts a string to a boolean.

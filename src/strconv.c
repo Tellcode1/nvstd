@@ -317,10 +317,11 @@ nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
 #define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &(s), NULL);
 
 intmax_t
-nv_atoi(const char in_string[], size_t max)
+nv_atoi2(const char in_string[], size_t max, char** endptr)
 {
   if (!in_string)
   {
+    *endptr = NULL;
     return __INTMAX_MAX__;
   }
 
@@ -362,14 +363,16 @@ nv_atoi(const char in_string[], size_t max)
     ret *= -1;
   }
 
+  *endptr = (char*)c;
   return ret;
 }
 
 double
-nv_atof(const char in_string[], size_t max)
+nv_atof2(const char in_string[], size_t max, char** endptr)
 {
   if (!in_string)
   {
+    *endptr = NULL;
     return 0.0;
   }
 
@@ -446,6 +449,8 @@ nv_atof(const char in_string[], size_t max)
   {
     result *= -1.0;
   }
+
+  *endptr = (char*)c;
 
   return result;
 }

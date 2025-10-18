@@ -235,9 +235,15 @@ extern int nv_strcasecmp(const char* s1, const char* s2);
 
 /**
  *  @brief find the first occurence of a character in a string
- *  @return NULL if chr is not in s or there is no n-th occurence of chr.
+ *  @return NULL if chr is not in s
  */
 extern char* nv_strchr(const char* s, int chr);
+
+/**
+ *  @brief find the first occurence of a character in a string within n characters
+ *  @return NULL if chr is not in s within n characters
+ */
+extern char* nv_strnchr(const char* s, size_t n, int chr);
 
 /**
  *  @brief Find the n-th occurence of a character in a string.
@@ -333,7 +339,13 @@ extern char* nv_basename(const char* path);
  *  @brief duplicate a string (using nv_malloc)
  *  and return it
  */
-extern char* nv_strdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s);
+extern char* nv_strdup(const char* s);
+
+/**
+ * @brief Duplicate no more than n characters of a string 's'
+ * Returned string will be nv_malloc()'d and must be freed.
+ */
+extern char* nv_strndup(const char* s, size_t n);
 
 /**
  *  @brief duplicate a string (using nv_malloc) with extra space
