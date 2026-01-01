@@ -24,8 +24,8 @@
 
 /* Utility file for cross compiler attribute support */
 
-#ifndef STD_ATTRIBUTES_H
-#define STD_ATTRIBUTES_H
+#ifndef NV_STD_ATTRIBUTES_H
+#define NV_STD_ATTRIBUTES_H
 
 #include "stdafx.h"
 
@@ -127,4 +127,4 @@ NOVA_HEADER_START
 
 NOVA_HEADER_END
 
-#endif // STD_ATTRIBUTES_H
+#endif // NV_STD_ATTRIBUTES_H

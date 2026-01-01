@@ -19,7 +19,7 @@ nv_memset(void* dst, char to, size_t nbytes)
   //   // No matter what the foof I do, this instruction is always faster for some ungodly reason.
   //   // No, not even mixing stosq for quad word writes.
   //   // >:C
-  asm volatile("rep stosb" : : "D"(dst), "a"((unsigned char)to), "c"(nbytes) : "memory");
+  __asm__ __volatile__("rep stosb" : : "D"(dst), "a"((unsigned char)to), "c"(nbytes) : "memory");
 #else
   // Pick a god and pray this optimizes to anything good
   char* bytep = dst;
@@ -50,7 +50,7 @@ nv_memmove(void* dst, const void* src, size_t nbytes)
     srcp += nbytes;
 
 #if defined(__x86_64__) || defined(__i386__)
-    asm volatile(
+    __asm__ __volatile__(
         // we first use the std instruction, which reverses direction of increment in d and s
         // then use cld instruction to restore increment state
         "std\n\t"
@@ -71,7 +71,7 @@ nv_memmove(void* dst, const void* src, size_t nbytes)
   else
   {
 #if defined(__x86_64__) || defined(__i386__)
-    asm volatile("rep movsb;" : : "D"(dstp), "S"(srcp), "c"(nbytes) : "memory");
+    __asm__ __volatile__("rep movsb;" : : "D"(dstp), "S"(srcp), "c"(nbytes) : "memory");
 #else
     while ((nbytes--) > 0)
     {
@@ -83,17 +83,6 @@ nv_memmove(void* dst, const void* src, size_t nbytes)
   }
 
   return dst;
-}
-
-void*
-nv_calloc(size_t sz)
-{
-  nv_assert_else_return(sz > 0, NULL);
-
-  void* ptr = calloc(sz, 1);
-  // nv_memset(ptr, 0, sz);
-
-  return ptr;
 }
 
 static inline size_t
@@ -110,7 +99,7 @@ nv_aligned_alloc(size_t size, size_t alignment)
 
   const size_t total_size = align_up(size + sizeof(void*) + sizeof(size_t), alignment);
 
-  void* const orig = nv_malloc(total_size);
+  void* const orig = nv_zmalloc(total_size);
   if (!orig)
   {
     return NULL;
@@ -190,24 +179,6 @@ nv_aligned_ptr_get_size(void* aligned_ptr)
 {
   size_t prev_size = *(size_t*)((uchar*)aligned_ptr - sizeof(void*) - sizeof(size_t));
   return prev_size;
-}
-
-void*
-nv_realloc(void* prevblock, size_t new_sz)
-{
-  nv_assert_else_return(new_sz > 0, NULL);
-
-  void* ptr = realloc(prevblock, new_sz);
-
-  return ptr;
-}
-
-void
-nv_free(void* block)
-{
-  // fuck you
-
-  free(block);
 }
 
 void
@@ -446,7 +417,7 @@ nv_strtrim(char* s)
 const char*
 nv_strtrim_c(const char* s, const char** begin, const char** end)
 {
-  while (*s && nv_chr_isspace((uchar)*s))
+  while (*s && nv_isspace((uchar)*s))
   {
     s++;
   }
@@ -460,7 +431,7 @@ nv_strtrim_c(const char* s, const char** begin, const char** end)
 
   s += nv_strlen(s);
 
-  while (s > begin_copy && nv_chr_isspace((uchar) * (s - 1)))
+  while (s > begin_copy && nv_isspace((uchar) * (s - 1)))
   {
     s--;
   }
@@ -587,8 +558,8 @@ nv_strcasencmp(const char* s1, const char* s2, size_t max)
   size_t i = 0;
   while (*s1 && *s2 && i < max)
   {
-    uchar c1 = nv_chr_tolower(*(uchar*)s1);
-    uchar c2 = nv_chr_tolower(*(uchar*)s2);
+    uchar c1 = nv_tolower(*(uchar*)s1);
+    uchar c2 = nv_tolower(*(uchar*)s2);
     if (c1 != c2)
     {
       return c1 - c2;
@@ -602,7 +573,7 @@ nv_strcasencmp(const char* s1, const char* s2, size_t max)
   {
     return 0;
   }
-  return nv_chr_tolower(*(const uchar*)s1) - nv_chr_tolower(*(const uchar*)s2);
+  return nv_tolower(*(const uchar*)s1) - nv_tolower(*(const uchar*)s2);
 }
 
 int
@@ -610,8 +581,8 @@ nv_strcasecmp(const char* s1, const char* s2)
 {
   while (*s1 && *s2)
   {
-    uchar c1 = nv_chr_tolower(*(uchar*)s1);
-    uchar c2 = nv_chr_tolower(*(uchar*)s2);
+    uchar c1 = nv_tolower(*(uchar*)s1);
+    uchar c2 = nv_tolower(*(uchar*)s2);
     if (c1 != c2)
     {
       return c1 - c2;
@@ -619,7 +590,7 @@ nv_strcasecmp(const char* s1, const char* s2)
     s1++;
     s2++;
   }
-  return nv_chr_tolower(*(uchar*)s1) - nv_chr_tolower(*(uchar*)s2);
+  return nv_tolower(*(uchar*)s1) - nv_tolower(*(uchar*)s2);
 }
 
 size_t
@@ -845,7 +816,7 @@ nv_strdup(const char* s)
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strdup, s);
 
   size_t slen  = nv_strlen(s);
-  char*  new_s = nv_malloc(slen + 1);
+  char*  new_s = nv_zmalloc(slen + 1);
   nv_strlcpy(new_s, s, slen + 1);
 
   return new_s;
@@ -857,16 +828,16 @@ nv_strndup(const char* s, size_t n)
   size_t slen    = nv_strlen(s);
   size_t dup_len = NV_MIN(slen, n);
 
-  char* new_s = nv_malloc(dup_len + 1);
+  char* new_s = nv_zmalloc(dup_len + 1);
   nv_strlcpy(new_s, s, dup_len + 1);
 
   return new_s;
 }
 
 char*
-nv_strexdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s, size_t size)
+nv_strexdup(const char* s, size_t size)
 {
-  char* new_s = alloc(alloc_user_data, NULL, NV_ALLOC_NEW_BLOCK, size + 1);
+  char* new_s = nv_zmalloc(size + 1);
 
   nv_strlcpy(new_s, s, size + 1);
 
@@ -884,7 +855,7 @@ nv_substr(const char* s, size_t start, size_t len)
     return NULL;
   }
 
-  char* sub = nv_malloc(len + 1);
+  char* sub = nv_zmalloc(len + 1);
   nv_strncpy(sub, s + start, len);
   sub[len] = 0;
   return sub;
@@ -931,32 +902,32 @@ nv_strnrev(char* str, size_t max)
 }
 
 bool
-nv_chr_isalpha(int chr)
+nv_isalpha(int chr)
 {
   return (chr >= 'A' && chr <= 'Z') || (chr >= 'a' && chr <= 'z');
 }
 
 bool
-nv_chr_isdigit(int chr)
+nv_isdigit(int chr)
 {
   return (chr >= '0' && chr <= '9');
 }
 
 bool
-nv_chr_isalnum(int chr)
+nv_isalnum(int chr)
 {
-  return nv_chr_isalpha(chr) || nv_chr_isdigit(chr);
+  return nv_isalpha(chr) || nv_isdigit(chr);
 }
 
 bool
-nv_chr_isblank(int chr)
+nv_isblank(int chr)
 {
   return (chr == ' ') || (chr == '\t');
 }
 
 /* https://en.wikipedia.org/wiki/Control_character */
 bool
-nv_chr_iscntrl(int chr)
+nv_iscntrl(int chr)
 {
   switch (chr)
   {
@@ -975,25 +946,25 @@ nv_chr_iscntrl(int chr)
 }
 
 bool
-nv_chr_islower(int chr)
+nv_islower(int chr)
 {
   return (chr >= 'a' && chr <= 'z');
 }
 
 bool
-nv_chr_isupper(int chr)
+nv_isupper(int chr)
 {
   return (chr >= 'A' && chr <= 'Z');
 }
 
 bool
-nv_chr_isspace(int chr)
+nv_isspace(int chr)
 {
   return (chr == ' ' || chr == '\n' || chr == '\t');
 }
 
 bool
-nv_chr_ispunct(int chr)
+nv_ispunct(int chr)
 {
   /* Generated with
     for (i = 0; i < 256; i++)
@@ -1040,9 +1011,9 @@ nv_chr_ispunct(int chr)
 }
 
 int
-nv_chr_tolower(int chr)
+nv_tolower(int chr)
 {
-  if (nv_chr_isupper(chr))
+  if (nv_isupper(chr))
   {
     return chr + 32;
   }
@@ -1050,9 +1021,9 @@ nv_chr_tolower(int chr)
 }
 
 int
-nv_chr_toupper(int chr)
+nv_toupper(int chr)
 {
-  if (nv_chr_islower(chr))
+  if (nv_islower(chr))
   {
     return chr - 32; /* chr - 32 */
   }

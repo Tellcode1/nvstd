@@ -1,7 +1,8 @@
-#ifndef STD_MATH_VEC3_H
-#define STD_MATH_VEC3_H
+#ifndef NV_STD_MATH_VEC3_H
+#define NV_STD_MATH_VEC3_H
 
 #include "../stdafx.h"
+
 #include <math.h>
 
 NOVA_HEADER_START
@@ -27,8 +28,7 @@ NOVA_HEADER_START
   static inline NAME FUNC##normalize(const NAME v)                                                                                                                            \
   {                                                                                                                                                                           \
     TYPE magnitude = FUNC##mag(v);                                                                                                                                            \
-    if (magnitude == 0)                                                                                                                                                       \
-      return nv_zero_init(NAME);                                                                                                                                              \
+    if (magnitude == 0) return nv_zinit(NAME);                                                                                                                                \
     return FUNC##divs(v, magnitude);                                                                                                                                          \
   }
 
@@ -40,4 +40,4 @@ NV_DECL_VEC3(double, vec3, v3, sqrt)
 
 NOVA_HEADER_END
 
-#endif // STD_MATH_VEC3_H
+#endif // NV_STD_MATH_VEC3_H

@@ -22,11 +22,12 @@
   SOFTWARE.
 */
 
-#ifndef STD_PRINT_H
-#define STD_PRINT_H
+#ifndef NV_STD_PRINT_H
+#define NV_STD_PRINT_H
 
 #include "attributes.h"
 #include "stdafx.h"
+
 #include <stdarg.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -135,4 +136,4 @@ extern size_t nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_ch
 
 NOVA_HEADER_END
 
-#endif // STD_PRINT_H
+#endif // NV_STD_PRINT_H

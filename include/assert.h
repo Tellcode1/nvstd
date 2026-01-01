@@ -15,21 +15,24 @@ extern "C"
         nv_log_error("Assertion failed -> %s\n", #expr);                                                                                                                      \
         return retval;                                                                                                                                                        \
       }                                                                                                                                                                       \
-    } while (0);
+    } while (0)
 #  define nv_assert_and_exec(expr, code)                                                                                                                                      \
-    if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                         \
-    {                                                                                                                                                                         \
-      nv_log_error("Assertion failed -> %s\n", #expr);                                                                                                                        \
-      code                                                                                                                                                                    \
-    }
-#  define nv_assert(expr)                                                                                                                                                     \
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
       if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                       \
       {                                                                                                                                                                       \
         nv_log_error("Assertion failed -> %s\n", #expr);                                                                                                                      \
+        code                                                                                                                                                                  \
       }                                                                                                                                                                       \
-    } while (0);
+    } while (0)
+#  define nv_assert(expr)                                                                                                                                                     \
+    do                                                                                                                                                                        \
+    {                                                                                                                                                                         \
+      if (NV_UNLIKELY(!((bool)(expr))))                                                                                                                                       \
+      {                                                                                                                                                                       \
+        nv_log_and_abort("Assertion failed -> %s\n", #expr);                                                                                                                  \
+      }                                                                                                                                                                       \
+    } while (0)
 #else
 // These are typecasted to void because they give warnings because result (its
 // like expr != NULL) is not used

@@ -1,9 +1,10 @@
-#ifndef STD_MATH_MATH_H
-#define STD_MATH_MATH_H
+#ifndef NV_STD_MATH_MATH_H
+#define NV_STD_MATH_MATH_H
 
 #include "../attributes.h"
 #include "../stdafx.h"
 #include "vec2.h"
+
 #include <stdbool.h>
 
 NOVA_HEADER_START
@@ -14,7 +15,7 @@ NOVA_HEADER_START
 #  define NVM_VEC_COPY(dst, src)                                                                                                                                              \
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
-      (dst) = nv_zero_init(NV_TYPEOF(dst));                                                                                                                                   \
+      (dst) = nv_zinit(NV_TYPEOF(dst));                                                                                                                                       \
       for (size_t vec_copy_it = 0; vec_copy_it < NV_MIN((sizeof(dst) / sizeof((dst).x)), (sizeof(src) / sizeof((src).x))); vec_copy_it++)                                     \
       {                                                                                                                                                                       \
         *((NV_TYPEOF(dst.x)*)(&((dst).x)) + vec_copy_it) = (NV_TYPEOF(dst.x))(*((NV_TYPEOF(src.x)*)(&((src).x)) + vec_copy_it));                                              \
@@ -26,10 +27,7 @@ NOVA_HEADER_START
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
       dst = {};                                                                                                                                                               \
-      for (size_t i = 0; i < NV_MIN((sizeof(dst) / sizeof((dst).x)), (sizeof(src) / sizeof((src).x))); i++)                                                                   \
-      {                                                                                                                                                                       \
-        NVM_VEC_INDEX(dst, i) = NVM_VEC_INDEX(src, i);                                                                                                                        \
-      }                                                                                                                                                                       \
+      for (size_t i = 0; i < NV_MIN((sizeof(dst) / sizeof((dst).x)), (sizeof(src) / sizeof((src).x))); i++) { NVM_VEC_INDEX(dst, i) = NVM_VEC_INDEX(src, i); }                \
     } while (0)
 #endif
 
@@ -61,7 +59,7 @@ typedef struct nvm_rect2d
   // The CENTER of the rect
   vec2 position;
   vec2 size;
-} NOVA_ATTR_ALIGNED(16) nvm_rect2d;
+} nvm_rect2d;
 
 static inline bool
 nvm_aabb(const struct nvm_rect2d* r1, const struct nvm_rect2d* r2)
@@ -98,4 +96,4 @@ nvm_is_point_inside_rect(const vec2* point, const struct nvm_rect2d* r)
 
 NOVA_HEADER_END
 
-#endif // STD_MATH_MATH_H
+#endif // NV_STD_MATH_MATH_H

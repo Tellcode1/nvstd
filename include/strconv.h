@@ -22,10 +22,11 @@
   SOFTWARE.
 */
 
-#ifndef STD_STRCONV_H
-#define STD_STRCONV_H
+#ifndef NV_STD_STRCONV_H
+#define NV_STD_STRCONV_H
 
 #include "stdafx.h"
+
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -95,18 +96,17 @@ extern double nv_atof2(const char in_string[], size_t max, char** endptr);
  * @brief Converts a string to an integer.
  */
 static inline intmax_t
-nv_atoi(const char in_string[], size_t max)
+nv_atoi(const char in_string[])
 {
-  return nv_atoi2(in_string, max, NULL);
+  return nv_atoi2(in_string, SIZE_MAX, NULL);
 }
-
 /**
  * @brief Converts a string to a double.
  */
 static inline double
-nv_atof(const char in_string[], size_t max)
+nv_atof(const char in_string[])
 {
-  return nv_atof2(in_string, max, NULL);
+  return nv_atof2(in_string, SIZE_MAX, NULL);
 }
 
 /**
@@ -115,40 +115,40 @@ nv_atof(const char in_string[], size_t max)
 extern bool nv_atobool(const char in_string[], size_t max);
 
 static inline char*
-nv_itoa(intmax_t x, char out[], int base, size_t max, bool add_commas)
+nv_itoa(int x, char out[], int base)
 {
-  nv_itoa2(x, out, base, max, add_commas);
+  nv_itoa2((intmax_t)x, out, base, SIZE_MAX, false);
   return out;
 }
 
 static inline char*
-nv_utoa(uintmax_t x, char out[], int base, size_t max, bool add_commas)
+nv_utoa(unsigned x, char out[], int base)
 {
-  nv_utoa2(x, out, base, max, add_commas);
+  nv_utoa2((uintmax_t)x, out, base, SIZE_MAX, false);
   return out;
 }
 
 static inline char*
-nv_ftoa(double x, char out[], int precision, size_t max, bool remove_zeroes)
+nv_ftoa(double x, char out[], int precision)
 {
-  nv_ftoa2(x, out, precision, max, remove_zeroes);
+  nv_ftoa2(x, out, precision, SIZE_MAX, false);
   return out;
 }
 
 static inline char*
-nv_ptoa(void* p, char* buf, size_t max)
+nv_ptoa(void* p, char* buf)
 {
-  nv_ptoa2(p, buf, max);
+  nv_ptoa2(p, buf, SIZE_MAX);
   return buf;
 }
 
 static inline char*
-nv_btoa(size_t x, bool upgrade, char* buf, size_t max)
+nv_btoa(size_t x, char* buf)
 {
-  nv_btoa2(x, upgrade, buf, max);
+  nv_btoa2(x, true, buf, SIZE_MAX);
   return buf;
 }
 
 NOVA_HEADER_END
 
-#endif // STD_STRCONV_H
+#endif // NV_STD_STRCONV_H

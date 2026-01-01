@@ -22,13 +22,14 @@
   SOFTWARE.
 */
 
-#ifndef STD_STDAFX_H
-#define STD_STDAFX_H
+#ifndef NV_STD_STDAFX_H
+#define NV_STD_STDAFX_H
 
 // implementation: core.c
 
 #include "assert.h"
 #include "log.h"
+
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -124,8 +125,7 @@ NOVA_HEADER_START
 #  define NV_STATIC_ASSERT(expr, errmsg) static volatile char static_assert_failed__##errmsg[!(expr) ? -1 : 1]
 #endif
 
-// deadbeef is for losers
-#define NOVA_CONT_CANARY 0xFEEF
+#define NOVA_CONT_CANARY 0xDEADBEEF
 #define NOVA_CONT_IS_VALID(cont) ((cont) && ((cont)->canary == NOVA_CONT_CANARY))
 
 #if defined NV_TYPEOF
@@ -147,11 +147,11 @@ NOVA_HEADER_START
 #  define nv_arrlen(arr) ((size_t)(sizeof(arr) / sizeof((arr)[0])))
 #endif
 
-#ifndef nv_zero_init
+#ifndef nv_zinit
 #  ifndef __cplusplus
-#    define nv_zero_init(TYPE) (TYPE){ 0 }
+#    define nv_zinit(TYPE) (TYPE){ 0 }
 #  else
-#    define nv_zero_init(TYPE)                                                                                                                                                \
+#    define nv_zinit(TYPE)                                                                                                                                                    \
       (TYPE) {}
 #  endif
 #endif
@@ -173,10 +173,7 @@ nv_get_time(void)
 }
 
 #define NOVA_CALL_FILE_FN(fn)                                                                                                                                                 \
-  if (NV_UNLIKELY((fn) != 0))                                                                                                                                                 \
-  {                                                                                                                                                                           \
-    nv_log_error("%s() => %i\n", #fn, errno);                                                                                                                                 \
-  }
+  if (NV_UNLIKELY((fn) != 0)) { nv_log_error("%s() => %i\n", #fn, errno); }
 
 NV_STATIC_ASSERT(sizeof(float) == 4, sizeof_float_must_be_32_bits);
 NV_STATIC_ASSERT(sizeof(double) == 8, sizeof_float_must_be_64_bits);

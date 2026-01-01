@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef STD_HASH_H
-#define STD_HASH_H
+#ifndef NV_STD_HASH_H
+#define NV_STD_HASH_H
 
 #include "attributes.h"
 #include "stdafx.h"
@@ -31,6 +31,12 @@
 #include "types.h"
 
 NOVA_HEADER_START
+
+/**
+ * NOTE: For strings, the 'size' passed will be the length + 1!
+ * This generally shouldn't matter, as they ignore the size but that should be
+ * something to keep in mind.
+ */
 
 /**
  * Return: the hash computed from the input
@@ -110,14 +116,8 @@ static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_murmur3(const voi
   const u8* tail = data + (nblocks * 4);
   u32       k1   = 0;
 
-  if ((input_size & 3U) == 3)
-  {
-    k1 ^= tail[2] << 16U;
-  }
-  if ((input_size & 3U) == 2)
-  {
-    k1 ^= tail[1] << 8U;
-  }
+  if ((input_size & 3U) == 3) { k1 ^= tail[2] << 16U; }
+  if ((input_size & 3U) == 2) { k1 ^= tail[1] << 8U; }
   if ((input_size & 3U) == 1)
   {
     k1 ^= tail[0];
@@ -135,6 +135,7 @@ static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_murmur3(const voi
   hash ^= hash >> 16U;
   return hash;
 }
+
 static inline int
 nv_compare_default(const void* key1, const void* key2, size_t size, void* user_data)
 {
@@ -152,4 +153,4 @@ nv_compare_string(const void* key1, const void* key2, size_t size, void* user_da
 
 NOVA_HEADER_END
 
-#endif // STD_HASH_H
+#endif // NV_STD_HASH_H

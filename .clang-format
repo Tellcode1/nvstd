@@ -20,9 +20,10 @@ SortIncludes: CaseSensitive
 SpaceBeforeAssignmentOperators: true
 IndentPPDirectives: AfterHash
 PPIndentWidth: 2
+IncludeBlocks: Regroup
 AllowShortBlocksOnASingleLine: Always
-AllowShortIfStatementsOnASingleLine: Never
-AllowShortLoopsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: AllIfsAndElse
+AllowShortLoopsOnASingleLine: true
 AllowShortCaseLabelsOnASingleLine: true
 BreakBeforeTernaryOperators: true
 BinPackArguments: false

@@ -22,24 +22,18 @@
   SOFTWARE.
 */
 
-#ifndef STD_RAND_H
-#define STD_RAND_H
+#ifndef NV_STD_RAND_H
+#define NV_STD_RAND_H
 
 #include "attributes.h"
 #include "errorcodes.h"
 #include "stdafx.h"
 #include "types.h"
+
 #include <stddef.h>
 #include <stdint.h>
 
 NOVA_HEADER_START
-
-/**
- * Must be larger than nv_rand_t
- */
-#ifndef NOVA_RAND_TMP_CONVERT_TYPE
-#  define NOVA_RAND_TMP_CONVERT_TYPE __uint128_t
-#endif
 
 /**
  * The type that this library works with
@@ -54,7 +48,7 @@ typedef struct nv_rand_info nv_rand_info_t;
 struct nv_rand_info
 {
   nv_rand_t state[4];
-} NOVA_ATTR_ALIGNED(32);
+};
 
 /**
  * For 1000000000 iterations, normal rand() takes 14.829721 seconds while this takes 3.230303 seconds at -O2.
@@ -90,4 +84,4 @@ extern void nv_random_seed(nv_rand_info_t* info, nv_rand_t seed) NOVA_ATTR_NONNU
 
 NOVA_HEADER_END
 
-#endif // STD_RAND_H
+#endif // NV_STD_RAND_H

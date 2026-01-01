@@ -22,19 +22,22 @@
   SOFTWARE.
 */
 
+/* TODO: Add documentation; Clean up code!!! */
+
 /**
  * A red black map. Pretty similar to the hashmap, though hashmaps generally are more stable (i.e. scale well).
  * If your data is small (< 1KB) then you can use this, if not, go with hashmaps. They're more supported by me anyway as they're far more simpler.
  */
 
-#ifndef STD_CONTAINERS_RBMAP_H
-#define STD_CONTAINERS_RBMAP_H
+#ifndef NV_STD_CONTAINERS_RBMAP_H
+#define NV_STD_CONTAINERS_RBMAP_H
 
 #include "../alloc.h"
 #include "../attributes.h"
 #include "../errorcodes.h"
 #include "../hash.h"
 #include "../stdafx.h"
+
 #include <stddef.h>
 
 NOVA_HEADER_START
@@ -46,6 +49,7 @@ typedef struct nv_rbmap          nv_rbmap_t;
 /**
  * Red black trees are a threat to god and must not be implemented by hand
  * WARNING: A lot of the code here is stolen from soruces like wiki, and shoved in by me
+ * How this works I do not know. Neither do I want to know.
  */
 
 typedef enum nv_rbnode_color
@@ -61,7 +65,7 @@ struct nv_rbmap_node
   nv_rbnode_color  color;
   void*            key;
   void*            val;
-} NOVA_ATTR_ALIGNED(64);
+};
 
 struct nv_rbmap_iterator
 {
@@ -69,7 +73,7 @@ struct nv_rbmap_iterator
   size_t            top;
   size_t            capacity;
   nv_rbmap_node_t** stack;
-} NOVA_ATTR_ALIGNED(32);
+};
 
 struct nv_rbmap
 {
@@ -79,11 +83,9 @@ struct nv_rbmap
   nv_compare_fn     compare_fn;
   nv_rbmap_node_t*  root;
   nv_rbmap_node_t** nodes;
-  nv_allocator_fn   alloc;
-  void*             alloc_arg;
-} NOVA_ATTR_ALIGNED(64);
+};
 
-extern nv_error nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_allocator_fn alloc, void* alloc_arg, nv_rbmap_t* dst);
+extern nv_error nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_rbmap_t* dst);
 
 extern void nv_rbmap_destroy(nv_rbmap_t* map);
 
@@ -141,4 +143,4 @@ extern void* nv_rbmap_find(const nv_rbmap_t* NV_RESTRICT map, const void* NV_RES
 
 NOVA_HEADER_END
 
-#endif // STD_CONTAINERS_RBMAP_H
+#endif // NV_STD_CONTAINERS_RBMAP_H

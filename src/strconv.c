@@ -321,9 +321,14 @@ nv_atoi2(const char in_string[], size_t max, char** endptr)
 {
   if (!in_string)
   {
-    *endptr = NULL;
-    return __INTMAX_MAX__;
+    if (endptr)
+    {
+      *endptr = NULL;
+    }
+    return INTMAX_MAX;
   }
+
+  intmax_t base = 10;
 
   const char* c   = in_string;
   intmax_t    ret = 0;
@@ -344,15 +349,51 @@ nv_atoi2(const char in_string[], size_t max, char** endptr)
     i++;
   }
 
+  if (*c == '0')
+  {
+    // num = 0600
+    base = 8;
+
+    c++;
+    i++;
+
+    if (i < max && nv_tolower(*c) == 'x')
+    {
+      // num = 0x600
+      base = 16;
+      c++;
+      i++;
+    }
+  }
+
   while (i < max && *c)
   {
-    if (!nv_chr_isdigit(*c))
+    bool is_hex_dig = (nv_tolower(*c) >= 'a') && (nv_tolower(*c) <= 'f');
+    if (!nv_isdigit(*c) && !is_hex_dig) // *c is not digit or hexadecimal letter
     {
       break;
     }
 
     int digit = *c - '0';
-    ret       = ret * 10 + digit;
+#if defined(DEBUG) && DEBUG
+    if (base == 8)
+    {
+      nv_assert(digit < 8);
+    }
+    else if (base == 10)
+    {
+      nv_assert(is_hex_dig == false);
+    }
+#endif
+
+    if (is_hex_dig)
+    {
+      /**
+       *c - a maps it from 0 - 5, +10 gives us the actual value
+       */
+      digit = (nv_tolower(*c) - 'a') + 10;
+    }
+    ret = ret * base + digit;
 
     c++;
     i++;
@@ -363,7 +404,10 @@ nv_atoi2(const char in_string[], size_t max, char** endptr)
     ret *= -1;
   }
 
-  *endptr = (char*)c;
+  if (endptr)
+  {
+    *endptr = (char*)c;
+  }
   return ret;
 }
 
@@ -372,7 +416,10 @@ nv_atof2(const char in_string[], size_t max, char** endptr)
 {
   if (!in_string)
   {
-    *endptr = NULL;
+    if (endptr)
+    {
+      *endptr = NULL;
+    }
     return 0.0;
   }
 
@@ -397,7 +444,7 @@ nv_atof2(const char in_string[], size_t max, char** endptr)
     i++;
   }
 
-  while (i < max && nv_chr_isdigit(*c))
+  while (i < max && nv_isdigit(*c))
   {
     result = result * 10 + (*c - '0');
     c++;
@@ -406,7 +453,7 @@ nv_atof2(const char in_string[], size_t max, char** endptr)
   if (*c == '.')
   {
     c++;
-    while (nv_chr_isdigit(*c))
+    while (nv_isdigit(*c))
     {
       fraction = fraction * 10 + (*c - '0');
       divisor *= 10;
@@ -435,7 +482,7 @@ nv_atof2(const char in_string[], size_t max, char** endptr)
       i++;
     }
 
-    while (i < max && nv_chr_isdigit(*c))
+    while (i < max && nv_isdigit(*c))
     {
       exponent = exponent * 10 + (*c - '0');
       c++;
@@ -450,8 +497,10 @@ nv_atof2(const char in_string[], size_t max, char** endptr)
     result *= -1.0;
   }
 
-  *endptr = (char*)c;
-
+  if (endptr)
+  {
+    *endptr = (char*)c;
+  }
   return result;
 }
 
@@ -487,7 +536,6 @@ nv_ptoa2(void* ptr, char out[], size_t max)
   w += nv_strncpy2(out, "0x", max);
 
   // stolen from stack overflow
-  /* forgot where I stole it from, god. */
   for (int i = (sizeof(addr) * 2) - 1; i >= 0 && w < max - 1; i--)
   {
     int dig = (int)((addr >> (i * 4)) & 0xF);
@@ -498,7 +546,6 @@ nv_ptoa2(void* ptr, char out[], size_t max)
   return w;
 }
 
-/* Written by yours truly. */
 size_t
 nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max)
 {

@@ -153,7 +153,7 @@ typedef struct nv_format_info_t
   bool        wbuffer_used;
   bool        precision_specified;
   char*       pad_buf;
-} NOVA_ATTR_ALIGNED(128) nv_format_info_t;
+} nv_format_info_t;
 
 static inline void
 nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written)
@@ -225,7 +225,7 @@ nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
   }
   else
   {
-    while (nv_chr_isdigit(NV_PRINTF_PEEK_FMT()))
+    while (nv_isdigit(NV_PRINTF_PEEK_FMT()))
     {
       info->padding_w = info->padding_w * 10 + (NV_PRINTF_PEEK_FMT() - '0');
       NV_PRINTF_ADVANCE_FMT();
@@ -248,7 +248,7 @@ nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
     else
     {
       info->precision = 0;
-      while (nv_chr_isdigit(NV_PRINTF_PEEK_FMT()))
+      while (nv_isdigit(NV_PRINTF_PEEK_FMT()))
       {
         info->precision = info->precision * 10 + (NV_PRINTF_PEEK_FMT() - '0');
         NV_PRINTF_ADVANCE_FMT();
@@ -266,7 +266,7 @@ nv_printf_format_process_char(nv_format_info_t* info)
   }
 
   // if user is asking for literal % sign, *iter will be the percent sign!!
-  int chr = (nv_chr_tolower(NV_PRINTF_PEEK_FMT()) == 'c') ? va_arg(info->args, int) : NV_PRINTF_PEEK_FMT();
+  int chr = (nv_tolower(NV_PRINTF_PEEK_FMT()) == 'c') ? va_arg(info->args, int) : NV_PRINTF_PEEK_FMT();
   if (info->file)
   {
     fputc(chr, (FILE*)info->dst_file);
@@ -288,7 +288,7 @@ nv_printf_handle_long_type(nv_format_info_t* info)
     return;
   }
 
-  const bool type_is_long_long_integer = nv_chr_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'l';
+  const bool type_is_long_long_integer = nv_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'l';
   if (type_is_long_long_integer)
   {
     /* Move past the extra l */
@@ -296,7 +296,7 @@ nv_printf_handle_long_type(nv_format_info_t* info)
     NV_PRINTF_ADVANCE_FMT();
 
     /* long long integers */
-    switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
+    switch (nv_tolower(NV_PRINTF_PEEK_FMT()))
     {
       case 'd':
       case 'i': info->written = nv_itoa2(va_arg(info->args, long long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
@@ -310,7 +310,7 @@ nv_printf_handle_long_type(nv_format_info_t* info)
     NV_PRINTF_ADVANCE_FMT();
     /* standard long integers */
     /* %lF\f is non standard behaviour */
-    switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
+    switch (nv_tolower(NV_PRINTF_PEEK_FMT()))
     {
       case 'd':
       case 'i': info->written = nv_itoa2(va_arg(info->args, long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
@@ -327,12 +327,12 @@ nv_printf_handle_size_type(nv_format_info_t* info)
     return;
   }
 
-  if ((nv_chr_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'i' || nv_chr_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'u'))
+  if ((nv_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'i' || nv_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'u'))
   {
     NV_PRINTF_ADVANCE_FMT();
   }
 
-  if (nv_chr_tolower(NV_PRINTF_PEEK_FMT()) == 'i')
+  if (nv_tolower(NV_PRINTF_PEEK_FMT()) == 'i')
   {
     info->written = nv_itoa2(va_arg(info->args, ssize_t), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
   }
@@ -402,7 +402,7 @@ nv_printf_format_parse_format(nv_format_info_t* info)
 
   size_t remaining = info->max_chars - info->chars_written;
 
-  switch (nv_chr_tolower(NV_PRINTF_PEEK_FMT()))
+  switch (nv_tolower(NV_PRINTF_PEEK_FMT()))
   {
     /* By default, ftoa should not trim trailing zeroes. */
     case 'f': info->written = nv_ftoa2(va_arg(info->args, double), info->tmp_writebuffer, info->precision, remaining, false); break;
@@ -552,7 +552,7 @@ nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const cha
     return 0;
   }
 
-  nv_format_info_t info = nv_zero_init(nv_format_info_t);
+  nv_format_info_t info = nv_zinit(nv_format_info_t);
 
   /* Aligned to 64 bytes for fast writing and reading access */
   NV_ALIGN_TO(64) char pad_buf[PADBUF_SIZE];

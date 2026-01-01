@@ -22,8 +22,8 @@
   SOFTWARE.
 */
 
-#ifndef STD_TYPES_H
-#define STD_TYPES_H
+#ifndef NV_STD_TYPES_H
+#define NV_STD_TYPES_H
 
 #ifdef __cplusplus
 extern "C"
@@ -48,15 +48,11 @@ extern "C"
 
   // They ARE 32 and 64 bits by IEEE-754 but aren't set by the standard
   // But there is a 99.9% chance that they will be
+  // We perform a static assert on stdafx.h so you need not worry.
   typedef float  f32;
   typedef double f64;
-
-  /**
-   * little easier to type
-   */
-#define null (NULL)
 
 #ifdef __cplusplus
 }
 #endif
-#endif // STD_TYPES_HS_H
+#endif // NV_STD_TYPES_HS_H

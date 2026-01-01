@@ -1,12 +1,19 @@
-#ifndef STD_MATH_MAT_H
-#define STD_MATH_MAT_H
+#ifndef NV_STD_MATH_MAT_H
+#define NV_STD_MATH_MAT_H
 
 #include "..//stdafx.h"
 #include "vec3.h"
 #include "vec4.h"
+
 #include <math.h>
 
 NOVA_HEADER_START
+
+#ifdef NOVA_MATH_OPENGL
+#  define _opengl_enabled true
+#else
+#  define _opengl_enabled false
+#endif
 
 #define NV_DECL_MAT4(NAME, FUNC, SIZE, TYPE, TYPE_PREFIX)                                                                                                                     \
   typedef struct NAME                                                                                                                                                         \
@@ -16,7 +23,7 @@ NOVA_HEADER_START
                                                                                                                                                                               \
   static inline NAME FUNC##init(TYPE diag)                                                                                                                                    \
   {                                                                                                                                                                           \
-    NAME result = nv_zero_init(NAME);                                                                                                                                         \
+    NAME result = nv_zinit(NAME);                                                                                                                                             \
     for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
     {                                                                                                                                                                         \
       result.data[i]              = (vec##SIZE##TYPE_PREFIX){ 0 };                                                                                                            \
@@ -28,53 +35,38 @@ NOVA_HEADER_START
   static inline NAME FUNC##add(const NAME m1, const NAME m2)                                                                                                                  \
   {                                                                                                                                                                           \
     NAME result;                                                                                                                                                              \
-    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
-    {                                                                                                                                                                         \
-      result.data[i] = v##SIZE##TYPE_PREFIX##add(m1.data[i], m2.data[i]);                                                                                                     \
-    }                                                                                                                                                                         \
+    for (int i = 0; i < (SIZE); i++) { result.data[i] = v##SIZE##TYPE_PREFIX##add(m1.data[i], m2.data[i]); }                                                                  \
     return result;                                                                                                                                                            \
   }                                                                                                                                                                           \
                                                                                                                                                                               \
   static inline NAME FUNC##sub(const NAME m1, const NAME m2)                                                                                                                  \
   {                                                                                                                                                                           \
     NAME result;                                                                                                                                                              \
-    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
-    {                                                                                                                                                                         \
-      result.data[i] = v##SIZE##TYPE_PREFIX##sub(m1.data[i], m2.data[i]);                                                                                                     \
-    }                                                                                                                                                                         \
+    for (int i = 0; i < (SIZE); i++) { result.data[i] = v##SIZE##TYPE_PREFIX##sub(m1.data[i], m2.data[i]); }                                                                  \
     return result;                                                                                                                                                            \
   }                                                                                                                                                                           \
                                                                                                                                                                               \
   static inline NAME FUNC##mul(const NAME m1, const NAME m2)                                                                                                                  \
   {                                                                                                                                                                           \
-    NAME result = nv_zero_init(NAME);                                                                                                                                         \
+    NAME result = nv_zinit(NAME);                                                                                                                                             \
     for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
     {                                                                                                                                                                         \
       result.data[i] = (vec##SIZE##TYPE_PREFIX){ 0 };                                                                                                                         \
-      for (int j = 0; j < (SIZE); j++)                                                                                                                                        \
-      {                                                                                                                                                                       \
-        result.data[i] = v##SIZE##TYPE_PREFIX##add(result.data[i], v##SIZE##TYPE_PREFIX##muls(m1.data[j], ((TYPE*)&m2.data[j])[i]));                                          \
-      }                                                                                                                                                                       \
+      for (int j = 0; j < (SIZE); j++) { result.data[i] = v##SIZE##TYPE_PREFIX##add(result.data[i], v##SIZE##TYPE_PREFIX##muls(m1.data[j], ((TYPE*)&m2.data[j])[i])); }       \
     }                                                                                                                                                                         \
     return result;                                                                                                                                                            \
   }                                                                                                                                                                           \
                                                                                                                                                                               \
   static inline vec##SIZE##TYPE_PREFIX FUNC##mulv(const NAME m, const vec##SIZE##TYPE_PREFIX v)                                                                               \
   {                                                                                                                                                                           \
-    vec##SIZE##TYPE_PREFIX result = nv_zero_init(vec##SIZE##TYPE_PREFIX);                                                                                                     \
-    for (int i = 0; i < (SIZE); i++)                                                                                                                                          \
-    {                                                                                                                                                                         \
-      ((TYPE*)&result)[i] = v##SIZE##TYPE_PREFIX##dot(m.data[i], v);                                                                                                          \
-    }                                                                                                                                                                         \
+    vec##SIZE##TYPE_PREFIX result = nv_zinit(vec##SIZE##TYPE_PREFIX);                                                                                                         \
+    for (int i = 0; i < (SIZE); i++) { ((TYPE*)&result)[i] = v##SIZE##TYPE_PREFIX##dot(m.data[i], v); }                                                                       \
     return result;                                                                                                                                                            \
   }                                                                                                                                                                           \
   static inline NAME FUNC##scale(const NAME m, const vec3##TYPE_PREFIX v)                                                                                                     \
   {                                                                                                                                                                           \
     NAME matrix = FUNC##init(1.0f);                                                                                                                                           \
-    for (int i = 0; i < 3; i++)                                                                                                                                               \
-    {                                                                                                                                                                         \
-      matrix.data[i] = v4##TYPE_PREFIX##muls(m.data[i], ((TYPE*)&v)[i]);                                                                                                      \
-    }                                                                                                                                                                         \
+    for (int i = 0; i < 3; i++) { matrix.data[i] = v4##TYPE_PREFIX##muls(m.data[i], ((TYPE*)&v)[i]); }                                                                        \
     matrix.data[3] = m.data[3];                                                                                                                                               \
     return matrix;                                                                                                                                                            \
   }                                                                                                                                                                           \
@@ -166,12 +158,13 @@ NOVA_HEADER_START
   {                                                                                                                                                                           \
     const TYPE halftan = tan(fovradians * 0.5f);                                                                                                                              \
                                                                                                                                                                               \
-    NAME result      = nv_zero_init(NAME);                                                                                                                                    \
-    result.data[0].x = 1.0f / (aspect_ratio * halftan);                                                                                                                       \
-    result.data[1].y = -(1.0f / (halftan)); /* y flip */                                                                                                                      \
+    NAME result      = nv_zinit(NAME);                                                                                                                                        \
+    result.data[1].y = (1.0f / (halftan));                                                                                                                                    \
     result.data[2].z = -(far + near) / (far - near);                                                                                                                          \
     result.data[2].w = -1.0f;                                                                                                                                                 \
     result.data[3].z = -(2.0f * far * near) / (far - near);                                                                                                                   \
+    result.data[0].x = 1.0f / (aspect_ratio * halftan);                                                                                                                       \
+    if (!_opengl_enabled) { result.data[1].y *= -1.0; /* Flip y for vulkan */ }                                                                                               \
     return result;                                                                                                                                                            \
   }                                                                                                                                                                           \
                                                                                                                                                                               \

@@ -22,10 +22,11 @@
   SOFTWARE.
 */
 
-#ifndef STD_ATOMIC_H
-#define STD_ATOMIC_H
+#ifndef NV_STD_ATOMIC_H
+#define NV_STD_ATOMIC_H
 
 #include "stdafx.h"
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -83,11 +84,11 @@ typedef volatile bool     nv_atomic_bool;
 #    define nv_atomic_cas(ptr, oldval, newval) __atomic_compare_exchange_n(ptr, &(oldval), 1, 0, __ATOMIC_SEQ_CST, __ATOMIC_SEQ_CST)
 
 #  else
-#    error "No atomic support on this platform. Define NV_NO_ATOMICS and implement it yourself pls."
+#    error "No atomic support on this platform."
 #  endif
 
 #endif
 
 NOVA_HEADER_END
 
-#endif // STD_ATOMIC_H
+#endif // NV_STD_ATOMIC_H

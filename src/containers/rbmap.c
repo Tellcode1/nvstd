@@ -1,10 +1,9 @@
+#include "../../include/containers/rbmap.h"
+
 #include "../../include/errorcodes.h"
 #include "../../include/stdafx.h"
 #include "../../include/string.h"
 
-#include "../../include/containers/rbmap.h"
-
-#include <SDL3/SDL_mutex.h>
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -15,22 +14,19 @@
 #include <string.h>
 
 nv_error
-nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_allocator_fn alloc, void* alloc_arg, nv_rbmap_t* dst)
+nv_rbmap_init(size_t key_size, size_t val_size, nv_compare_fn compare_fn, nv_rbmap_t* dst)
 {
   nv_assert_else_return(key_size != 0, NV_ERROR_INVALID_ARG);
   nv_assert_else_return(val_size != 0, NV_ERROR_INVALID_ARG);
   nv_assert_else_return(compare_fn != NULL, NV_ERROR_INVALID_ARG);
-  nv_assert_else_return(alloc != NULL, NV_ERROR_INVALID_ARG);
 
-  *dst = nv_zero_init(nv_rbmap_t);
+  *dst = nv_zinit(nv_rbmap_t);
 
   dst->canary     = NOVA_CONT_CANARY;
   dst->key_size   = key_size;
   dst->val_size   = val_size;
   dst->compare_fn = compare_fn;
   dst->root       = NULL;
-  dst->alloc      = alloc;
-  dst->alloc_arg  = alloc_arg;
 
   return NV_ERROR_SUCCESS;
 }
@@ -41,16 +37,10 @@ nv_rbmap_left_rotate(nv_rbmap_t* map, nv_rbmap_node_t* x)
   nv_assert(NOVA_CONT_IS_VALID(map));
   nv_rbmap_node_t* y = x->children[1];
   x->children[1]     = y->children[0];
-  if (y->children[0])
-  {
-    y->children[0]->parent = x;
-  }
+  if (y->children[0]) { y->children[0]->parent = x; }
 
   y->parent = x->parent;
-  if (!x->parent)
-  {
-    map->root = y;
-  }
+  if (!x->parent) { map->root = y; }
   else
   {
     x->parent->children[x == x->parent->children[1]] = y;
@@ -66,16 +56,10 @@ nv_rbmap_right_rotate(nv_rbmap_t* map, nv_rbmap_node_t* y)
   nv_assert(NOVA_CONT_IS_VALID(map));
   nv_rbmap_node_t* x = y->children[0];
   y->children[0]     = x->children[1];
-  if (x->children[1])
-  {
-    x->children[1]->parent = y;
-  }
+  if (x->children[1]) { x->children[1]->parent = y; }
 
   x->parent = y->parent;
-  if (!y->parent)
-  {
-    map->root = x;
-  }
+  if (!y->parent) { map->root = x; }
   else
   {
     y->parent->children[y == y->parent->children[1]] = x;
@@ -88,10 +72,7 @@ nv_rbmap_right_rotate(nv_rbmap_t* map, nv_rbmap_node_t* y)
 nv_rbmap_node_t*
 nv_rbmap_minimum(nv_rbmap_node_t* node)
 {
-  while (node && node->children[0] != NULL)
-  {
-    node = node->children[0];
-  }
+  while (node && node->children[0] != NULL) { node = node->children[0]; }
   return node;
 }
 
@@ -99,23 +80,14 @@ void
 nv_rbmap_transplant(nv_rbmap_t* map, nv_rbmap_node_t* u, nv_rbmap_node_t* v)
 {
   nv_assert(NOVA_CONT_IS_VALID(map));
-  if (u->parent == NULL)
-  {
-    map->root = v;
-  }
-  else if (u == u->parent->children[0])
-  {
-    u->parent->children[0] = v;
-  }
+  if (u->parent == NULL) { map->root = v; }
+  else if (u == u->parent->children[0]) { u->parent->children[0] = v; }
   else
   {
     u->parent->children[1] = v;
   }
 
-  if (v != NULL)
-  {
-    v->parent = u->parent;
-  }
+  if (v != NULL) { v->parent = u->parent; }
 }
 
 void
@@ -127,10 +99,7 @@ nv_rbmap_delete_fixup(nv_rbmap_t* map, nv_rbmap_node_t* x)
     if (x == x->parent->children[0])
     {
       nv_rbmap_node_t* w = x->parent->children[1];
-      if (!w)
-      {
-        continue;
-      }
+      if (!w) { continue; }
       if (w && w->color == NOVA_RBNODE_COLOR_RED)
       {
         w->color         = NOVA_RBNODE_COLOR_BLK;
@@ -148,20 +117,14 @@ nv_rbmap_delete_fixup(nv_rbmap_t* map, nv_rbmap_node_t* x)
       {
         if (w->children[1] == NULL || w->children[1]->color == NOVA_RBNODE_COLOR_BLK)
         {
-          if (w->children[0])
-          {
-            w->children[0]->color = NOVA_RBNODE_COLOR_BLK;
-          }
+          if (w->children[0]) { w->children[0]->color = NOVA_RBNODE_COLOR_BLK; }
           w->color = NOVA_RBNODE_COLOR_RED;
           nv_rbmap_right_rotate(map, w);
           w = x->parent->children[1];
         }
         w->color         = x->parent->color;
         x->parent->color = NOVA_RBNODE_COLOR_BLK;
-        if (w->children[1])
-        {
-          w->children[1]->color = NOVA_RBNODE_COLOR_BLK;
-        }
+        if (w->children[1]) { w->children[1]->color = NOVA_RBNODE_COLOR_BLK; }
         nv_rbmap_left_rotate(map, x->parent);
         x = map->root;
       }
@@ -185,29 +148,20 @@ nv_rbmap_delete_fixup(nv_rbmap_t* map, nv_rbmap_node_t* x)
       {
         if (w->children[0] == NULL || w->children[0]->color == NOVA_RBNODE_COLOR_BLK)
         {
-          if (w->children[1])
-          {
-            w->children[1]->color = NOVA_RBNODE_COLOR_BLK;
-          }
+          if (w->children[1]) { w->children[1]->color = NOVA_RBNODE_COLOR_BLK; }
           w->color = NOVA_RBNODE_COLOR_RED;
           nv_rbmap_left_rotate(map, w);
           w = x->parent->children[0];
         }
         w->color         = x->parent->color;
         x->parent->color = NOVA_RBNODE_COLOR_BLK;
-        if (w->children[0])
-        {
-          w->children[0]->color = NOVA_RBNODE_COLOR_BLK;
-        }
+        if (w->children[0]) { w->children[0]->color = NOVA_RBNODE_COLOR_BLK; }
         nv_rbmap_right_rotate(map, x->parent);
         x = map->root;
       }
     }
   }
-  if (x)
-  {
-    x->color = NOVA_RBNODE_COLOR_BLK;
-  }
+  if (x) { x->color = NOVA_RBNODE_COLOR_BLK; }
 }
 
 void
@@ -237,35 +191,23 @@ nv_rbmap_delete(nv_rbmap_t* map, nv_rbmap_node_t* z)
     x                = y->children[1];
     if (y->parent == z)
     {
-      if (x)
-      {
-        x->parent = y;
-      }
+      if (x) { x->parent = y; }
     }
     else
     {
       nv_rbmap_transplant(map, y, y->children[1]);
       y->children[1] = z->children[1];
-      if (y->children[1])
-      {
-        y->children[1]->parent = y;
-      }
+      if (y->children[1]) { y->children[1]->parent = y; }
     }
     nv_rbmap_transplant(map, z, y);
     y->children[0] = z->children[0];
-    if (y->children[0])
-    {
-      y->children[0]->parent = y;
-    }
+    if (y->children[0]) { y->children[0]->parent = y; }
     y->color = z->color;
   }
 
-  if (y_original_color == NOVA_RBNODE_COLOR_BLK && x != NULL)
-  {
-    nv_rbmap_delete_fixup(map, x);
-  }
+  if (y_original_color == NOVA_RBNODE_COLOR_BLK && x != NULL) { nv_rbmap_delete_fixup(map, x); }
 
-  NV_FREE(map->alloc, map->alloc_arg, z, sizeof(nv_rbmap_node_t));
+  nv_free(z);
 }
 
 void
@@ -339,7 +281,7 @@ nv_rbmap_insert(nv_rbmap_t* map, const void* key, const void* value, void* user_
   nv_assert(key != NULL);
   nv_assert(value != NULL);
 
-  void* allocation = NV_ALLOC(map->alloc, map->alloc_arg, sizeof(nv_rbmap_node_t));
+  void* allocation = nv_zmalloc(sizeof(nv_rbmap_node_t));
 
   nv_rbmap_node_t* z = (nv_rbmap_node_t*)allocation;
 
@@ -360,24 +302,15 @@ nv_rbmap_insert(nv_rbmap_t* map, const void* key, const void* value, void* user_
   {
     y       = x;
     int cmp = map->compare_fn(key, x->key, map->key_size, user_hash_data);
-    if (cmp < 0)
-    {
-      x = x->children[0];
-    }
+    if (cmp < 0) { x = x->children[0]; }
     else
     {
       x = x->children[1];
     }
   }
   z->parent = y;
-  if (y == NULL)
-  {
-    map->root = z;
-  }
-  else if (map->compare_fn(key, y->key, map->key_size, user_hash_data) < 0)
-  {
-    y->children[0] = z;
-  }
+  if (y == NULL) { map->root = z; }
+  else if (map->compare_fn(key, y->key, map->key_size, user_hash_data) < 0) { y->children[0] = z; }
   else
   {
     y->children[1] = z;
@@ -392,7 +325,7 @@ nv_rbmap_iterator_init(nv_rbmap_t* map, nv_rbmap_iterator_t* dst)
   nv_assert(dst != NULL);
   nv_assert(map != NULL);
 
-  *dst          = nv_zero_init(nv_rbmap_iterator_t);
+  *dst          = nv_zinit(nv_rbmap_iterator_t);
   dst->current  = map->root;
   dst->stack    = NULL;
   dst->capacity = 0;
@@ -403,13 +336,10 @@ void
 nv_rbmap_iterator_reserve(nv_rbmap_iterator_t* itr, size_t num_elems)
 {
   nv_assert(itr != NULL);
-  if (itr->stack)
-  {
-    itr->stack = (nv_rbmap_node_t**)nv_realloc(itr->stack, num_elems * sizeof(nv_rbmap_node_t*));
-  }
+  if (itr->stack) { itr->stack = (nv_rbmap_node_t**)nv_realloc(itr->stack, num_elems * sizeof(nv_rbmap_node_t*)); }
   else
   {
-    itr->stack = (nv_rbmap_node_t**)nv_calloc(num_elems * sizeof(nv_rbmap_node_t*));
+    itr->stack = (nv_rbmap_node_t**)nv_zmalloc(num_elems * sizeof(nv_rbmap_node_t*));
   }
   itr->capacity = num_elems;
 }
@@ -443,14 +373,8 @@ nv_rbmap_iterator_next(nv_rbmap_iterator_t* itr)
 void
 nv_rbmap_iterator_destroy(nv_rbmap_iterator_t* itr)
 {
-  if (!itr)
-  {
-    return;
-  }
-  if (itr->stack)
-  {
-    nv_free(itr->stack);
-  }
+  if (!itr) { return; }
+  if (itr->stack) { nv_free(itr->stack); }
   itr->stack    = NULL;
   itr->capacity = 0;
 }
@@ -464,14 +388,8 @@ nv_rbmap_find(const nv_rbmap_t* map, const void* key, void* user_hash_data)
   while (node != NULL)
   {
     int cmp = map->compare_fn(key, node->key, map->key_size, user_hash_data);
-    if (cmp < 0)
-    {
-      node = node->children[0];
-    }
-    else if (cmp > 0)
-    {
-      node = node->children[1];
-    }
+    if (cmp < 0) { node = node->children[0]; }
+    else if (cmp > 0) { node = node->children[1]; }
     else
     {
       return node->val;
@@ -491,7 +409,7 @@ nv_rbmap_destroy(nv_rbmap_t* map)
   nv_rbmap_node_t** nodes    = NULL;
   size_t            count    = 0;
   size_t            capacity = 16;
-  nodes                      = (nv_rbmap_node_t**)nv_calloc(capacity * sizeof(nv_rbmap_node_t*));
+  nodes                      = (nv_rbmap_node_t**)nv_zmalloc(capacity * sizeof(nv_rbmap_node_t*));
 
   nv_rbmap_node_t* node = NULL;
   while ((node = nv_rbmap_iterator_next(&itr)) != NULL)
@@ -508,7 +426,7 @@ nv_rbmap_destroy(nv_rbmap_t* map)
   for (size_t i = 0; i < count; i++)
   {
     node = nodes[i];
-    NV_FREE(map->alloc, map->alloc_arg, node, sizeof(nv_rbmap_node_t));
+    nv_free(node);
   }
   nv_free(nodes);
   nv_rbmap_iterator_destroy(&itr);

@@ -25,13 +25,13 @@
 /* An overlayer of standard string.h */
 /* This library though, contains many differences than the standard. Like memcpy has been abolished in favour of memmove. */
 
-#ifndef STD_STRING_H
-#define STD_STRING_H
+#ifndef NV_STD_STRING_H
+#define NV_STD_STRING_H
 
 // implementation: core.c
 
-#include "alloc.h"
 #include "stdafx.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
@@ -53,10 +53,7 @@ NOVA_HEADER_START
 #  define NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(fn, ...)                                                                                                               \
     do                                                                                                                                                                        \
     {                                                                                                                                                                         \
-      if (__has_builtin(__builtin_##fn))                                                                                                                                      \
-      {                                                                                                                                                                       \
-        return __builtin_##fn(__VA_ARGS__);                                                                                                                                   \
-      }                                                                                                                                                                       \
+      if (__has_builtin(__builtin_##fn)) { return __builtin_##fn(__VA_ARGS__); }                                                                                              \
     } while (0);
 #else
 #  define NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(fn, ...)
@@ -94,11 +91,6 @@ extern int nv_memcmp(const void* ptr1, const void* ptr2, size_t max);
 
 // god is dead and i killed him
 
-/* Dude, if using calloc is really slowing down your program, your program is the fault. */
-#define nv_malloc nv_calloc
-
-extern void* nv_calloc(size_t sz);
-
 /**
  * Get an aligned block of memory
  * The memory must be freed by aligned_free
@@ -120,24 +112,7 @@ extern void* nv_aligned_get_absolute_ptr(void* aligned_ptr);
  */
 extern size_t nv_aligned_ptr_get_size(void* aligned_ptr);
 
-extern void* nv_realloc(void* prevblock, size_t new_sz);
-
-extern void nv_free(void* block);
-
 extern void nv_aligned_free(void* aligned_block);
-
-/**
- *  uses zlib to compress and decompress the buffer
- *  this works just as you'd expect on images
- *  @param output should be an allocation of output_size (or bigger)
- */
-extern int nv_bufcompress(const void* NV_RESTRICT input, size_t input_size, void* NV_RESTRICT output, size_t* NV_RESTRICT output_size);
-
-/**
- *  @return The number of bytes decompressed
- *  @param o_buf must be allocated with atleast o_buz_sz bytes of memory
- */
-extern size_t nv_bufdecompress(const void* NV_RESTRICT compressed_data, size_t compressed_size, void* NV_RESTRICT o_buf, size_t o_buf_sz);
 
 /**
  *  get the size of the string
@@ -169,7 +144,7 @@ extern char* nv_strcpy(char* dst, const char* src);
 extern char* nv_strncpy(char* dst, const char* src, size_t max);
 
 /* https://manpages.debian.org/testing/linux-manual-4.8/strscpy.9.en.html */
-#define nv_strscpy(...) (nv_strncpy(__VA_ARGS__))
+#define nv_strscpy nv_strncpy
 
 /**
  *  concatenate src to dst
@@ -189,7 +164,7 @@ extern char* nv_strncat(char* dst, const char* src, size_t max);
 extern size_t nv_strcat_max(char* dst, const char* src, size_t dest_size);
 
 /* nv_strcat_max is functionally equivalent to strlcat */
-#define nv_strlcat(...) (nv_strcat_max(__VA_ARGS__))
+#define nv_strlcat nv_strcat_max
 
 /**
  *  @return the number of characters copied.
@@ -273,8 +248,8 @@ extern size_t nv_strcpy2(char* dst, const char* src);
 
 /**
  *  @return 0 when they are equal,
- *  positive number if the lc (last character) of s1 is greater than lc of s2
- *  negative number if the lc (last character) of s1 is less than lc of s2
+ *  positive number if the first non equal character of s1 is greater than lc of s2
+ *  negative number if the first non equal character of s1 is less than lc of s2
  */
 extern int nv_strcmp(const char* s1, const char* s2);
 
@@ -321,7 +296,7 @@ extern char* nv_strpbrk(const char* s1, const char* s2);
 extern char* nv_strtok(char* s, const char* delim, char** context);
 
 /* As nv_strtok is functionally equivalent to strtok_r, we just define to allow for idiots who don't want to open this header to use it. */
-#define nv_strtok_r(...) (nv_strtok(__VA_ARGS__))
+#define nv_strtok_r nv_strtok
 
 /**
  * @brief Replace every occurence of to_replace in string with replace_with
@@ -336,22 +311,22 @@ extern char* nv_strreplace(char* s, char to_replace, char replace_with);
 extern char* nv_basename(const char* path);
 
 /**
- *  @brief duplicate a string (using nv_malloc)
+ *  @brief duplicate a string (using nv_zmalloc)
  *  and return it
  */
 extern char* nv_strdup(const char* s);
 
 /**
  * @brief Duplicate no more than n characters of a string 's'
- * Returned string will be nv_malloc()'d and must be freed.
+ * Returned string will be nv_zmalloc()'d and must be freed.
  */
 extern char* nv_strndup(const char* s, size_t n);
 
 /**
- *  @brief duplicate a string (using nv_malloc) with extra space
- *  Note that the NULL terminator is excluded from 'size', i.e. one extra byte will be allocated at the end for the terminator.
+ *  @brief duplicate a string (using nv_zmalloc) with extra space equal to 'len'. If 'len' is less than required, the function fails and will return NULL.
+ *  Note that the NULL terminator is excluded from 'len', i.e. one extra byte will be allocated at the end for the terminator.
  */
-extern char* nv_strexdup(nv_allocator_fn alloc, void* alloc_user_data, const char* s, size_t size);
+extern char* nv_strexdup(const char* s, size_t len);
 
 /**
  *  @brief make a substring of the string s
@@ -372,4 +347,4 @@ extern char* nv_strnrev(char* str, size_t max);
 
 NOVA_HEADER_END
 
-#endif // STD_STRING_H
+#endif // NV_STD_STRING_H

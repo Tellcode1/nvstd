@@ -30,13 +30,13 @@
  * https://github.com/juj/RectangleBinPack/blob/master/SkylineBinPack.h
  */
 
-#ifndef STD_CONTAINERS_RECTPACK_H
-#define STD_CONTAINERS_RECTPACK_H
+#ifndef NV_STD_CONTAINERS_RECTPACK_H
+#define NV_STD_CONTAINERS_RECTPACK_H
 
 #include "../attributes.h"
 #include "../errorcodes.h"
 #include "../stdafx.h"
-#include <SDL3/SDL_mutex.h>
+
 #include <stddef.h>
 
 NOVA_HEADER_START
@@ -47,7 +47,7 @@ typedef struct nv_skyline_rect nv_skyline_rect_t;
 struct nv_skyline_rect
 {
   size_t width, height, posx, posy;
-} NOVA_ATTR_ALIGNED(32);
+};
 
 struct nv_skyline_bin
 {
@@ -57,8 +57,7 @@ struct nv_skyline_bin
   size_t             width, height;
   size_t             allocated_rect_count;
   size_t             num_rects;
-  SDL_Mutex*         mutex;
-} NOVA_ATTR_ALIGNED(64);
+};
 
 extern nv_error nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* bin);
 extern void     nv_skyline_bin_destroy(nv_skyline_bin_t* bin);
@@ -95,4 +94,4 @@ extern void nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t ne
 
 NOVA_HEADER_END
 
-#endif // STD_CONTAINERS_RECTPACK_H
+#endif // NV_STD_CONTAINERS_RECTPACK_H

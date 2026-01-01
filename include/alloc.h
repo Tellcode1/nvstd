@@ -20,112 +20,163 @@
   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
   SOFTWARE.
-*/
-
-/**
-  * This allocator is blatantly stolen from lua!
-  * You'd learn more about the allocator from lua than from me.
-  * https://www.lua.org/ to learn more about lua
-
-  The following is lua's license. I don't think I need to add it but still:
-
-  Copyright © 1994–2024 Lua.org, PUC-Rio.
-
-  Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software
-  without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit
-  persons to whom the Software is furnished to do so, subject to the following conditions:
-
-  The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
-
-  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
-  PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT
-  OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-*/
-
-/**
- * A standardized allocator interface for all of nova.
- * Based off of lua's allocator.
- * For more info: https://nullprogram.com/blog/2023/12/17/
  */
 
-#ifndef STD_ALLOC_H
-#define STD_ALLOC_H
+#ifndef NV_STD_ALLOC_H
+#define NV_STD_ALLOC_H
 
 #include "attributes.h"
 #include "stdafx.h"
+#include "string.h"
+
 #include <stddef.h>
+#include <stdlib.h>
 
 NOVA_HEADER_START
 
-/**
- * The following defines, though techincally not needed and can be replaced by 0
- * are essential for the readability of the allocate function. I find lua's allocator to be very unreadable
- * wihtout those defines
- *
- * If a custom allocator is to be used, then it should be passed to user_data
- */
-
-/**
- * When passed as new_size to allocator(), frees the pointer
- */
-#define NV_ALLOC_FREE ((size_t)0)
-
-/**
- * When passed as old_size to allocator(), allocates a new block of memory (malloc)
- */
-#define NV_ALLOC_NEW_BLOCK ((size_t)-1)
-
-#define NV_ALLOC(allocator, user_data, new_size) (allocator)(user_data, NULL, NV_ALLOC_NEW_BLOCK, new_size)
-#define NV_REALLOC(allocator, user_data, old_ptr, old_size, new_size) (allocator)(user_data, old_ptr, old_size, new_size)
-#define NV_FREE(allocator, user_data, old_ptr, old_size) (allocator)(user_data, old_ptr, old_size, NV_ALLOC_FREE)
-
-/**
- * A simple yet effective allocator, blatantly stole from lua
- * - Allocates new memory if old_ptr is NULL and old_size is 0.
- * - Reallocates if old_ptr is non-NULL.
- * - Frees memory if new_size is 0.
- * old_ptr may not be NULL if old_size > 0 and vice versa
- * If a free is successful, returns old_ptr
- * If NV_ALLOC_FREE or NV_ALLOC_NEW_BLOCK aren't specified, then realloc is assumed
- */
-typedef void* (*nv_allocator_fn)(void* allocator, void* old_ptr, size_t old_size, size_t new_size);
-
 typedef struct nv_allocator nv_allocator_t;
+
+// allocate memory initialized to zero
+typedef void* (*nv_zalloc_fn)(nv_allocator_t* self, size_t size);
+
+// realloc memory. the new section will NOT be initialized to zero
+typedef void* (*nv_realloc_fn)(nv_allocator_t* self, void* oldptr, size_t size);
+
+// Free an allocated block of memory
+typedef void (*nv_free_fn)(nv_allocator_t* self, void* ptr);
+
+/* Start with libc allocator. Change this to change default allocator */
+#define NV_ALLOC_DEFAULT &nv_alloc_libc
 
 struct nv_allocator
 {
-  void*           arg;
-  nv_allocator_fn fn;
-} NOVA_ATTR_ALIGNED(16);
+  nv_zalloc_fn  alloc;
+  nv_realloc_fn realloc;
+  nv_free_fn    free;
+  // set to the stack context
+  void* ctx; // context ptr ; used by the allocator
+  void* ud;  // user data
+};
 
-typedef struct nv_alloc_estack nv_alloc_estack_t;
-
-/**
- * The C standard's allocator
- */
-extern void* nv_allocator_c(void* allocator, void* old_ptr, size_t old_size, size_t new_size);
-
-struct nv_alloc_estack
+typedef struct nv_stack_ctx
 {
-  unsigned char* buffer;      // << USER MUST WRITE >>
-  size_t         buffer_size; // << USER MUST WRITE >>
-  /**
-   * Used for free'ing purposes
-   */
-  unsigned char* last_allocation; // << MUST BE ZERO INITIALIZED >>
-  size_t         buffer_bumper;   // << MUST BE ZERO INITIALIZED >>
+  uint8_t* buffer;
+  size_t   size; // total size
+  size_t   offset;
+} nv_stack_ctx_t;
 
-  bool using_heap_buffer; // << DO NOT MODIFY >>
-} NOVA_ATTR_ALIGNED(64);
+inline void*
+nv_stack_zmalloc(nv_allocator_t* self, size_t size)
+{
+  nv_stack_ctx_t* ctx        = (nv_stack_ctx_t*)self->ctx;
+  size_t          new_offset = ctx->offset + size;
+  if (new_offset > ctx->size)
+  {
+    // OOM
+    return NULL;
+  }
 
-/**
- * A custom, expandable stack allocator
- * It is legal to call this function for free'ing a memory block that is not the last
- * the function will simply exit and do nothing, but return old_ptr nonetheless
- * It is not legal to call new_size>old_size(realloc)
- */
-extern void* nv_allocator_estack(void* allocator, void* old_ptr, size_t old_size, size_t new_size);
+  void* ptr   = ctx->buffer + ctx->offset;
+  ctx->offset = new_offset;
+
+  ///
+  /// Zero out new memory block.
+  /// We can't rely on the memory being clean from the start
+  /// because if the user frees memory once (we don't want to zero out memory every free)
+  /// Then the state of the memory is left undefined.
+  ///
+  nv_memset(ptr, 0, size);
+
+  return ptr;
+}
+
+inline void*
+nv_stack_realloc(nv_allocator_t* self, void* oldptr, size_t size)
+{
+  // only support last ptr realloc
+  nv_stack_ctx_t* ctx     = (nv_stack_ctx_t*)self->ctx;
+  uint8_t*        top_ptr = ctx->buffer + ctx->offset;
+  if ((uint8_t*)oldptr + size == top_ptr) // oldptr == last ptr allocated
+  {
+    ctx->offset = ((uint8_t*)oldptr - ctx->buffer) + size;
+    return oldptr;
+  }
+
+  // failed
+  return NULL;
+}
+
+inline void
+nv_stack_free(nv_allocator_t* self, void* ptr)
+{
+  nv_stack_ctx_t* ctx = (nv_stack_ctx_t*)self->ctx;
+  // only allow freeing the last allocation
+  if ((uint8_t*)ptr == ctx->buffer + ctx->offset - 1) { ctx->offset = (uint8_t*)ptr - ctx->buffer; }
+}
+
+static inline void*
+nv_czmalloc(nv_allocator_t* self, size_t size)
+{
+  (void)self;
+  return calloc(1, size);
+}
+
+static inline void*
+nv_crealloc(nv_allocator_t* self, void* oldptr, size_t size)
+{
+  (void)self;
+  return realloc(oldptr, size);
+}
+
+static inline void
+nv_cfree(nv_allocator_t* self, void* ptr)
+{
+  (void)self;
+  free(ptr);
+}
+
+static nv_allocator_t nv_alloc_libc = { .alloc = nv_czmalloc, .realloc = nv_crealloc, .free = nv_cfree };
+
+static nv_allocator_t* nv_alloc_current = NV_ALLOC_DEFAULT;
+
+// push a new allocator and get the previous one
+static inline nv_allocator_t*
+nv_push_allocator(nv_allocator_t* allocator)
+{
+  nv_allocator_t* old = nv_alloc_current;
+  nv_alloc_current    = allocator;
+  return old;
+}
+
+static inline void
+nv_pop_allocator(nv_allocator_t* old)
+{
+  nv_alloc_current = old;
+}
+
+static inline void*
+nv_zmalloc(size_t size)
+{
+  return nv_alloc_current->alloc(nv_alloc_current, size);
+}
+static inline void*
+nv_memdup(void* ptr, size_t size)
+{
+  void* allocd = nv_alloc_current->alloc(nv_alloc_current, size);
+  if (!allocd) return allocd;
+  return nv_memmove(allocd, ptr, size);
+}
+static inline void*
+nv_realloc(void* ptr, size_t size)
+{
+  return nv_alloc_current->realloc(nv_alloc_current, ptr, size);
+}
+static inline void
+nv_free(void* ptr)
+{
+  nv_alloc_current->free(nv_alloc_current, ptr);
+}
 
 NOVA_HEADER_END
 
-#endif // STD_ALLOC_H
+#endif // NV_STD_ALLOC_H

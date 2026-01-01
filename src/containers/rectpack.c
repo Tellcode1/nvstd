@@ -1,10 +1,9 @@
-#include "../../include/errorcodes.h"
-#include "../../include/stdafx.h"
-#include "../../include/string.h"
-
 #include "../../include/containers/rectpack.h"
 
-#include <SDL3/SDL_mutex.h>
+#include "../../include/alloc.h"
+#include "../../include/errorcodes.h"
+#include "../../include/stdafx.h"
+
 #include <limits.h>
 #include <stdarg.h>
 #include <stdbool.h>
@@ -21,7 +20,7 @@ nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* dst)
   nv_assert_else_return(width != 0, NV_ERROR_INVALID_ARG);
   nv_assert_else_return(height != 0, NV_ERROR_INVALID_ARG);
 
-  *dst = nv_zero_init(nv_skyline_bin_t);
+  *dst = nv_zinit(nv_skyline_bin_t);
 
   dst->canary = NOVA_CONT_CANARY;
   dst->width  = width;
@@ -31,11 +30,8 @@ nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* dst)
   dst->num_rects            = 0;
   dst->allocated_rect_count = 0;
 
-  dst->skyline = (size_t*)nv_calloc(width * sizeof(size_t));
+  dst->skyline = (size_t*)nv_zmalloc(width * sizeof(size_t));
   nv_assert_else_return(dst->skyline != NULL, NV_ERROR_MALLOC_FAILED);
-
-  dst->mutex = SDL_CreateMutex();
-  nv_assert_else_return(dst->mutex != NULL, NV_ERROR_EXTERNAL);
 
   nv_assert_else_return(NOVA_CONT_IS_VALID(dst), NV_ERROR_BROKEN_STATE);
 
@@ -45,22 +41,10 @@ nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* dst)
 void
 nv_skyline_bin_destroy(nv_skyline_bin_t* bin)
 {
-  if (!bin)
-  {
-    return;
-  }
+  if (!bin) { return; }
   nv_assert(NOVA_CONT_IS_VALID(bin));
-  SDL_LockMutex(bin->mutex);
-  if (bin->rects)
-  {
-    nv_free(bin->rects);
-  }
-  if (bin->skyline)
-  {
-    nv_free(bin->skyline);
-  }
-  SDL_UnlockMutex(bin->mutex);
-  SDL_DestroyMutex(bin->mutex);
+  if (bin->rects) { nv_free(bin->rects); }
+  if (bin->skyline) { nv_free(bin->skyline); }
 }
 
 size_t
@@ -71,10 +55,7 @@ nv_skyline_bin_max_height_nolock(const nv_skyline_bin_t* bin, size_t x, size_t w
   size_t max_h = 0;
   for (size_t i = x; i < x + w && i < bin->width; i++)
   {
-    if (bin->skyline[i] > max_h)
-    {
-      max_h = bin->skyline[i];
-    }
+    if (bin->skyline[i] > max_h) { max_h = bin->skyline[i]; }
   }
 
   return max_h;
@@ -85,11 +66,8 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
 
-  SDL_LockMutex(bin->mutex);
-
   size_t ret = nv_skyline_bin_max_height_nolock(bin, x, w);
 
-  SDL_UnlockMutex(bin->mutex);
   return ret;
 }
 
@@ -97,8 +75,6 @@ int
 nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t* best_x, size_t* best_y)
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
-
-  SDL_LockMutex(bin->mutex);
 
   /**
    * SIZE_MAX is used as a no find value.
@@ -109,10 +85,7 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
   *best_x      = SIZE_MAX;
   *best_y      = SIZE_MAX;
 
-  if (rect->width > bin->width)
-  {
-    return -1;
-  }
+  if (rect->width > bin->width) { return -1; }
 
   size_t max_x = bin->width - rect->width;
   for (size_t x = 0; x <= max_x; x++)
@@ -127,7 +100,6 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
     }
   }
 
-  SDL_UnlockMutex(bin->mutex);
   return (*best_x != SIZE_MAX);
 }
 
@@ -136,31 +108,21 @@ nv_skyline_bin_place_rect(nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, 
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
 
-  SDL_LockMutex(bin->mutex);
-
   if (bin->num_rects >= bin->allocated_rect_count)
   {
     size_t new_alloc = (bin->allocated_rect_count == 0) ? 2 : bin->allocated_rect_count * 2;
 
-    if (bin->rects)
-    {
-      bin->rects = (nv_skyline_rect_t*)nv_realloc(bin->rects, new_alloc * sizeof(nv_skyline_rect_t));
-    }
+    if (bin->rects) { bin->rects = (nv_skyline_rect_t*)nv_realloc(bin->rects, new_alloc * sizeof(nv_skyline_rect_t)); }
     else
     {
-      bin->rects = nv_calloc(new_alloc * sizeof(nv_skyline_rect_t));
+      bin->rects = nv_zmalloc(new_alloc * sizeof(nv_skyline_rect_t));
     }
     bin->allocated_rect_count = new_alloc;
   }
 
   bin->rects[bin->num_rects++] = (nv_skyline_rect_t){ rect->width, rect->height, x, y };
 
-  for (size_t i = x; i < x + rect->width && i < bin->width; i++)
-  {
-    bin->skyline[i] = y + rect->height;
-  }
-
-  SDL_UnlockMutex(bin->mutex);
+  for (size_t i = x; i < x + rect->width && i < bin->width; i++) { bin->skyline[i] = y + rect->height; }
 }
 
 static int
@@ -208,18 +170,13 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
   nv_skyline_rect_t* invalid_rects = NULL;
   size_t             num_invalid   = 0;
 
-  SDL_LockMutex(bin->mutex);
-
   for (size_t i = 0; i < bin->num_rects; i++)
   {
     nv_skyline_rect_t rect = bin->rects[i];
     if (rect.posx + rect.width > new_w || rect.posy + rect.height > new_h)
     {
       nv_skyline_rect_t* tmp = NULL;
-      if (!invalid_rects)
-      {
-        tmp = (nv_skyline_rect_t*)nv_calloc(sizeof(nv_skyline_rect_t));
-      }
+      if (!invalid_rects) { tmp = (nv_skyline_rect_t*)nv_zmalloc(sizeof(nv_skyline_rect_t)); }
       else
       {
         tmp = (nv_skyline_rect_t*)nv_realloc(invalid_rects, (num_invalid + 1) * sizeof(nv_skyline_rect_t));
@@ -228,7 +185,6 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
       {
         nv_free(valid_rects);
         nv_free(invalid_rects);
-        SDL_UnlockMutex(bin->mutex);
         return;
       }
       invalid_rects                = tmp;
@@ -241,7 +197,6 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
       {
         nv_free(valid_rects);
         nv_free(invalid_rects);
-        SDL_UnlockMutex(bin->mutex);
         return;
       }
       valid_rects              = tmp;
@@ -257,26 +212,19 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
       nv_log_error("Memory allocation failed for bin->skyline in nv_skyline_bin_resize\n");
       nv_free(valid_rects);
       nv_free(invalid_rects);
-      SDL_UnlockMutex(bin->mutex);
       return;
     }
     // if it's bigger horizontally, clear the new entries
     if (new_w > bin->width)
     {
-      for (size_t i = bin->width; i < new_w; i++)
-      {
-        new_skyline[i] = 0;
-      }
+      for (size_t i = bin->width; i < new_w; i++) { new_skyline[i] = 0; }
     }
     bin->skyline = new_skyline;
   }
 
   for (size_t i = 0; i < new_w; i++)
   {
-    if (bin->skyline[i] > new_h)
-    {
-      bin->skyline[i] = new_h;
-    }
+    if (bin->skyline[i] > new_h) { bin->skyline[i] = new_h; }
   }
 
   for (size_t i = 0; i < num_valid; i++)
@@ -284,17 +232,11 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
     nv_skyline_rect_t rect = valid_rects[i];
     for (size_t x = rect.posx; x < rect.posx + rect.width && x < new_w; x++)
     {
-      if (bin->skyline[x] < rect.posy + rect.height)
-      {
-        bin->skyline[x] = rect.posy + rect.height;
-      }
+      if (bin->skyline[x] < rect.posy + rect.height) { bin->skyline[x] = rect.posy + rect.height; }
     }
   }
 
-  if (bin->rects)
-  {
-    nv_free(bin->rects);
-  }
+  if (bin->rects) { nv_free(bin->rects); }
   bin->rects                = valid_rects;
   bin->num_rects            = num_valid;
   bin->allocated_rect_count = num_valid;
@@ -303,22 +245,15 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
   {
     size_t x = 0;
     size_t y = 0;
-    if (nv_skyline_bin_find_best_placement(bin, &invalid_rects[i], &x, &y))
-    {
-      nv_skyline_bin_place_rect(bin, &invalid_rects[i], x, y);
-    }
+    if (nv_skyline_bin_find_best_placement(bin, &invalid_rects[i], &x, &y)) { nv_skyline_bin_place_rect(bin, &invalid_rects[i], x, y); }
     else
     {
       nv_log_error("failed to repack rect %lu after resize\n", i);
     }
   }
 
-  if (invalid_rects)
-  {
-    nv_free(invalid_rects);
-  }
+  if (invalid_rects) { nv_free(invalid_rects); }
 
   bin->width  = new_w;
   bin->height = new_h;
-  SDL_UnlockMutex(bin->mutex);
 }
