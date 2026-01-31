@@ -1,7 +1,7 @@
 #include "../../include/containers/rectpack.h"
 
 #include "../../include/alloc.h"
-#include "../../include/errorcodes.h"
+#include "../../include/error.h"
 #include "../../include/stdafx.h"
 
 #include <limits.h>

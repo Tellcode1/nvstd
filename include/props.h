@@ -28,7 +28,7 @@
 // implementation: core.c
 
 #include "attributes.h"
-#include "errorcodes.h"
+#include "error.h"
 #include "stdafx.h"
 
 #include <stddef.h>

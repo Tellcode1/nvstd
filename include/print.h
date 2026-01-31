@@ -27,6 +27,7 @@
 
 #include "attributes.h"
 #include "stdafx.h"
+#include "stream.h"
 
 #include <stdarg.h>
 #include <stddef.h>
@@ -45,6 +46,11 @@ NOVA_HEADER_START
 #ifndef NOVA_PRINTF_ADD_COMMAS
 #  define NOVA_PRINTF_ADD_COMMAS false
 #endif
+
+/* Flush the stream at the end of every printf call? */
+#ifndef NOVA_PRINTF_FLUSH_EVERY_TIME
+#  define NOVA_PRINTF_FLUSH_EVERY_TIME false
+#endif // NOVA_PRINTF_FLUSH_EVERY_TIME
 
 /**
  * set the write buffer for printf
@@ -124,15 +130,22 @@ extern size_t nv_vnprintf(va_list args, size_t max_chars, const char* fmt) NOVA_
 extern size_t nv_vsnprintf(va_list args, char* dst, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 4);
 
 /**
+ * "Sink" printf.
+ * Open a sink stream and write to it using the format and arguments, essentially nullifying the call.
+ * This is used to patch any printf called with NULL for the dst argument.
+ */
+extern size_t nv_sinkprintf(va_list args, const char* fmt);
+
+/*
+ * Print a formatted string in to a stream.
  * the core print function
  *
  * all nv_printf* funcs call this in the end.
  * stops formatting when max_chars is hit.
  *
- * @param dst destination buffer or FILE ptr. It is safe to pass NULL.
  * @return The number of characters that WOULD be written, even if dst is NULL, but truncated to max_chars.
  */
-extern size_t nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 5);
+extern size_t nv_vssnprintf(nv_stream_t* s, size_t max_chars, const char* fmt, va_list args) NOVA_ATTR_NONNULL(1, 3, 4);
 
 NOVA_HEADER_END
 

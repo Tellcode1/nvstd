@@ -140,6 +140,7 @@ static inline int
 nv_compare_default(const void* key1, const void* key2, size_t size, void* user_data)
 {
   (void)user_data;
+  if (key1 == key2) return 0;
   return nv_memcmp(key1, key2, size);
 }
 
@@ -148,6 +149,7 @@ nv_compare_string(const void* key1, const void* key2, size_t size, void* user_da
 {
   (void)user_data;
   (void)size;
+  if (key1 == key2) return 0;
   return nv_strcmp((const char*)key1, (const char*)key2);
 }
 

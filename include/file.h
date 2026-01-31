@@ -28,7 +28,7 @@
 #define NV_STD_FILE_H
 
 #include "alloc.h"
-#include "errorcodes.h"
+#include "error.h"
 #include "stdafx.h"
 
 #include <stddef.h>
@@ -215,7 +215,7 @@ extern nv_error nvfs_dir_delete_recursive(const char* dpath);
 
 /**
  * The list 'entries' and each element's path in the list is allocated through malloc().
- * Directories "." and ".." are included in the list.
+ * Directories "." and ".." are excluded in the list.
  * and must be freed by the user.
  * All paths are relative to the directory.
  * No parameter is allowed to be NULL.

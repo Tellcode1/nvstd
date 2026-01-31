@@ -45,6 +45,13 @@ NOVA_HEADER_START
 #  define NOVA_STRING_USE_BUILTIN false
 #endif
 
+/**
+ * Do not let nvstd serve as passthrough to Cstd.
+ */
+#ifndef NV_NO_STDLIB_FUNCTIONS
+#  define NV_NO_STDLIB_FUNCTIONS false
+#endif
+
 #define nv_alloc_struct(struc) ((struc*)nv_calloc(sizeof(struc)))
 #define nv_zero_struct(struc) (nv_memset(&(struc), 0, sizeof(struc)))
 #define nv_zero_structp(struc) (nv_memset(struc, 0, sizeof(*(struc))))
@@ -63,7 +70,7 @@ NOVA_HEADER_START
  *  @brief sets 'sz' bytes of 'dst' to 'to'
  *  @return null on error and dst for success
  */
-extern void* nv_memset(void* dst, char to, size_t dst_size);
+extern void* nv_memset(void* dst, int to, size_t dst_size);
 
 #define nv_bzero(dst, sz) nv_memset((dst), 0, (sz))
 
@@ -88,8 +95,6 @@ extern void* nv_memchr(const void* ptr, int chr, size_t psize);
  *  @return non zero if p1 is not equal to p2
  */
 extern int nv_memcmp(const void* ptr1, const void* ptr2, size_t max);
-
-// god is dead and i killed him
 
 /**
  * Get an aligned block of memory
@@ -165,6 +170,8 @@ extern size_t nv_strcat_max(char* dst, const char* src, size_t dest_size);
 
 /* nv_strcat_max is functionally equivalent to strlcat */
 #define nv_strlcat nv_strcat_max
+
+extern char* nv_strlpcat(char* dst, char* dst_absolute, const char* src, size_t dst_size);
 
 /**
  *  @return the number of characters copied.
