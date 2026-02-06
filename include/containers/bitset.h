@@ -45,18 +45,18 @@ struct nv_bitset
   size_t size;
 };
 
-extern nv_error nv_bitset_init(size_t init_capacity, nv_bitset_t* set);
-extern void     nv_bitset_destroy(nv_bitset_t* set);
+nv_error nv_bitset_init(size_t init_capacity, nv_bitset_t* set);
+void     nv_bitset_destroy(nv_bitset_t* set);
 
-extern void nv_bitset_set_bit(nv_bitset_t* set, size_t bitindex);
-extern void nv_bitset_set_bit_to(nv_bitset_t* set, size_t bitindex, nv_bitset_bit to);
-extern void nv_bitset_clear_bit(nv_bitset_t* set, size_t bitindex);
-extern void nv_bitset_toggle_bit(nv_bitset_t* set, size_t bitindex);
-extern void nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src);
+void nv_bitset_set_bit(nv_bitset_t* set, size_t bitindex);
+void nv_bitset_set_bit_to(nv_bitset_t* set, size_t bitindex, nv_bitset_bit to);
+void nv_bitset_clear_bit(nv_bitset_t* set, size_t bitindex);
+void nv_bitset_toggle_bit(nv_bitset_t* set, size_t bitindex);
+void nv_bitset_copy_from(nv_bitset_t* dst, const nv_bitset_t* src);
 
-extern nv_bitset_bit nv_bitset_access_bit(const nv_bitset_t* set, size_t bitindex);
+nv_bitset_bit nv_bitset_access_bit(const nv_bitset_t* set, size_t bitindex);
 
-extern void nv_bitset_copy_from_bool_array(nv_bitset_t* set, const bool* array, size_t array_size);
+void nv_bitset_copy_from_bool_array(nv_bitset_t* set, const bool* array, size_t array_size);
 
 NOVA_HEADER_END
 

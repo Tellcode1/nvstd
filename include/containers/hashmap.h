@@ -76,28 +76,28 @@ struct nv_hashmap
   @note hash_fn may be NULL for the standard FNV-1A function.
   @note equal_fn may also be NULL for standard memcmp == 0
 */
-extern nv_error nv_hashmap_init(size_t keysize, size_t valuesize, nv_hash_fn hash_fn, nv_compare_fn comp_fn, size_t init_capacity, nv_hashmap_t* dst);
+nv_error nv_hashmap_init(size_t keysize, size_t valuesize, nv_hash_fn hash_fn, nv_compare_fn comp_fn, size_t init_capacity, nv_hashmap_t* dst);
 
-extern void nv_hashmap_destroy(nv_hashmap_t* map);
+void nv_hashmap_destroy(nv_hashmap_t* map);
 
-extern void nv_hashmap_resize(nv_hashmap_t* map, size_t new_capacity);
+void nv_hashmap_resize(nv_hashmap_t* map, size_t new_capacity);
 
-extern void nv_hashmap_clear(nv_hashmap_t* map);
+void nv_hashmap_clear(nv_hashmap_t* map);
 
-extern size_t nv_hashmap_size(const nv_hashmap_t* map);
+size_t nv_hashmap_size(const nv_hashmap_t* map);
 
-extern size_t nv_hashmap_capacity(const nv_hashmap_t* map);
+size_t nv_hashmap_capacity(const nv_hashmap_t* map);
 
-extern size_t nv_hashmap_key_size(const nv_hashmap_t* map);
+size_t nv_hashmap_key_size(const nv_hashmap_t* map);
 
-extern size_t nv_hashmap_value_size(const nv_hashmap_t* map);
+size_t nv_hashmap_value_size(const nv_hashmap_t* map);
 
 /**
  *  __i needs to point to an integer initialized to 0
  */
-extern nv_hashmap_node_t* nv_hashmap_iterate(const nv_hashmap_t* NV_RESTRICT map, size_t* NV_RESTRICT _i);
+nv_hashmap_node_t* nv_hashmap_iterate(const nv_hashmap_t* NV_RESTRICT map, size_t* NV_RESTRICT _i);
 
-extern nv_hashmap_node_t* nv_hashmap_root_node(const nv_hashmap_t* map);
+nv_hashmap_node_t* nv_hashmap_root_node(const nv_hashmap_t* map);
 
 /**
  * WARNING: Doesn't replace the value if a key already exists!! Use nv_hashmap_insert_or_replace()
@@ -106,35 +106,35 @@ extern nv_hashmap_node_t* nv_hashmap_root_node(const nv_hashmap_t* map);
  *   The hash function argument will be passed on to resize() too if it needs to be
  * @return A pointer to the value of the node that was inserted.
  */
-extern void* nv_hashmap_insert(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value);
+void* nv_hashmap_insert(nv_hashmap_t* map, const void* NV_RESTRICT key, const void* NV_RESTRICT value);
 
 /**
  * Delete the node in the hashmap with the key specified.
  * @return Whether the node was found and deleted.
  */
-extern bool nv_hashmap_delete(nv_hashmap_t* map, const void* key);
+bool nv_hashmap_delete(nv_hashmap_t* map, const void* key);
 
 /**
  * @return A pointer to the value of the node that was inserted.
  */
-extern void* nv_hashmap_insert_or_replace(nv_hashmap_t* map, const void* NV_RESTRICT key, void* NV_RESTRICT value);
+void* nv_hashmap_insert_or_replace(nv_hashmap_t* map, const void* NV_RESTRICT key, void* NV_RESTRICT value);
 
 /**
  * @return NULL on no find
  */
-extern void* nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key);
+void* nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key);
 
 /**
  * @brief Write to the file containing each key-value pair
  * @note Does not close or open the file
  */
-extern void nv_hashmap_serialize(const nv_hashmap_t* NV_RESTRICT map, FILE* NV_RESTRICT f);
+void nv_hashmap_serialize(const nv_hashmap_t* NV_RESTRICT map, FILE* NV_RESTRICT f);
 
 /**
  * map must have been initialized
  * @note Does not close or open the file
  */
-extern void nv_hashmap_deserialize(nv_hashmap_t* NV_RESTRICT map, FILE* NV_RESTRICT f);
+void nv_hashmap_deserialize(nv_hashmap_t* NV_RESTRICT map, FILE* NV_RESTRICT f);
 
 struct nv_hashmap_node
 {

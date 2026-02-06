@@ -69,8 +69,9 @@ typedef struct nvfs_entry
 
   /**
    * The relative path to the entry.
+   * If unclear, path is relative to the CWD of the program.
    */
-  char* path;
+  char* relpath;
 } nvfs_entry_t;
 
 /**
@@ -78,24 +79,24 @@ typedef struct nvfs_entry
  * Disks like C:/ and D:/ can not be converted though.
  * The returned string is malloc'd and must be freed by the user.
  */
-extern char* nvfs_win_to_unix_path(const char* path);
+char* nvfs_win_to_unix_path(const char* path);
 
 /**
  * Query if an entry exists and is within your permissions or not.
  */
-extern bool nvfs_entry_exists(const char* fpath);
+bool nvfs_entry_exists(const char* fpath);
 
 /**
  * Returns -1 on invalid input.
  * Windows permissions are available even on unix
  */
-extern int nvfs_perms_to_win_perms(nvfs_permission perms, bool for_directory);
+int nvfs_perms_to_win_perms(nvfs_permission perms, bool for_directory);
 
 /**
  * Returns -1 on invalid input or
  * if the platform is windows.
  */
-extern int nvfs_perms_to_unix_perms(nvfs_permission perms, bool for_directory);
+int nvfs_perms_to_unix_perms(nvfs_permission perms, bool for_directory);
 
 /**
  * Get file extension. NULL if none.
@@ -104,19 +105,19 @@ extern int nvfs_perms_to_unix_perms(nvfs_permission perms, bool for_directory);
  * Doesn't do actual run time checking of the file's actual extension, only tries to guess it from the path.
  * returns NULL on error.
  */
-extern char* nvfs_file_extension(const char* path);
+char* nvfs_file_extension(const char* path);
 
 /**
  * Get parent directory of file, may never return NULL.
  * Paths are relative, and are allocated with nv_zmalloc and must be freed by callee.
  */
-extern char* nvfs_file_dir(const char* fpath);
+char* nvfs_file_dir(const char* fpath);
 
 /**
  * Get the type of the entry.
  * Returns NVFS_UNKNOWN if entry does not exist.
  */
-extern nvfs_type nvfs_entry_type(const char* path);
+nvfs_type nvfs_entry_type(const char* path);
 
 #define nvfs_file_exists(path) (nvfs_entry_type(path) == NVFS_FILE)
 #define nvfs_dir_exists(path) (nvfs_entry_type(path) == NVFS_DIR)
@@ -126,38 +127,38 @@ extern nvfs_type nvfs_entry_type(const char* path);
  * Get if the object at path is a directory or not.
  * Also returns false if it doesn't exist.
  */
-extern bool nvfs_is_dir(const char* path);
+bool nvfs_is_dir(const char* path);
 
 /**
  * Get if the object at path is a file or not.
  * Also returns false if it doesn't exist.
  */
-extern bool nvfs_is_file(const char* path);
+bool nvfs_is_file(const char* path);
 
 /**
  * Get if the object at path is a link or not.
  * Also returns false if it doesn't exist.
  */
-extern bool nvfs_is_link(const char* path);
+bool nvfs_is_link(const char* path);
 
 /**
  * fpath must only be a regular file or a link to a regular file.
  * On error, out_size is set to 0, and the error is returned.
  */
-extern nv_error nvfs_file_size(const char* fpath, size_t* out_size);
+nv_error nvfs_file_size(const char* fpath, size_t* out_size);
 
 /**
  * Get the time the entry was last accessed in. On some linux systems, the filesystem can be set to
  * not update the access time every time the entry is accessed. So this need not be the most reliable method.
  * On error, out_size is set to 0, and the error is returned.
  */
-extern nv_error nvfs_get_access_time(const char* fpath, size_t* out_atime);
+nv_error nvfs_get_access_time(const char* fpath, size_t* out_atime);
 
 /**
  * Get the time that the entry was last modified in.
  * On error, out_size is set to 0, and the error is returned.
  */
-extern nv_error nvfs_get_modified_time(const char* fpath, size_t* out_mtime);
+nv_error nvfs_get_modified_time(const char* fpath, size_t* out_mtime);
 
 /**
  * Read all of the data of a file into a buffer.
@@ -165,44 +166,44 @@ extern nv_error nvfs_get_modified_time(const char* fpath, size_t* out_mtime);
  * Note that the buffer is NULL terminated and the terminator is not included in buffer_size
  * On error, *buffer is set to NULL and *buffer_size is set to 0.
  */
-extern nv_error nvfs_file_read_all(const char* fpath, char** buffer, size_t* buffer_size);
+nv_error nvfs_file_read_all(const char* fpath, char** buffer, size_t* buffer_size);
 
 /**
  * If the user has passed in a directory that does not exist, this function will fail
  * and return NV_ERROR_INVALID_OPERATION. You need to create all parent directories before writing.
  */
-extern nv_error nvfs_file_write_all(const char* fpath, const void* data, size_t data_size);
+nv_error nvfs_file_write_all(const char* fpath, const void* data, size_t data_size);
 
 /**
  * Create an empty file.
  * You will need to create all parent directories before calling this function.
  * The state of the created file on error is not defined.
  */
-extern nv_error nvfs_file_create(const char* fpath);
+nv_error nvfs_file_create(const char* fpath);
 
 /**
  * Remove a file or empty directory.
  * If the file does not exist, returns NV_ERROR_NO_EXIST, though technically not an error.
  * It is invalid to attempt to remove non-empty directories through this function.
  */
-extern nv_error nvfs_file_delete(const char* fpath);
+nv_error nvfs_file_delete(const char* fpath);
 
 /**
  * Must create parent directories before calling this function.
  */
-extern nv_error nvfs_dir_create(const char* dpath, nvfs_permission perms);
+nv_error nvfs_dir_create(const char* dpath, nvfs_permission perms);
 
 /**
  * Recursively create all parent directories of the directory path specified.
  * It is invalid to call this with a 'dpath' that references a file, not a directory as this function
  * will create a directory with the name of the file (and overwrite it).
  */
-extern nv_error nvfs_dir_create_recursive(const char* dpath, nvfs_permission perms);
+nv_error nvfs_dir_create_recursive(const char* dpath, nvfs_permission perms);
 
 /**
  * Create the directories for a file, but not the file itself.
  */
-extern nv_error nvfs_dir_create_recursive_for_file(const char* fpath, nvfs_permission perms);
+nv_error nvfs_dir_create_recursive_for_file(const char* fpath, nvfs_permission perms);
 
 /**
  * WARNING: Removes everything from the directory.
@@ -211,7 +212,7 @@ extern nv_error nvfs_dir_create_recursive_for_file(const char* fpath, nvfs_permi
  * If a file exists in the directory which we do not have permissions to delete, the file will
  * not be deleted and NV_ERROR_INVALID_OPERATION is returned.
  */
-extern nv_error nvfs_dir_delete_recursive(const char* dpath);
+nv_error nvfs_dir_delete_recursive(const char* dpath);
 
 /**
  * The list 'entries' and each element's path in the list is allocated through malloc().
@@ -227,7 +228,7 @@ extern nv_error nvfs_dir_delete_recursive(const char* dpath);
  * for (size_t i = 0; i < nentries; i++) { nv_free(entries[i].path); }
  * nv_free(entries);
  */
-extern nv_error nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries);
+nv_error nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries);
 
 NOVA_HEADER_END
 

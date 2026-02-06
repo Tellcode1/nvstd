@@ -50,42 +50,92 @@ NOVA_HEADER_START
 #  endif
 #  if NOVA_HAS_ATTR(pure)
 #    define NOVA_ATTR_PURE __attribute__((pure))
+#  else
+#    define NOVA_ATTR_PURE
 #  endif
 #  if NOVA_HAS_ATTR(const)
 #    define NOVA_ATTR_CONST __attribute__((const))
+#  else
+#    define NOVA_ATTR_CONST
 #  endif
 #  if NOVA_HAS_ATTR(noreturn)
 #    define NOVA_ATTR_NORETURN __attribute__((noreturn))
+#  else
+#    define NOVA_ATTR_NORETURN
 #  endif
 #  if NOVA_HAS_ATTR(deprecated)
 #    define NOVA_ATTR_DEPRECATED __attribute__((deprecated))
+#  else
+#    define NOVA_ATTR_DEPRECATED
 #  endif
 #  if NOVA_HAS_ATTR(unused)
 #    define NOVA_ATTR_UNUSED __attribute__((unused))
+#  else
+#    define NOVA_ATTR_UNUSED
 #  endif
 #  if NOVA_HAS_ATTR(aligned)
 #    define NOVA_ATTR_ALIGNED(n) __attribute__((aligned(n)))
+#  else
+#    define NOVA_ATTR_ALIGNED(n)
 #  endif
 #  if NOVA_HAS_ATTR(format)
 #    define NOVA_ATTR_FORMAT(fmt_idx, args_idx) __attribute__((format(printf, fmt_idx, args_idx)))
+#  else
+#    define NOVA_ATTR_FORMAT(fmt_idx, args_idx)
+#  endif
+#  if NOVA_HAS_ATTR(format_arg)
+#    define NOVA_ATTR_FORMAT_ARG(...) __attribute__((format_arg(__VA_ARGS__)))
+#  else
+#    define NOVA_ATTR_FORMAT_ARG(...)
 #  endif
 #  if NOVA_HAS_ATTR(hot)
 #    define NOVA_ATTR_HOT __attribute__((hot))
+#  else
+#    define NOVA_ATTR_HOT
 #  endif
 #  if NOVA_HAS_ATTR(cold)
 #    define NOVA_ATTR_COLD __attribute__((cold))
+#  else
+#    define NOVA_ATTR_COLD
 #  endif
 #  if NOVA_HAS_ATTR(constructor)
 #    define NOVA_ATTR_CONSTRUCTOR __attribute__((constructor))
+#  else
+#    define NOVA_ATTR_CONSTRUCTOR
 #  endif
 #  if NOVA_HAS_ATTR(destructor)
 #    define NOVA_ATTR_DESTRUCTOR __attribute__((destructor))
+#  else
+#    define NOVA_ATTR_DESTRUCTOR
 #  endif
 #  if NOVA_HAS_ATTR(nonnull)
 #    define NOVA_ATTR_NONNULL(...) __attribute__((nonnull(__VA_ARGS__)))
+#  else
+#    define NOVA_ATTR_NONNULL
 #  endif
 #  if NOVA_HAS_ATTR(returns_nonnull)
 #    define NOVA_ATTR_RETURNS_NONNULL __attribute__((returns_nonnull))
+#  else
+#    define NOVA_ATTR_RETURNS_NONNULL
+#  endif
+#  if NOVA_HAS_ATTR(access)
+#    define NOVA_ATTR_READ_ONLY(...) __attribute__((access(read_only, __VA_ARGS__)))
+#    define NOVA_ATTR_WRITE_ONLY(...) __attribute__((access(write_only, __VA_ARGS__)))
+#    define NOVA_ATTR_READ_WRITE(...) __attribute__((access(read_write, __VA_ARGS__)))
+#  else
+#    define NOVA_ATTR_READ_ONLY(...)
+#    define NOVA_ATTR_WRITE_ONLY(...)
+#    define NOVA_ATTR_READ_WRITE(...)
+#  endif
+#  if NOVA_HAS_ATTR(alloc_align)
+#    define NOVA_ATTR_ALLOC_ALIGN(...) __attribute__((alloc_align(__VA_ARGS__)))
+#  else
+#    define NOVA_ATTR_ALLOC_ALIGN(...)
+#  endif
+#  if NOVA_HAS_ATTR(alloc_size)
+#    define NOVA_ATTR_ALLOC_SIZE(...) __attribute__((alloc_size(__VA_ARGS__)))
+#  else
+#    define NOVA_ATTR_ALLOC_SIZE(...)
 #  endif
 // #  if NOVA_HAS_ATTR(access)
 // #    define NOVA_ATTR_ACCESS(...) __attribute__((access(__VA_ARGS__)))
@@ -107,6 +157,11 @@ NOVA_HEADER_START
 #  define NOVA_ATTR_NONNULL(...)
 #  define NOVA_ATTR_RETURNS_NONNULL
 #  define NOVA_ATTR_ACCESS(...)
+#  define NOVA_ATTR_READ_ONLY(...)
+#  define NOVA_ATTR_WRITE_ONLY(...)
+#  define NOVA_ATTR_READ_WRITE(...)
+#  define NOVA_ATTR_ALLOC_ALIGN(...)
+#  define NOVA_ATTR_ALLOC_SIZE(...)
 #else
 #  define NOVA_ATTR_MALLOC
 #  define NOVA_ATTR_PURE
@@ -123,6 +178,11 @@ NOVA_HEADER_START
 #  define NOVA_ATTR_NONNULL(...)
 #  define NOVA_ATTR_RETURNS_NONNULL
 #  define NOVA_ATTR_ACCESS(...)
+#  define NOVA_ATTR_READ_ONLY(...)
+#  define NOVA_ATTR_WRITE_ONLY(...)
+#  define NOVA_ATTR_READ_WRITE(...)
+#  define NOVA_ATTR_ALLOC_ALIGN(...)
+#  define NOVA_ATTR_ALLOC_SIZE(...)
 #endif
 
 NOVA_HEADER_END

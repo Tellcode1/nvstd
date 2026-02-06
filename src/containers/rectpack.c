@@ -71,7 +71,7 @@ nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w)
   return ret;
 }
 
-int
+nv_error
 nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t* best_x, size_t* best_y)
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
@@ -85,7 +85,7 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
   *best_x      = SIZE_MAX;
   *best_y      = SIZE_MAX;
 
-  if (rect->width > bin->width) { return -1; }
+  if (rect->width > bin->width) { return NV_ERROR_TOO_BIG; }
 
   size_t max_x = bin->width - rect->width;
   for (size_t x = 0; x <= max_x; x++)
@@ -100,7 +100,8 @@ nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline
     }
   }
 
-  return (*best_x != SIZE_MAX);
+  if (NV_LIKELY(*best_x != SIZE_MAX)) { return NV_SUCCESS; }
+  return NV_ERROR_TOO_BIG;
 }
 
 void
@@ -144,7 +145,7 @@ nv_skyline_bin_pack_rects(nv_skyline_bin_t* bin, nv_skyline_rect_t* rects, size_
   {
     size_t x = 0;
     size_t y = 0;
-    if (nv_skyline_bin_find_best_placement(bin, &rects[i], &x, &y))
+    if (nv_skyline_bin_find_best_placement(bin, &rects[i], &x, &y) == NV_SUCCESS)
     {
       nv_skyline_bin_place_rect(bin, &rects[i], x, y);
       rects[i].posx = x;
@@ -165,94 +166,83 @@ nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h)
 {
   nv_assert(NOVA_CONT_IS_VALID(bin));
 
-  nv_skyline_rect_t* valid_rects   = NULL;
-  size_t             num_valid     = 0;
-  nv_skyline_rect_t* invalid_rects = NULL;
-  size_t             num_invalid   = 0;
+  size_t total = bin->num_rects;
 
-  for (size_t i = 0; i < bin->num_rects; i++)
+  nv_skyline_rect_t* valid   = (nv_skyline_rect_t*)nv_zmalloc(total * sizeof(nv_skyline_rect_t));
+  nv_skyline_rect_t* invalid = (nv_skyline_rect_t*)nv_zmalloc(total * sizeof(nv_skyline_rect_t));
+  if (!valid || !invalid)
   {
-    nv_skyline_rect_t rect = bin->rects[i];
-    if (rect.posx + rect.width > new_w || rect.posy + rect.height > new_h)
-    {
-      nv_skyline_rect_t* tmp = NULL;
-      if (!invalid_rects) { tmp = (nv_skyline_rect_t*)nv_zmalloc(sizeof(nv_skyline_rect_t)); }
-      else
-      {
-        tmp = (nv_skyline_rect_t*)nv_realloc(invalid_rects, (num_invalid + 1) * sizeof(nv_skyline_rect_t));
-      }
-      if (!tmp)
-      {
-        nv_free(valid_rects);
-        nv_free(invalid_rects);
-        return;
-      }
-      invalid_rects                = tmp;
-      invalid_rects[num_invalid++] = rect;
-    }
+    nv_free(valid);
+    nv_free(invalid);
+    return;
+  }
+
+  size_t num_valid   = 0;
+  size_t num_invalid = 0;
+
+  for (size_t i = 0; i < total; i++)
+  {
+    nv_skyline_rect_t r = bin->rects[i];
+    if (r.posx + r.width > new_w || r.posy + r.height > new_h) { invalid[num_invalid++] = r; }
     else
     {
-      nv_skyline_rect_t* tmp = (nv_skyline_rect_t*)nv_realloc(valid_rects, (num_valid + 1) * sizeof(nv_skyline_rect_t));
-      if (!tmp)
-      {
-        nv_free(valid_rects);
-        nv_free(invalid_rects);
-        return;
-      }
-      valid_rects              = tmp;
-      valid_rects[num_valid++] = rect;
+      valid[num_valid++] = r;
     }
   }
 
+  // rasize
   if (new_w != bin->width)
   {
-    size_t* new_skyline = (size_t*)nv_realloc(bin->skyline, new_w * sizeof(size_t));
-    if (!new_skyline)
+    size_t* skyline = (size_t*)nv_realloc(bin->skyline, new_w * sizeof(*skyline));
+    if (!skyline)
     {
-      nv_log_error("Memory allocation failed for bin->skyline in nv_skyline_bin_resize\n");
-      nv_free(valid_rects);
-      nv_free(invalid_rects);
+      nv_log_error("Memory allocation failed for skyline resize\n");
+      nv_free(valid);
+      nv_free(invalid);
       return;
     }
-    // if it's bigger horizontally, clear the new entries
-    if (new_w > bin->width)
-    {
-      for (size_t i = bin->width; i < new_w; i++) { new_skyline[i] = 0; }
-    }
-    bin->skyline = new_skyline;
+
+    /* clear newly added columns */
+    if (new_w > bin->width) { memset(skyline + bin->width, 0, (new_w - bin->width) * sizeof(*skyline)); }
+
+    bin->skyline = skyline;
   }
 
-  for (size_t i = 0; i < new_w; i++)
+  /* clamp skyline to new height */
+  for (size_t x = 0; x < new_w; x++)
   {
-    if (bin->skyline[i] > new_h) { bin->skyline[i] = new_h; }
+    if (bin->skyline[x] > new_h) bin->skyline[x] = new_h;
   }
 
   for (size_t i = 0; i < num_valid; i++)
   {
-    nv_skyline_rect_t rect = valid_rects[i];
-    for (size_t x = rect.posx; x < rect.posx + rect.width && x < new_w; x++)
+    nv_skyline_rect_t r   = valid[i];
+    size_t            top = r.posy + r.height;
+
+    for (size_t x = r.posx; x < r.posx + r.width && x < new_w; x++)
     {
-      if (bin->skyline[x] < rect.posy + rect.height) { bin->skyline[x] = rect.posy + rect.height; }
+      if (bin->skyline[x] < top) bin->skyline[x] = top;
     }
   }
 
-  if (bin->rects) { nv_free(bin->rects); }
-  bin->rects                = valid_rects;
+  nv_free(bin->rects);
+  bin->rects                = valid;
   bin->num_rects            = num_valid;
   bin->allocated_rect_count = num_valid;
 
+  /** repack invalidated rects */
   for (size_t i = 0; i < num_invalid; i++)
   {
-    size_t x = 0;
-    size_t y = 0;
-    if (nv_skyline_bin_find_best_placement(bin, &invalid_rects[i], &x, &y)) { nv_skyline_bin_place_rect(bin, &invalid_rects[i], x, y); }
-    else
+    size_t x, y;
+    if (NV_UNLIKELY(nv_skyline_bin_find_best_placement(bin, &invalid[i], &x, &y)))
     {
       nv_log_error("failed to repack rect %lu after resize\n", i);
+      continue;
     }
+    nv_skyline_bin_place_rect(bin, &invalid[i], x, y);
   }
 
-  if (invalid_rects) { nv_free(invalid_rects); }
+  nv_free(invalid);
 
   bin->width  = new_w;
   bin->height = new_h;

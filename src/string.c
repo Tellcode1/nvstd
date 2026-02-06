@@ -15,8 +15,8 @@ nv_memset(void* dst, int to, size_t nbytes)
 #if !NV_NO_STDLIB_FUNCTIONS
   return memset(dst, to, nbytes);
 #endif
-  nv_assert_else_return(dst != NULL, NULL);
-  nv_assert_else_return(nbytes != 0, NULL);
+
+  nv_assert_else_return(nbytes != 0, dst);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memset, dst, to, nbytes);
 
@@ -62,9 +62,9 @@ nv_memmove(void* dst, const void* src, size_t nbytes)
     __asm__ __volatile__(
         // we first use the std instruction, which reverses direction of increment in d and s
         // then use cld instruction to restore increment state
-        "std\n\t"
+        "std\n\t" // set direction
         "rep movsb\n\t"
-        "cld\n\t"
+        "cld\n\t" // clear direction
         :
         : "D"(dstp), "S"(srcp), "c"(nbytes)
         : "memory");
@@ -86,16 +86,29 @@ nv_memmove(void* dst, const void* src, size_t nbytes)
                          : "D"(dstp), "S"(srcp), "c"(nbytes)
                          : "memory");
 #else
-    while ((nbytes--) > 0)
-    {
-      *dstp = *srcp;
-      dstp++;
-      srcp++;
-    }
+    for (size_t i = 0; i < nbytes; i++) { dstp[i] = srcp[i]; }
 #endif
   }
 
   return dst;
+}
+
+size_t
+nv_memswp(void* a, void* b, size_t nbyte)
+{
+  /* Compilers love this function. It's always optimized up to SSE/AVX instructions at -O2. */
+  /* Trying to work ahead of the compiler just makes it more difficult and slower. */
+  uint8_t* ba = a;
+  uint8_t* bb = b;
+
+  for (size_t i = 0; i < nbyte; i++)
+  {
+    uint8_t t = ba[i];
+    ba[i]     = bb[i];
+    bb[i]     = t;
+  }
+
+  return nbyte;
 }
 
 static inline size_t
@@ -256,8 +269,6 @@ nv_strncpy2(char* dst, const char* src, size_t max)
 
   size_t slen         = nv_strlen(src);
   size_t original_max = max;
-
-  if (!dst) { return NV_MIN(slen, max); }
 
 #if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strncpy)
   __builtin_strncpy(dst, src, max);
@@ -664,9 +675,6 @@ nv_strlcpy(char* dst, const char* src, size_t dst_size)
 size_t
 nv_strcpy2(char* dst, const char* src)
 {
-  size_t slen = nv_strlen(src);
-  if (!dst) { return slen; }
-
 #if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strcpy)
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strlen, __builtin_strcpy(dst, src)); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
 #endif
@@ -746,7 +754,7 @@ nv_strpbrk(const char* s1, const char* s2)
 }
 
 char*
-nv_strtok(char* s, const char* delim, char** context)
+nv_strtok_r(char* s, const char* delim, char** context)
 {
 #if !NV_NO_STDLIB_FUNCTIONS
   return strtok_r(s, delim, context);
@@ -773,6 +781,14 @@ nv_strtok(char* s, const char* delim, char** context)
   *s       = 0;
   *context = s + 1;
   return p;
+}
+
+char*
+nv_strtok(char* s, const char* delim)
+{
+  static char* __nv_strtok_ctx = NULL;
+  if (s) __nv_strtok_ctx = NULL; // first call? set context to NULL.
+  return nv_strtok_r(s, delim, &__nv_strtok_ctx);
 }
 
 char*

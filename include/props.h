@@ -75,14 +75,14 @@ struct nv_option_desc
  * @param error buffer for error messages.
  * @param error_size size of the error buffer.
  */
-extern nv_error nv_props_parse(int argc, char* argv[], const nv_option_desc_t* options, int noptions, char* error, size_t error_size);
+nv_error nv_props_parse(int argc, char* argv[], const nv_option_desc_t* options, int noptions, char* error, size_t error_size);
 
 /**
  * @brief generate a help message and write it into buf
  *
  * @param buf_size size of buf for writing the help message to
  */
-extern void nv_props_generate_help_message(const nv_option_desc_t* options, int noptions, char* buf, size_t buf_size);
+void nv_props_generate_help_message(const nv_option_desc_t* options, int noptions, char* buf, size_t buf_size);
 
 NOVA_HEADER_END
 

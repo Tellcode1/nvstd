@@ -1,8 +1,10 @@
 #include "../include/strconv.h"
+
 #include "../include/chrclass.h"
 #include "../include/stdafx.h"
 #include "../include/string.h"
 #include "../include/types.h"
+
 #include <math.h>
 #include <stdint.h>
 
@@ -56,10 +58,7 @@ nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas)
 
   /* highest power of base that is <= x */
   intmax_t highest_power_of_base = 1;
-  while (highest_power_of_base <= num / base)
-  {
-    highest_power_of_base *= base;
-  }
+  while (highest_power_of_base <= num / base) { highest_power_of_base *= base; }
 
   size_t   dig_count = 0;
   intmax_t temp      = num;
@@ -73,10 +72,7 @@ nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas)
 
   do
   {
-    if (i >= max)
-    {
-      break;
-    }
+    if (i >= max) { break; }
 
     if (add_commas && NOVA_SEPERATOR_CHAR && dig_count > 3 && loop_digits_written > 0 && (dig_count - loop_digits_written) % 3 == 0)
     {
@@ -93,10 +89,7 @@ nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas)
 
     intmax_t dig = num / highest_power_of_base;
 
-    if (dig < 10)
-    {
-      out[i] = (char)('0' + dig);
-    }
+    if (dig < 10) { out[i] = (char)('0' + dig); }
     else
     {
       out[i] = (char)('a' + (dig - 10));
@@ -157,18 +150,12 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
 
   /* highest power of base that is <= x */
   uintmax_t highest_power_of_base = 1;
-  while (highest_power_of_base <= num / (uintmax_t)base)
-  {
-    highest_power_of_base *= base;
-  }
+  while (highest_power_of_base <= num / (uintmax_t)base) { highest_power_of_base *= base; }
 
   size_t loop_digits_written = 0;
   do
   {
-    if (i >= max)
-    {
-      break;
-    }
+    if (i >= max) { break; }
 
     if (add_commas && NOVA_SEPERATOR_CHAR && dig_count > 3 && loop_digits_written > 0 && (dig_count - loop_digits_written) % 3 == 0)
     {
@@ -185,10 +172,7 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
 
     uintmax_t dig = num / highest_power_of_base;
 
-    if (dig < 10)
-    {
-      out[i] = (char)('0' + dig);
-    }
+    if (dig < 10) { out[i] = (char)('0' + dig); }
     else
     {
       out[i] = (char)('a' + (dig - 10));
@@ -207,21 +191,14 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
 #define NOVA_FTOA_HANDLE_CASE(fn, n, str)                                                                                                                                     \
   if (fn(n))                                                                                                                                                                  \
   {                                                                                                                                                                           \
-    if (signbit(n) == 0)                                                                                                                                                      \
-      return nv_strncpy2(out, str, max);                                                                                                                                      \
-    else                                                                                                                                                                      \
-      return nv_strncpy2(out, "-" str, max);                                                                                                                                  \
+    if (signbit(n) == 0) return nv_strncpy2(out, str, max);                                                                                                                   \
+    else return nv_strncpy2(out, "-" str, max);                                                                                                                               \
   }
 
-// WARNING::: I didn't write most of this, stole it from stack overflow.
-// if it explodes your computer its your fault!!!
 size_t
-nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
+nv_fltoa2(long double num, char out[], int precision, size_t max, bool remove_zeros)
 {
-  if (max == 0)
-  {
-    return 0;
-  }
+  if (max == 0) { return 0; }
   if (max == 1)
   {
     out[0] = 0;
@@ -242,21 +219,18 @@ nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
     itr++;
   }
 
-  int exponent        = (num == 0.0) ? 0 : (int)log10(num);
+  int exponent        = (num == 0.0) ? 0 : (int)log10l(num);
   int to_use_exponent = (exponent >= 14 || (neg && exponent >= 9) || exponent <= -9);
-  if (to_use_exponent)
-  {
-    num /= pow(10.0, exponent);
-  }
+  if (to_use_exponent) { num /= pow(10.0, exponent); }
 
-  double rounding = pow(10.0, -precision) * 0.5;
+  long double rounding = powl(10.0, -precision) * 0.5;
   num += rounding;
 
   /* n has been absoluted before so we can expect that it won't be negative */
   uintmax_t int_part = (uintmax_t)num;
 
   // int part is now floored
-  double frac_part = num - (double)int_part;
+  long double frac_part = num - (long double)int_part;
 
   itr += nv_utoa2(int_part, itr, 10, max - 1, false);
 
@@ -277,14 +251,8 @@ nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
 
   if (remove_zeros && precision > 0)
   {
-    while (*(itr - 1) == '0')
-    {
-      itr--;
-    }
-    if (*(itr - 1) == '.')
-    {
-      itr--;
-    }
+    while (*(itr - 1) == '0') { itr--; }
+    if (*(itr - 1) == '.') { itr--; }
   }
 
   if (to_use_exponent && (size_t)(itr - out) < max - 4)
@@ -314,6 +282,15 @@ nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
   return itr - out;
 }
 
+// WARNING::: I didn't write most of this, stole it from stack overflow.
+// if it explodes your computer its your fault!!!
+// Well.. its safe :3 you have my word
+size_t
+nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
+{
+  return nv_fltoa2((long double)num, out, precision, max, remove_zeros);
+}
+
 #define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &(s), NULL);
 
 intmax_t
@@ -321,10 +298,7 @@ nv_atoi2(const char in_string[], size_t max, char** endptr)
 {
   if (!in_string)
   {
-    if (endptr)
-    {
-      *endptr = NULL;
-    }
+    if (endptr) { *endptr = NULL; }
     return INTMAX_MAX;
   }
 
@@ -376,14 +350,8 @@ nv_atoi2(const char in_string[], size_t max, char** endptr)
 
     int digit = *c - '0';
 #if defined(DEBUG) && DEBUG
-    if (base == 8)
-    {
-      nv_assert(digit < 8);
-    }
-    else if (base == 10)
-    {
-      nv_assert(is_hex_dig == false);
-    }
+    if (base == 8) { nv_assert(digit < 8); }
+    else if (base == 10) { nv_assert(is_hex_dig == false); }
 #endif
 
     if (is_hex_dig)
@@ -399,15 +367,9 @@ nv_atoi2(const char in_string[], size_t max, char** endptr)
     i++;
   }
 
-  if (neg)
-  {
-    ret *= -1;
-  }
+  if (neg) { ret *= -1; }
 
-  if (endptr)
-  {
-    *endptr = (char*)c;
-  }
+  if (endptr) { *endptr = (char*)c; }
   return ret;
 }
 
@@ -416,10 +378,7 @@ nv_atof2(const char in_string[], size_t max, char** endptr)
 {
   if (!in_string)
   {
-    if (endptr)
-    {
-      *endptr = NULL;
-    }
+    if (endptr) { *endptr = NULL; }
     return 0.0;
   }
 
@@ -492,15 +451,9 @@ nv_atof2(const char in_string[], size_t max, char** endptr)
     result = ldexp(result, exp_sign * exponent);
   }
 
-  if (neg)
-  {
-    result *= -1.0;
-  }
+  if (neg) { result *= -1.0; }
 
-  if (endptr)
-  {
-    *endptr = (char*)c;
-  }
+  if (endptr) { *endptr = (char*)c; }
   return result;
 }
 
@@ -509,24 +462,15 @@ nv_atobool(const char in_string[], size_t max)
 {
   size_t i = 0;
   NV_SKIP_WHITSPACE(in_string);
-  if (i > max)
-  {
-    return true;
-  }
-  if (nv_strcasencmp(in_string, "false", max - i) == 0 || nv_strncmp(in_string, "0", max - i) == 0)
-  {
-    return false;
-  }
+  if (i > max) { return true; }
+  if (nv_strcasencmp(in_string, "false", max - i) == 0 || nv_strncmp(in_string, "0", max - i) == 0) { return false; }
   return true;
 }
 
 size_t
 nv_ptoa2(void* ptr, char out[], size_t max)
 {
-  if (ptr == NULL)
-  {
-    return nv_strncpy2(out, "NULL", max);
-  }
+  if (ptr == NULL) { return nv_strncpy2(out, "NULL", max); }
 
   u64        addr   = (u64)ptr;
   const char digs[] = "0123456789abcdef";

@@ -47,12 +47,12 @@ NOVA_HEADER_START
  * @param max Maximum number of characters to write.
  * @return The number of characters written (excluding null terminator).
  */
-extern size_t nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas);
+size_t nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas);
 
 /**
  * @brief Converts an unsigned integer to ASCII.
  */
-extern size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas);
+size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas);
 
 /**
  * @brief Converts a double to ASCII.
@@ -61,12 +61,21 @@ extern size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add
  * @param remove_zeroes If true, trailing zeroes are removed.
  * @return number of characters written. (excluding null terminator)
  */
-extern size_t nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros);
+size_t nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros);
+
+/**
+ * @brief Convert a long double to ASCII.
+ *
+ * @param precision Number of digits after the decimal point.
+ * @param remove_zeroes If true, trailing zeroes are removed.
+ * @return number of characters written. (excluding null terminator)
+ */
+size_t nv_fltoa2(long double num, char out[], int precision, size_t max, bool remove_zeros);
 
 /**
  * @brief Converts a pointer to ASCII.
  */
-extern size_t nv_ptoa2(void* ptr, char out[], size_t max);
+size_t nv_ptoa2(void* ptr, char out[], size_t max);
 
 /**
  * @brief Converts a byte count to ASCII.
@@ -76,21 +85,21 @@ extern size_t nv_ptoa2(void* ptr, char out[], size_t max);
  * Writes the bytes (using utoa) and writes the suffix ( B/KB/MB/GB/PB )
  * @return The number of characters written.
  */
-extern size_t nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max);
+size_t nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max);
 
 /**
  * @brief Converts a string to an integer and if not NULL, store a pointer
  * to the last successfully converted character in endptr
  * If an error occurs, endptr will be set to NULL and INTMAX_MAX will be returned
  */
-extern intmax_t nv_atoi2(const char in_string[], size_t max, char** endptr);
+intmax_t nv_atoi2(const char in_string[], size_t max, char** endptr);
 
 /**
  * @brief Converts a string to a double and if not NULL, store a pointer
  * to the last successfully converted character in endptr
  * If an error occurs, endptr will be set to NULL and DBL_MAX will be returned
  */
-extern double nv_atof2(const char in_string[], size_t max, char** endptr);
+double nv_atof2(const char in_string[], size_t max, char** endptr);
 
 /**
  * @brief Converts a string to an integer.
@@ -112,7 +121,7 @@ nv_atof(const char in_string[])
 /**
  * @brief Converts a string to a boolean.
  */
-extern bool nv_atobool(const char in_string[], size_t max);
+bool nv_atobool(const char in_string[], size_t max);
 
 static inline char*
 nv_itoa(int x, char out[], int base)
