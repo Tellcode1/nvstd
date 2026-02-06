@@ -35,25 +35,22 @@ NOVA_HEADER_START
 
 #define NVM_VEC_INDEX(v, i) (&((v).x))[i]
 
-#ifdef NV_TYPEOF
-#  define NVM_VEC_COPY(dst, src)                                                                                                                                              \
-    do                                                                                                                                                                        \
-    {                                                                                                                                                                         \
-      (dst) = nv_zinit(NV_TYPEOF(dst));                                                                                                                                       \
-      for (size_t vec_copy_it = 0; vec_copy_it < NV_MIN((sizeof(dst) / sizeof((dst).x)), (sizeof(src) / sizeof((src).x))); vec_copy_it++)                                     \
-      {                                                                                                                                                                       \
-        *((NV_TYPEOF(dst.x)*)(&((dst).x)) + vec_copy_it) = (NV_TYPEOF(dst.x))(*((NV_TYPEOF(src.x)*)(&((src).x)) + vec_copy_it));                                              \
-      }                                                                                                                                                                       \
-    } while (0)
+#define nvm_vec_copy(dst, src)                                                                                                                                                \
+  do                                                                                                                                                                          \
+  {                                                                                                                                                                           \
+    nv_memset(&dst, 0, sizeof(dst));                                                                                                                                          \
+    size_t _nvm_min = NV_MIN(sizeof(dst) / sizeof((dst).x), sizeof(src) / sizeof((src).x));                                                                                   \
+    for (size_t _i = 0; _i < _nvm_min; ++_i) { NVM_VEC_INDEX(dst, _i) = NVM_VEC_INDEX(src, _i); }                                                                             \
+  } while (0)
 
-#else
-#  define NVM_VEC_COPY(dst, src)                                                                                                                                              \
-    do                                                                                                                                                                        \
-    {                                                                                                                                                                         \
-      dst = {};                                                                                                                                                               \
-      for (size_t i = 0; i < NV_MIN((sizeof(dst) / sizeof((dst).x)), (sizeof(src) / sizeof((src).x))); i++) { NVM_VEC_INDEX(dst, i) = NVM_VEC_INDEX(src, i); }                \
-    } while (0)
-#endif
+#define nvm_mat_copy(dst, src)                                                                                                                                                \
+  do                                                                                                                                                                          \
+  {                                                                                                                                                                           \
+    const int size = nv_arrlen((dst).data);                                                                                                                                   \
+    for (int __nv_matrix_copy_i = 0; __nv_matrix_copy_i < (size); __nv_matrix_copy_i++)                                                                                       \
+      for (int __nv_matrix_copy_j = 0; __nv_matrix_copy_j < (size); __nv_matrix_copy_j++)                                                                                     \
+        ((&(dst).data[__nv_matrix_copy_i].x)[__nv_matrix_copy_j] = (&(src).data[__nv_matrix_copy_i].x)[__nv_matrix_copy_j]);                                                  \
+  } while (0)
 
 static const double NVM_PI  = 3.1415926535897932385;
 static const double NVM_2PI = 6.283185307179586;

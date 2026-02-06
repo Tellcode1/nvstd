@@ -47,6 +47,19 @@ typedef void* (*nv_realloc_fn)(nv_allocator_t* self, void* oldptr, size_t size);
 // Free an allocated block of memory
 typedef void (*nv_free_fn)(nv_allocator_t* self, void* ptr);
 
+#define NV_SETUP_STACK_ALLOC(alloc_name, buffer, buffer_size)                                                                                                                 \
+  nv_stack_ctx_t __stack = {                                                                                                                                                  \
+    buffer,                                                                                                                                                                   \
+    buffer_size,                                                                                                                                                              \
+    0,                                                                                                                                                                        \
+  };                                                                                                                                                                          \
+  nv_allocator_t alloc_name = {                                                                                                                                               \
+    .alloc   = nv_stack_zmalloc,                                                                                                                                              \
+    .realloc = nv_stack_realloc,                                                                                                                                              \
+    .free    = nv_stack_free,                                                                                                                                                 \
+    .ctx     = (void*)&__stack,                                                                                                                                               \
+  };
+
 /* Start with libc allocator. Change this to change default allocator */
 #define NV_ALLOC_DEFAULT &nv_alloc_libc
 
@@ -67,7 +80,7 @@ typedef struct nv_stack_ctx
   size_t   offset;
 } nv_stack_ctx_t;
 
-inline void*
+static inline void*
 nv_stack_zmalloc(nv_allocator_t* self, size_t size)
 {
   nv_stack_ctx_t* ctx        = (nv_stack_ctx_t*)self->ctx;
@@ -92,7 +105,7 @@ nv_stack_zmalloc(nv_allocator_t* self, size_t size)
   return ptr;
 }
 
-inline void*
+static inline void*
 nv_stack_realloc(nv_allocator_t* self, void* oldptr, size_t size)
 {
   // only support last ptr realloc
@@ -108,7 +121,7 @@ nv_stack_realloc(nv_allocator_t* self, void* oldptr, size_t size)
   return NULL;
 }
 
-inline void
+static inline void
 nv_stack_free(nv_allocator_t* self, void* ptr)
 {
   nv_stack_ctx_t* ctx = (nv_stack_ctx_t*)self->ctx;

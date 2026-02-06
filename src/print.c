@@ -461,11 +461,10 @@ __hex_conv_helper(uint64_t v, char* out, bool cap)
 static inline size_t
 p_hex_dispatch(struct printf_info* inf)
 {
-  bool        lower = *inf->head == 'x';
-  const char* tbl   = lower ? "0123456789abcdef" : "0123456789ABCDEF";
+  bool cap = *inf->head == 'X';
   inf->head++;
-  __hex_conv_helper(va_arg(*inf->argp, unsigned), inf->scratch, tbl);
-  return p_lwrite(inf, lower ? "0x" : "0X", 2) + p_lwrite(inf, inf->scratch, sizeof(inf->scratch)); /* on success, p_lwrite would just return nv_strlen(scratch) */
+  __hex_conv_helper(va_arg(*inf->argp, unsigned), inf->scratch, cap);
+  return p_lwrite(inf, cap ? "0X" : "0x", 2) + p_lwrite(inf, inf->scratch, sizeof(inf->scratch)); /* on success, p_lwrite would just return nv_strlen(scratch) */
 }
 
 static inline size_t
@@ -532,7 +531,11 @@ nv_vssnprintf(nv_stream_t* s, size_t max_chars, const char* fmt, va_list args)
     // if (inf.written >= inf.max) break;
 
     /* oo yummy optimizations oo */
-    if (NV_LIKELY(*inf.head != '%')) { p_lputc(&inf, *inf.head); }
+    if (NV_LIKELY(*inf.head != '%'))
+    {
+      p_lputc(&inf, *inf.head);
+      next(&inf);
+    }
     else // *inf.head == '%
     {
       // character after %
@@ -560,12 +563,10 @@ nv_vssnprintf(nv_stream_t* s, size_t max_chars, const char* fmt, va_list args)
         case 'f': p_flt_dispatch(&inf); break;
         case 'c': p_chr_dispatch(&inf); break;
         case '%': p_pct_dispatch(&inf); break;
-        default: next(&inf); continue;
+        default: continue;
       }
       // It's the stream write function's job to increment inf.write, don't do it here.
     }
-
-    next(&inf);
   }
 
   va_end(argsc);

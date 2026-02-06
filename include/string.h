@@ -53,7 +53,7 @@ NOVA_HEADER_START
 #  define NV_NO_STDLIB_FUNCTIONS false
 #endif
 
-#define nv_alloc_struct(struc) ((struc*)nv_calloc(sizeof(struc)))
+#define nv_alloc_struct(struc) ((struc*)nv_zmalloc(sizeof(struc)))
 #define nv_zero_structp(struc) (nv_memset(struc, 0, sizeof(*(struc))))
 
 #if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin)
@@ -86,6 +86,12 @@ void* nv_memmove(void* dst, const void* src, size_t sz) NOVA_ATTR_NONNULL(1, 2) 
 #define nv_memcpy nv_memmove
 
 /**
+ * Swap nbyte of memory between ptr1 and ptr2.
+ * Returns the number of bytes swapped. Always nbyte unless you did something catostrophically wrong.
+ */
+size_t nv_memswp(void* ptr1, void* ptr2, size_t nbyte) NOVA_ATTR_NONNULL(1, 2);
+
+/**
  *  @return a pointer to the first occurance of chr in p
  *  searches at most psize bytes of p
  */
@@ -95,6 +101,11 @@ void* nv_memchr(const void* ptr, int chr, size_t psize) NOVA_ATTR_PURE NOVA_ATTR
  *  @return non zero if p1 is not equal to p2
  */
 int nv_memcmp(const void* ptr1, const void* ptr2, size_t max) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
+
+/**
+ * Free aligned block of memory.
+ */
+void nv_aligned_free(void* aligned_block);
 
 /**
  * Get an aligned block of memory
@@ -116,8 +127,6 @@ void* nv_aligned_get_absolute_ptr(void* aligned_ptr);
  * Get the size allocated by nv_aligned_alloc()\*realloc
  */
 size_t nv_aligned_ptr_get_size(void* aligned_ptr);
-
-void nv_aligned_free(void* aligned_block);
 
 /**
  *  get the size of the string

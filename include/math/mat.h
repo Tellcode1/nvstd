@@ -204,15 +204,6 @@ NV_DECL_MAT4(mat4f, m4f, 4, float, f)
 NV_DECL_MAT4(mat4d, m4d, 4, double, d)
 NV_DECL_MAT4(mat4, m4, 4, double, )
 
-#define NVM_MATRIX_COPY(m1, m2)                                                                                                                                               \
-  do                                                                                                                                                                          \
-  {                                                                                                                                                                           \
-    const int size = nv_arrlen((m1).data);                                                                                                                                    \
-    for (int __nv_matrix_copy_i = 0; __nv_matrix_copy_i < (size); __nv_matrix_copy_i++)                                                                                       \
-      for (int __nv_matrix_copy_j = 0; __nv_matrix_copy_j < (size); __nv_matrix_copy_j++)                                                                                     \
-        ((&(m1).data[__nv_matrix_copy_i].x)[__nv_matrix_copy_j] = (&(m2).data[__nv_matrix_copy_i].x)[__nv_matrix_copy_j]);                                                    \
-  } while (0)
-
 NOVA_HEADER_END
 
 #endif

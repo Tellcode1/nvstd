@@ -45,7 +45,7 @@ struct nv_stream
   } val;
 };
 
-size_t
+static size_t
 file_write(nv_stream_t* stm, const void* data, size_t nbyte)
 {
   FILE*  f                 = stm->val.file;
@@ -53,19 +53,19 @@ file_write(nv_stream_t* stm, const void* data, size_t nbyte)
   if (read_successfully != nbyte) { nv_stream_seterror(stm, NV_ERROR_EOF); }
   return read_successfully;
 }
-size_t
+static size_t
 file_read(nv_stream_t* stm, void* buffer, size_t buffer_size)
 {
   FILE*  f                 = stm->val.file;
   size_t read_successfully = fread(buffer, 1, buffer_size, f);
   if (read_successfully != buffer_size) { nv_stream_seterror(stm, NV_ERROR_EOF); }
 
-  // reduce the head by only the bytes that we read successfully
-  stm->read_head -= read_successfully;
+  // fwd the head by only the bytes that we read successfully
+  stm->read_head += read_successfully;
 
   return read_successfully;
 }
-nv_error
+static nv_error
 file_seek(ssize_t offset, nv_seek_pos pos, nv_stream_t* stm)
 {
   FILE* f = stm->val.file;
@@ -95,7 +95,7 @@ file_seek(ssize_t offset, nv_seek_pos pos, nv_stream_t* stm)
 
   return NV_SUCCESS;
 }
-void
+static void
 file_flush(nv_stream_t* stm)
 {
   FILE* f = stm->val.file;
@@ -158,7 +158,7 @@ err_cleanup:
 
 #define buffstream_current_offset(stm) ((stm)->val.buf.write - (uchar*)((stm)->val.buf.buffer))
 
-size_t
+static inline size_t
 membuf_write(nv_stream_t* stm, const void* data, size_t nbyte)
 {
   size_t current_offset = buffstream_current_offset(stm);
@@ -187,7 +187,7 @@ membuf_write(nv_stream_t* stm, const void* data, size_t nbyte)
 
   return nbyte;
 }
-size_t
+static inline size_t
 membuf_read(nv_stream_t* stm, void* buffer, size_t buffer_size)
 {
   size_t current_offset = stm->read_head;
@@ -204,12 +204,12 @@ membuf_read(nv_stream_t* stm, void* buffer, size_t buffer_size)
   head += stm->read_head;                    // move buffer ptr to head
   memcpy(buffer, head, buffer_size);
 
-  // move head down
-  stm->read_head -= buffer_size;
+  // move head up
+  stm->read_head += buffer_size;
 
   return buffer_size;
 }
-nv_error
+static inline nv_error
 membuf_seek(ssize_t offset, nv_seek_pos pos, nv_stream_t* stm)
 {
   size_t buf_size = stm->val.buf.buffer_size;
@@ -230,10 +230,11 @@ membuf_seek(ssize_t offset, nv_seek_pos pos, nv_stream_t* stm)
 
   return NV_SUCCESS;
 }
-void
+static inline void
 membuf_flush(nv_stream_t* stm)
 {
   // NOOP
+  (void)stm;
 }
 
 nv_error
@@ -309,16 +310,6 @@ nv_open_pipestream(FILE* pipe, struct nv_stream** stm)
   stmp->type             = STREAM_PIPE;
   stmp->val.file         = pipe;
 
-  if (!stmp->val.buf.buffer)
-  {
-    nv_free(stmp);
-    *stm = NULL;
-    return NV_ERROR_MALLOC_FAILED;
-  }
-
-  // initialize write head to the buffer.
-  stmp->val.buf.write = (uchar*)stmp->val.buf.buffer;
-
   stmp->read  = file_read;
   stmp->write = file_write;
   stmp->flush = file_flush;
@@ -327,7 +318,7 @@ nv_open_pipestream(FILE* pipe, struct nv_stream** stm)
   return e;
 }
 
-size_t
+static inline size_t
 sink_write(nv_stream_t* stm, const void* data, size_t nbyte)
 {
   (void)nbyte;
@@ -335,7 +326,7 @@ sink_write(nv_stream_t* stm, const void* data, size_t nbyte)
   (void)stm;
   return 0;
 }
-size_t
+static inline size_t
 sink_read(nv_stream_t* stm, void* buffer, size_t buffer_size)
 {
   (void)buffer_size;
@@ -343,7 +334,7 @@ sink_read(nv_stream_t* stm, void* buffer, size_t buffer_size)
   (void)stm;
   return 0;
 }
-nv_error
+static inline nv_error
 sink_seek(ssize_t offset, nv_seek_pos pos, nv_stream_t* stm)
 {
   (void)stm;
@@ -351,10 +342,11 @@ sink_seek(ssize_t offset, nv_seek_pos pos, nv_stream_t* stm)
   (void)offset;
   return NV_SUCCESS;
 }
-void
+static inline void
 sink_flush(nv_stream_t* stm)
 {
   // NOOP
+  (void)stm;
 }
 
 nv_error
@@ -461,11 +453,12 @@ nv_stream_get_context(const struct nv_stream* stm)
   return NULL;
 }
 
-size_t
+int
 nv_stream_putc(int chr, struct nv_stream* stm)
 {
   uchar tmp = (uchar)chr;
-  return stm->write(stm, &tmp, sizeof(uchar));
+  if (NV_UNLIKELY(stm->write(stm, &tmp, sizeof(uchar)) != sizeof(uchar))) return -1;
+  return tmp;
 }
 
 size_t

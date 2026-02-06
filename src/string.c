@@ -94,12 +94,12 @@ nv_memmove(void* dst, const void* src, size_t nbytes)
 }
 
 size_t
-nv_memswp(void* a, void* b, size_t nbyte)
+nv_memswp(void* ptr1, void* ptr2, size_t nbyte)
 {
   /* Compilers love this function. It's always optimized up to SSE/AVX instructions at -O2. */
   /* Trying to work ahead of the compiler just makes it more difficult and slower. */
-  uint8_t* ba = a;
-  uint8_t* bb = b;
+  uint8_t* ba = ptr1;
+  uint8_t* bb = ptr2;
 
   for (size_t i = 0; i < nbyte; i++)
   {

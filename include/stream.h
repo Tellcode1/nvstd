@@ -109,9 +109,10 @@ extern "C"
 
   /**
    * "Put" a character into a stream.
+   * On success, returns the character. On error, returns -1.
    */
 #define nv_fputc nv_stream_putc
-  size_t nv_stream_putc(int chr, struct nv_stream* stm);
+  int nv_stream_putc(int chr, struct nv_stream* stm);
 
   /**
    * Read a character from a stream.

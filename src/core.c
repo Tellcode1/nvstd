@@ -41,7 +41,7 @@
 nv_error
 nv_default_error_handler(nv_error error, const char* fn, const char* file, size_t line, const char* supplementary, va_list args)
 {
-  printf("[%s:%zu] function %s raised %s", file, line, fn, nv_error_str(error));
+  printf("[%s:%zu] function %s raised %s", nv_basename(file), line, fn, nv_error_str(error));
   if (nv_strcmp(supplementary, "") != 0) { printf("\n"); }
   else
   {

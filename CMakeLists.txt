@@ -11,23 +11,22 @@ include_directories(${SDL3_image_INCLUDE_DIRS})
 set(NVSTD_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
 
 set(CORE_SOURCES
+  ${NVSTD_SRC_DIR}/containers/bitset.c
+  ${NVSTD_SRC_DIR}/containers/hashmap.c
+  ${NVSTD_SRC_DIR}/containers/idlist.c
+  ${NVSTD_SRC_DIR}/containers/list.c
+  ${NVSTD_SRC_DIR}/containers/rectpack.c
   ${NVSTD_SRC_DIR}/core.c
   ${NVSTD_SRC_DIR}/file.c
   ${NVSTD_SRC_DIR}/print.c
+  ${NVSTD_SRC_DIR}/rand.c
   ${NVSTD_SRC_DIR}/strconv.c
+  ${NVSTD_SRC_DIR}/stream.c
   ${NVSTD_SRC_DIR}/string.c
-
-  ${NVSTD_SRC_DIR}/containers/bitset.c
-  ${NVSTD_SRC_DIR}/containers/hashmap.c
-  ${NVSTD_SRC_DIR}/containers/list.c
-  ${NVSTD_SRC_DIR}/containers/rbmap.c
-  ${NVSTD_SRC_DIR}/containers/rectpack.c
 )
 
 set(CORE_LIBS
   m
-  SDL3
-  SDL3_image
 )
 
 set(CMAKE_C_STANDARD 99)

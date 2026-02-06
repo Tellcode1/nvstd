@@ -564,7 +564,7 @@ nvfs_entry_type(const char* path)
 }
 
 bool
-nvfs_is_directory(const char* path)
+nvfs_is_dir(const char* path)
 {
   return nvfs_entry_type(path) == NVFS_DIR;
 }
@@ -588,7 +588,7 @@ nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries)
   nv_assert_ptr(entries);
   nv_assert_ptr(nentries);
 
-  if (nvfs_is_directory(dpath) == false) { nv_raise_and_return(NV_ERROR_INVALID_ARG, "Argument dpath does not point to a directory"); }
+  if (nvfs_is_dir(dpath) == false) { nv_raise_and_return(NV_ERROR_INVALID_ARG, "Argument dpath does not point to a directory"); }
 
 #ifndef _WIN32
   DIR* dirp = opendir(dpath);
@@ -622,7 +622,7 @@ nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries)
     struct nvfs_entry* write = &(*entries)[(*nentries)++];
 
     // duplicate the string and add it to the list.
-    write->path = nv_strdup(entry->d_name);
+    write->relpath = nv_strdup(entry->d_name);
 
     nvfs_type type = NVFS_UNKNOWN;
 
