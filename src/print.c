@@ -192,20 +192,21 @@ enum p_length
 
 struct printf_info
 {
+  char scratch[256];
+
   nv_stream_t* s;
   va_list*     argp;
 
   size_t written; /* characters written until now. */
   // size_t      remaining; /* max - written */
-  size_t      max; /* max number of characters we're allowed to write. */
-  const char* fmt;
+  size_t      max;  /* max number of characters we're allowed to write. */
   const char* head; /* Format string iterator */
 
   /* width.prec */
   int           width;          /* width, 0 if unspecified */
   int           prec;           /* precision, 6 if unspecified (general default) */
-  int           prec_specified; /* Precision specified? */
   enum p_length length;         /* length, 0 if unspecified */
+  bool          prec_specified; /* Precision specified? */
 };
 
 static inline int
@@ -235,7 +236,7 @@ struct p_conv_entry
   p_conv_fn fn;
 };
 
-int
+static inline int
 p_readint(struct printf_info* inf)
 {
   int neg = 0;
@@ -334,30 +335,26 @@ p_parseintlen(struct printf_info* inf)
  * Write no more than n characters of s to inf->s.
  * Limits of inf will be respected.
  */
-size_t
-p_lwrite(struct printf_info* inf, const char* s, size_t n)
+static inline size_t
+p_lwrite(struct printf_info* restrict inf, const char* restrict s, size_t n)
 {
-  if (inf->written >= inf->max) return 0;
+  if (NV_UNLIKELY(inf->written >= inf->max)) return 0;
 
-  size_t len = strlen(s);
+  size_t len = nv_strlen(s);
   size_t rem = inf->max - inf->written;
   size_t cpy = NV_MIN(len, NV_MIN(rem, n)); // The minimum of string length, n and remaining characters
 
   return (inf->written += nv_stream_write(s, cpy, inf->s));
 }
 
-size_t
+static inline size_t
 p_lputc(struct printf_info* inf, int c)
 {
-  if (inf->written >= inf->max) return 0;
-
-  size_t rem = inf->max - inf->written;
-  if (rem == 0) return 0;
-
+  if (NV_UNLIKELY(inf->written >= inf->max)) return 0;
   return (inf->written += nv_stream_putc(c, inf->s));
 }
 
-size_t
+static inline size_t
 p_chr_dispatch(struct printf_info* inf)
 {
   next(inf);
@@ -365,7 +362,7 @@ p_chr_dispatch(struct printf_info* inf)
   return p_lputc(inf, c);
 }
 
-size_t
+static inline size_t
 p_int_dispatch(struct printf_info* inf)
 {
   inf->head++; // skip i/I/d/D
@@ -381,13 +378,11 @@ p_int_dispatch(struct printf_info* inf)
     case LENGTH_Z: val = (ssize_t)va_arg(*inf->argp, ssize_t); break;
   }
 
-  char   scratch[256];
-  size_t write = nv_itoa2(val, scratch, 10, sizeof(scratch), false);
-
-  return p_lwrite(inf, scratch, write);
+  size_t write = nv_itoa2(val, inf->scratch, 10, sizeof(inf->scratch), false);
+  return p_lwrite(inf, inf->scratch, write);
 }
 
-size_t
+static inline size_t
 p_unt_dispatch(struct printf_info* inf)
 {
   inf->head++; // skip u/U
@@ -403,132 +398,171 @@ p_unt_dispatch(struct printf_info* inf)
     case LENGTH_Z: val = (size_t)va_arg(*inf->argp, size_t); break;
   }
 
-  char   scratch[256];
-  size_t write = nv_utoa2(val, scratch, 10, sizeof(scratch), false);
-
-  return p_lwrite(inf, scratch, write);
+  size_t write = nv_utoa2(val, inf->scratch, 10, sizeof(inf->scratch), false);
+  return p_lwrite(inf, inf->scratch, write);
 }
 
-size_t
+static inline size_t
 p_flt_dispatch(struct printf_info* inf)
 {
   inf->head++;
 
-  char   scratch[256];
-  size_t write = nv_ftoa2(va_arg(*inf->argp, double), scratch, inf->prec, sizeof(scratch), true);
+  char scratch[256];
+
+  /* only process in long doubles */
+  long double val   = inf->length == LENGTH_L ? va_arg(*inf->argp, long double) : (long double)va_arg(*inf->argp, double);
+  size_t      write = nv_fltoa2(val, scratch, inf->prec, sizeof(scratch), true);
+
   return p_lwrite(inf, scratch, write);
 }
 
 /* https://stackoverflow.com/a/75644188 */
-static inline char*
-__hex_conv_helper(unsigned int a, char* out, const char* help)
+static inline char
+hex_digit(unsigned v)
 {
-  out[8] = '\0';
-  for (int i = 0; i < 8; i++)
-  {
-    out[7 - i] = help[a & 0xF];
-    a          = a >> 4;
-  }
-  return out;
+  return "0123456789abcdef"[v & 0xF];
+}
+
+static inline char
+hex_digit_upper(unsigned v)
+{
+  return "0123456789ABCDEF"[v & 0xF];
 }
 
 size_t
+__hex_conv_helper(uint64_t v, char* out, bool cap)
+{
+  char   buf[16];
+  size_t n = 0;
+
+  if (cap)
+  {
+    do
+    {
+      buf[n++] = hex_digit_upper(v);
+      v >>= 4;
+    } while (v);
+  }
+  else
+  {
+    do
+    {
+      buf[n++] = hex_digit(v);
+      v >>= 4;
+    } while (v);
+  }
+
+  // reverse
+  for (size_t i = 0; i < n; i++) out[i] = buf[n - 1 - i];
+
+  return n;
+}
+
+static inline size_t
 p_hex_dispatch(struct printf_info* inf)
 {
-  char        scratch[256];
-  const char* tbl = *inf->head == 'x' ? "0123456789abcdef" : "0123456789ABCDEF";
+  bool        lower = *inf->head == 'x';
+  const char* tbl   = lower ? "0123456789abcdef" : "0123456789ABCDEF";
   inf->head++;
-  __hex_conv_helper(va_arg(*inf->argp, unsigned), scratch, tbl);
-  return p_lwrite(inf, scratch, strlen(scratch)); /* on success, p_lwrite would just return strlen(scratch) */
+  __hex_conv_helper(va_arg(*inf->argp, unsigned), inf->scratch, tbl);
+  return p_lwrite(inf, lower ? "0x" : "0X", 2) + p_lwrite(inf, inf->scratch, sizeof(inf->scratch)); /* on success, p_lwrite would just return nv_strlen(scratch) */
 }
 
-size_t
+static inline size_t
 p_bin_dispatch(struct printf_info* inf)
 {
   inf->head++;
-  char   scratch[256];
-  size_t write = nv_utoa2(va_arg(*inf->argp, unsigned), scratch, 2, sizeof(scratch), false);
-  return p_lwrite(inf, scratch, write);
+
+  size_t write = nv_utoa2(va_arg(*inf->argp, unsigned), inf->scratch, 2, sizeof(inf->scratch), false);
+  return p_lwrite(inf, inf->scratch, write);
 }
 
-size_t
+static inline size_t
 p_ptr_dispatch(struct printf_info* inf)
 {
   inf->head++;
-  char   scratch[256];
-  size_t write = nv_ptoa2(va_arg(*inf->argp, void*), scratch, sizeof(scratch));
-  return p_lwrite(inf, scratch, write);
+
+  size_t write = nv_ptoa2(va_arg(*inf->argp, void*), inf->scratch, sizeof(inf->scratch));
+  return p_lwrite(inf, inf->scratch, write);
 }
 
-size_t
+static inline size_t
 p_str_dispatch(struct printf_info* inf)
 {
   inf->head++;
-  const char* s = va_arg(*inf->argp, const char*);
-  if (!s) s = "(null)";
 
-  size_t cpy = strlen(s);
+  const char* s = va_arg(*inf->argp, const char*);
+  if (NV_UNLIKELY(!s)) s = "(null)";
+
+  size_t cpy = nv_strlen(s);
   if (inf->prec_specified) cpy = NV_MIN(cpy, inf->prec); /* If precision specified, min it to the lower of cpy or prec */
 
   return p_lwrite(inf, s, cpy);
 }
 
+static inline size_t
+p_pct_dispatch(struct printf_info* inf)
+{
+  inf->head++;
+  return p_lputc(inf, '%');
+}
+
 size_t
 nv_vssnprintf(nv_stream_t* s, size_t max_chars, const char* fmt, va_list args)
 {
-  va_list argsc;
-  va_copy(argsc, args);
-
   struct printf_info inf = {
     .s       = s,
-    .argp    = &argsc,
+    .argp    = NULL,
     .written = 0,
     .max     = max_chars,
-    .fmt     = fmt,
     .head    = fmt,
     .prec    = 6,
     .width   = 0,
     .length  = LENGTH_UNSPEC,
   };
 
-  const char* dispatch_s    = "iduxbpsfc";
-  p_conv_fn   dispatch_fn[] = {
-    p_int_dispatch, p_int_dispatch, p_unt_dispatch, p_hex_dispatch, p_bin_dispatch, p_ptr_dispatch, p_str_dispatch, p_flt_dispatch, p_chr_dispatch,
-  };
+  va_list argsc;
+  va_copy(argsc, args);
+
+  inf.argp = &argsc;
 
   while (peek(&inf))
   {
-    inf.prec   = DEFAULTPREC;
-    inf.width  = 0;
-    inf.length = LENGTH_UNSPEC;
-
     // Out of space?
     // if (inf.written >= inf.max) break;
 
     /* oo yummy optimizations oo */
-    if (NV_LIKELY(*inf.head != '%')) { p_lwrite(&inf, inf.head, 1); }
+    if (NV_LIKELY(*inf.head != '%')) { p_lputc(&inf, *inf.head); }
     else // *inf.head == '%
     {
       // character after %
       next(&inf);
-      if (NV_UNLIKELY(*inf.head == '%'))
-      {
-        p_lputc(&inf, '%');
-        continue;
-      }
+
+      inf.prec   = DEFAULTPREC;
+      inf.width  = 0;
+      inf.length = LENGTH_UNSPEC;
 
       p_parsewidlen(&inf);
       p_parseintlen(&inf);
-      if (NV_UNLIKELY(peek(&inf) == 0)) { break; }
 
       // search for format specifier
       // It's the functions job to move the head forwards!
-      char* search = strchr(dispatch_s, *inf.head);
-      if (!search) { return 0; } /* error out or something? */
-
-      // Call the conversion function
-      size_t idx = search - dispatch_s;
-      dispatch_fn[idx](&inf); // yeah it looks ugly but it's good...
+      switch (*inf.head)
+      {
+        // call the conversion function.
+        case 'i':
+        case 'd': p_int_dispatch(&inf); break;
+        case 'u': p_unt_dispatch(&inf); break;
+        case 'x': p_hex_dispatch(&inf); break;
+        case 'b': p_bin_dispatch(&inf); break;
+        case 'p': p_ptr_dispatch(&inf); break;
+        case 's': p_str_dispatch(&inf); break;
+        case 'f': p_flt_dispatch(&inf); break;
+        case 'c': p_chr_dispatch(&inf); break;
+        case '%': p_pct_dispatch(&inf); break;
+        default: next(&inf); continue;
+      }
+      // It's the stream write function's job to increment inf.write, don't do it here.
     }
 
     next(&inf);

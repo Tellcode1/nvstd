@@ -61,7 +61,7 @@ NOVA_HEADER_START
  * @param buf ptr to buffer or NULL
  * @param size size of the buffer
  */
-extern void nv_setwbuf(char* buf, size_t size);
+void nv_setwbuf(char* buf, size_t size);
 
 /**
  * Get the write buffer used by printf.
@@ -70,7 +70,7 @@ extern void nv_setwbuf(char* buf, size_t size);
  * Ensure that you sequentially write to the buffer, read it, and then perform any operations!
  * DO NOT WRITE A STRING TO THIS AND USE IT IN FORMATTING YOU MORON!!!
  */
-extern char* nv_getwbuf(void);
+char* nv_getwbuf(void);
 
 /**
  * set the output stream for printf
@@ -79,62 +79,62 @@ extern char* nv_getwbuf(void);
  *
  * @param stream a valid FILE ptr, no sanity checks are done on stream
  */
-extern void nv_setstdout(FILE* stream);
+void nv_setstdout(FILE* stream);
 
 /**
  * prints formatted output to the g_stdstream
  * @return number of characters written
  */
-extern size_t nv_printf(const char* fmt, ...) NOVA_ATTR_FORMAT(1, 2) NOVA_ATTR_NONNULL(1);
+size_t nv_printf(const char* fmt, ...) NOVA_ATTR_FORMAT(1, 2) NOVA_ATTR_NONNULL(1);
 
 /**
  * prints formatted output to a file
  */
-extern size_t nv_fprintf(FILE* outfile, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(1, 2);
+size_t nv_fprintf(FILE* outfile, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(1, 2);
 
 /**
  * prints no more than max_chars to g_stdstream
  */
-extern size_t nv_nprintf(size_t max_chars, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(2);
+size_t nv_nprintf(size_t max_chars, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(2);
 
 /**
  * prints formatted output to a string
  *
  * note: not recommended. use nv_snprintf instead.
  */
-extern size_t nv_sprintf(char* dst, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(2);
+size_t nv_sprintf(char* dst, const char* fmt, ...) NOVA_ATTR_FORMAT(2, 3) NOVA_ATTR_NONNULL(2);
 
 /**
  * prints formatted output using a va_list
  */
-extern size_t nv_vprintf(va_list args, const char* fmt) NOVA_ATTR_NONNULL(2);
+size_t nv_vprintf(va_list args, const char* fmt) NOVA_ATTR_NONNULL(2);
 
 /**
  * prints formatted output using a va_list to a file
  */
-extern size_t nv_vfprintf(va_list args, FILE* outfile, const char* fmt) NOVA_ATTR_NONNULL(1, 3);
+size_t nv_vfprintf(va_list args, FILE* outfile, const char* fmt) NOVA_ATTR_NONNULL(1, 3);
 
 /**
  * prints formatted output to a string, writing no more than max_chars
  */
-extern size_t nv_snprintf(char* dst, size_t max_chars, const char* fmt, ...) NOVA_ATTR_FORMAT(3, 4) NOVA_ATTR_NONNULL(3);
+size_t nv_snprintf(char* dst, size_t max_chars, const char* fmt, ...) NOVA_ATTR_FORMAT(3, 4) NOVA_ATTR_NONNULL(3);
 
 /**
  * prints no more than max_chars to g_stdstream using a va_list
  */
-extern size_t nv_vnprintf(va_list args, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 3);
+size_t nv_vnprintf(va_list args, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 3);
 
 /**
  * prints no more than max_chars to a string using a va_list
  */
-extern size_t nv_vsnprintf(va_list args, char* dst, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 4);
+size_t nv_vsnprintf(va_list args, char* dst, size_t max_chars, const char* fmt) NOVA_ATTR_NONNULL(1, 4);
 
 /**
  * "Sink" printf.
  * Open a sink stream and write to it using the format and arguments, essentially nullifying the call.
  * This is used to patch any printf called with NULL for the dst argument.
  */
-extern size_t nv_sinkprintf(va_list args, const char* fmt);
+size_t nv_sinkprintf(va_list args, const char* fmt);
 
 /*
  * Print a formatted string in to a stream.
@@ -145,7 +145,7 @@ extern size_t nv_sinkprintf(va_list args, const char* fmt);
  *
  * @return The number of characters that WOULD be written, even if dst is NULL, but truncated to max_chars.
  */
-extern size_t nv_vssnprintf(nv_stream_t* s, size_t max_chars, const char* fmt, va_list args) NOVA_ATTR_NONNULL(1, 3, 4);
+size_t nv_vssnprintf(nv_stream_t* s, size_t max_chars, const char* fmt, va_list args) NOVA_ATTR_NONNULL(1, 3, 4);
 
 NOVA_HEADER_END
 

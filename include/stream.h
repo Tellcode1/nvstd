@@ -1,3 +1,27 @@
+/*
+  MIT License
+
+  Copyright (c) 2025 Fouzan MD Ishaque (fouzanmdishaque@gmail.com)
+
+  Permission is hereby granted, free of charge, to any person obtaining a copy
+  of this software and associated documentation files (the "Software"), to deal
+  in the Software without restriction, including without limitation the rights
+  to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+  copies of the Software, and to permit persons to whom the Software is
+  furnished to do so, subject to the following conditions:
+
+  The above copyright notice and this permission notice shall be included in all
+  copies or substantial portions of the Software.
+
+  THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+  IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+  FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+  AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+  LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+  OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+  SOFTWARE.
+*/
+
 #ifndef NV_STREAM_H
 #define NV_STREAM_H
 
@@ -112,13 +136,17 @@ extern "C"
 
   /**
    * Flush the stream.
+   * All the data will be written to their specified location.
+   * Except for memories and buffer streams.
+   * Additionally, piped streams will call fflush.
+   * Sink streams do nothing.
    */
   void nv_stream_flush(struct nv_stream* stm);
 
   /**
    * Get the error flag of the stream.
-   * Errors in streams are "sticky" a la they aren't every flushed.
-   * They will stay even if you handle them. stream_seterror(stm,NV_SUCCESS) if you explicity handle the error.
+   * Errors in streams are "sticky" a la they aren't flushed unless you explicitly do it.
+   * They will stay even if you read them. stream_seterror(stm,NV_SUCCESS) if you explicity handle the error.
    * Generally NV_SUCCESS or NV_ERROR_EOF.
    */
   nv_error nv_stream_error(const struct nv_stream* stm);
@@ -126,9 +154,10 @@ extern "C"
 
   /**
    * Get the context pointer for the stream.
-   * For custom streams, it will be the pointer passed during creation.
+   * For custom streams, it will be the context pointer passed during creation.
    * For file and piped streams, it will be the FILE pointer
    * For buffer streams, it will be the write pointer (pointer to the next byte to write)
+   * On error, (invalid stream?), returns NULL.
    */
   void* nv_stream_get_context(const struct nv_stream* stm);
 

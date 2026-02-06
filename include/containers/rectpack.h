@@ -59,25 +59,25 @@ struct nv_skyline_bin
   size_t             num_rects;
 };
 
-extern nv_error nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* bin);
-extern void     nv_skyline_bin_destroy(nv_skyline_bin_t* bin);
+nv_error nv_skyline_bin_init(size_t width, size_t height, nv_skyline_bin_t* bin);
+void     nv_skyline_bin_destroy(nv_skyline_bin_t* bin);
 
 /**
  * @brief The maximum height of a skyline in the bin
  */
-extern size_t nv_skyline_bin_max_height_nolock(const nv_skyline_bin_t* bin, size_t x, size_t w);
-extern size_t nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w);
+size_t nv_skyline_bin_max_height_nolock(const nv_skyline_bin_t* bin, size_t x, size_t w);
+size_t nv_skyline_bin_max_height(const nv_skyline_bin_t* bin, size_t x, size_t w);
 
 /**
- * @return Returns true if a placement was found, anything else if not.
+ * @return Returns NV_SUCCESS if a good location for the rect was successfully found.
  * WARNING: This may not trigger a resize!
  */
-extern int nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t* best_x, size_t* best_y);
+nv_error nv_skyline_bin_find_best_placement(const nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t* best_x, size_t* best_y);
 
 /**
  * why are x and y needed as seperate arguements? Can't they be included in the rect
  */
-extern void nv_skyline_bin_place_rect(nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t x, size_t y);
+void nv_skyline_bin_place_rect(nv_skyline_bin_t* bin, const nv_skyline_rect_t* rect, size_t x, size_t y);
 
 /**
  * @brief Pack all rects into the bin. This involves copying over the rects into their positions, as specified from posx and posy
@@ -85,12 +85,12 @@ extern void nv_skyline_bin_place_rect(nv_skyline_bin_t* bin, const nv_skyline_re
  * Say, if the bin got full.
  * WARNING: This function should be called only once per bin!
  */
-extern void nv_skyline_bin_pack_rects(nv_skyline_bin_t* bin, nv_skyline_rect_t* rects, size_t nrects);
+void nv_skyline_bin_pack_rects(nv_skyline_bin_t* bin, nv_skyline_rect_t* rects, size_t nrects);
 
 /**
  * WARNING: new_w < current_width or new_h < current_height is currently UNDEFINED
  */
-extern void nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h);
+void nv_skyline_bin_resize(nv_skyline_bin_t* bin, size_t new_w, size_t new_h);
 
 NOVA_HEADER_END
 

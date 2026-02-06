@@ -152,7 +152,7 @@ typedef enum nv_error
  */
 typedef nv_error (*nv_error_handler_fn)(nv_error error, const char* fn, const char* file, size_t line, const char* supplementary, va_list args);
 
-extern nv_error nv_default_error_handler(nv_error error, const char* fn, const char* file, size_t line, const char* supplementary, va_list args);
+nv_error nv_default_error_handler(nv_error error, const char* fn, const char* file, size_t line, const char* supplementary, va_list args);
 
 static nv_error_handler_fn error_handler = nv_default_error_handler;
 
