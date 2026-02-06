@@ -114,6 +114,17 @@ typedef enum nv_error
   NV_ERROR_INVALID_INPUT,
 
   /**
+   * End of file error.
+   * Program tried to read past the end of the file.
+   */
+  NV_ERROR_EOF,
+
+  /**
+   * Input/variable too big.
+   */
+  NV_ERROR_TOO_BIG,
+
+  /**
    * A function returned an invalid value or failed. We do not know why and it was most defenitely not our fault.
    */
   NV_ERROR_INVALID_RETVAL,

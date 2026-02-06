@@ -1,9 +1,11 @@
 #include "../include/file.h"
+
 #include "../include/alloc.h"
-#include "../include/errorcodes.h"
+#include "../include/error.h"
 #include "../include/print.h"
 #include "../include/stdafx.h"
 #include "../include/string.h"
+
 #include <asm-generic/errno-base.h>
 #include <errno.h>
 #include <stdbool.h>
@@ -60,18 +62,9 @@ nvfs_perms_to_unix_perms(nvfs_permission perms, bool for_directory)
 
   if (for_directory)
   {
-    if (mode & S_IRUSR)
-    {
-      mode |= S_IXUSR;
-    }
-    if (mode & S_IRGRP)
-    {
-      mode |= S_IXGRP;
-    }
-    if (mode & S_IROTH)
-    {
-      mode |= S_IXOTH;
-    }
+    if (mode & S_IRUSR) { mode |= S_IXUSR; }
+    if (mode & S_IRGRP) { mode |= S_IXGRP; }
+    if (mode & S_IROTH) { mode |= S_IXOTH; }
   }
 #  endif
 
@@ -107,20 +100,11 @@ nvfs_entry_exists(const char* fpath)
 static inline nv_error
 _estat(const char* f, struct STAT* s)
 {
-  if (STAT(f, s) == 0)
-  {
-    return NV_SUCCESS;
-  }
+  if (STAT(f, s) == 0) { return NV_SUCCESS; }
 
   /* stat failed. return an error based on the errno. */
-  if (errno == ENOENT)
-  {
-    return NV_ERROR_NO_EXIST;
-  }
-  else if (errno == EPERM)
-  {
-    return NV_ERROR_INSUFFICIENT_PERMISSIONS;
-  }
+  if (errno == ENOENT) { return NV_ERROR_NO_EXIST; }
+  else if (errno == EPERM) { return NV_ERROR_INSUFFICIENT_PERMISSIONS; }
   return NV_ERROR_IO_ERROR;
 }
 
@@ -132,10 +116,7 @@ nvfs_file_size(const char* fpath, size_t* out_size)
   struct STAT st;
 
   nv_error check = _estat(fpath, &st);
-  if (check != NV_SUCCESS)
-  {
-    nv_raise_and_return(check, "Could not stat file %s", fpath);
-  }
+  if (check != NV_SUCCESS) { nv_raise_and_return(check, "Could not stat file %s", fpath); }
 
   *out_size = (size_t)st.st_size;
   return NV_SUCCESS;
@@ -149,10 +130,7 @@ nvfs_get_access_time(const char* fpath, size_t* out_atime)
   struct STAT st;
 
   nv_error check = _estat(fpath, &st);
-  if (check != NV_SUCCESS)
-  {
-    nv_raise_and_return(check, "Could not stat file %s", fpath);
-  }
+  if (check != NV_SUCCESS) { nv_raise_and_return(check, "Could not stat file %s", fpath); }
 
   *out_atime = (size_t)st.st_atime;
   return NV_SUCCESS;
@@ -166,10 +144,7 @@ nvfs_get_modified_time(const char* fpath, size_t* out_mtime)
   struct STAT st;
 
   nv_error check = _estat(fpath, &st);
-  if (check != NV_SUCCESS)
-  {
-    nv_raise_and_return(check, "Could not stat file %s", fpath);
-  }
+  if (check != NV_SUCCESS) { nv_raise_and_return(check, "Could not stat file %s", fpath); }
 
   *out_mtime = (size_t)st.st_mtime;
   return NV_SUCCESS;
@@ -178,33 +153,21 @@ nvfs_get_modified_time(const char* fpath, size_t* out_mtime)
 nv_error
 nvfs_file_read_all(const char* fpath, char** buffer, size_t* buffer_size)
 {
-  if (fpath == NULL)
-  {
-    nv_raise_and_return(NV_ERROR_INVALID_ARG, "Parameter \"fpath\" is not allowed to be NULL");
-  }
-  if (buffer == NULL)
-  {
-    nv_raise_and_return(NV_ERROR_INVALID_ARG, "Parameter \"buffer\" is not allowed to be NULL");
-  }
+  if (fpath == NULL) { nv_raise_and_return(NV_ERROR_INVALID_ARG, "Parameter \"fpath\" is not allowed to be NULL"); }
+  if (buffer == NULL) { nv_raise_and_return(NV_ERROR_INVALID_ARG, "Parameter \"buffer\" is not allowed to be NULL"); }
 
   nv_error code = NV_SUCCESS;
   size_t   size = 0;
 
   *buffer = NULL;
-  if (buffer_size)
-  {
-    *buffer_size = 0;
-  }
+  if (buffer_size) { *buffer_size = 0; }
 
   /**
    * r => read
    * b => binary
    */
   FILE* fp = fopen(fpath, "rb");
-  if (!fp)
-  {
-    return NV_ERROR_IO_ERROR;
-  }
+  if (!fp) { return NV_ERROR_IO_ERROR; }
 
   if ((code = nvfs_file_size(fpath, &size)) != NV_SUCCESS)
   {
@@ -233,10 +196,7 @@ nvfs_file_read_all(const char* fpath, char** buffer, size_t* buffer_size)
   // NULL term our string
   (*buffer)[size] = '\0';
 
-  if (buffer_size)
-  {
-    *buffer_size = size;
-  }
+  if (buffer_size) { *buffer_size = size; }
 
   fclose(fp);
   return NV_SUCCESS;
@@ -246,10 +206,7 @@ nv_error
 nvfs_file_write_all(const char* fpath, const void* data, size_t data_size)
 {
   FILE* fp = fopen(fpath, "wbe");
-  if (!fp)
-  {
-    return NV_ERROR_IO_ERROR;
-  }
+  if (!fp) { return NV_ERROR_IO_ERROR; }
 
   if (fwrite(data, 1, data_size, fp) != data_size)
   {
@@ -270,10 +227,7 @@ nvfs_file_create(const char* fpath)
   if (fd < 0)
   {
     // return already exist if the file already exists.. duh
-    if (errno == EEXIST)
-    {
-      return NV_ERROR_EXIST;
-    }
+    if (errno == EEXIST) { return NV_ERROR_EXIST; }
     return NV_ERROR_IO_ERROR;
   }
   close(fd);
@@ -285,10 +239,7 @@ nvfs_file_create(const char* fpath)
   if (bimbows_file_handle == INVALID_HANDLE_VALUE)
   {
     DWORD error = GetLastError();
-    if (error != ERROR_FILE_EXISTS && error != ERROR_ALREADY_EXISTS)
-    {
-      return NV_ERROR_IO_ERROR;
-    }
+    if (error != ERROR_FILE_EXISTS && error != ERROR_ALREADY_EXISTS) { return NV_ERROR_IO_ERROR; }
   }
   else
   {
@@ -305,14 +256,8 @@ nvfs_file_delete(const char* fpath)
 {
   if (remove(fpath) != 0)
   {
-    if (errno == ENOENT)
-    {
-      nv_raise_and_return(NV_ERROR_NO_EXIST, "File to delete does not exist");
-    }
-    else if (errno == EPERM)
-    {
-      nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, "Insufficient permissions to delete file");
-    }
+    if (errno == ENOENT) { nv_raise_and_return(NV_ERROR_NO_EXIST, "File to delete does not exist"); }
+    else if (errno == EPERM) { nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, "Insufficient permissions to delete file"); }
     return NV_ERROR_IO_ERROR;
   }
   return NV_SUCCESS;
@@ -323,10 +268,7 @@ nvfs_dir_create(const char* dpath, nvfs_permission perms)
 {
 #  ifndef _WIN32
   int sysperms = nvfs_perms_to_sys_perms(perms, true);
-  if (sysperms == -1)
-  {
-    nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, "");
-  }
+  if (sysperms == -1) { nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, ""); }
 
   if (mkdir(dpath, sysperms) != 0)
   {
@@ -342,10 +284,7 @@ nvfs_dir_create(const char* dpath, nvfs_permission perms)
   if (!CreateDirectoryA(dpath, NULL))
   {
     DWORD err = GetLastError();
-    if (err == ERROR_ALREADY_EXISTS)
-    {
-      return NV_ERROR_ALREADY_EXIST;
-    }
+    if (err == ERROR_ALREADY_EXISTS) { return NV_ERROR_ALREADY_EXIST; }
     return NV_ERROR_IO_ERROR;
   }
 #  endif
@@ -378,10 +317,7 @@ nvfs_dir_create_recursive(const char* dpath, nvfs_permission perms)
     nv_strlcpy(buffer, path_copy, dirlen + 1);
     size_t len = nv_strlen(buffer);
 
-    if (buffer[len - 1] == '/')
-    {
-      buffer[len - 1] = 0;
-    }
+    if (buffer[len - 1] == '/') { buffer[len - 1] = 0; }
 
     for (char* p = buffer + 1; *p; p++)
     {
@@ -390,27 +326,18 @@ nvfs_dir_create_recursive(const char* dpath, nvfs_permission perms)
         *p = 0;
 
         check = nvfs_dir_create(buffer, perms);
-        if (check != NV_SUCCESS)
-        {
-          nv_raise_error(check, "Error in recursive directory creation");
-        }
+        if (check != NV_SUCCESS) { nv_raise_error(check, "Error in recursive directory creation"); }
 
         *p = '/';
       }
     }
 
     check = nvfs_dir_create(buffer, perms);
-    if (check != NV_SUCCESS)
-    {
-      nv_raise_error(check, "Error in recursive directory creation");
-    }
+    if (check != NV_SUCCESS) { nv_raise_error(check, "Error in recursive directory creation"); }
   }
 
   check = nvfs_dir_create(buffer, perms);
-  if (check != NV_SUCCESS)
-  {
-    nv_raise_error(check, "Error in recursive directory creation");
-  }
+  if (check != NV_SUCCESS) { nv_raise_error(check, "Error in recursive directory creation"); }
 
   nv_free(path_copy);
   nv_free(buffer);
@@ -444,16 +371,10 @@ nvfs_dir_create_recursive_for_file(const char* fpath, nvfs_permission perms)
     nv_strlcpy(buffer, path_copy, pathlen + 1);
     size_t len = nv_strlen(buffer);
 
-    if (buffer[len - 1] == '/')
-    {
-      buffer[len - 1] = 0;
-    }
+    if (buffer[len - 1] == '/') { buffer[len - 1] = 0; }
 
     char* start = buffer;
-    if (buffer[0] == '/')
-    {
-      start = buffer + 1;
-    }
+    if (buffer[0] == '/') { start = buffer + 1; }
 
     for (char* p = start; *p; p++)
     {
@@ -493,14 +414,8 @@ nvfs_dir_delete_recursive(const char* dpath)
   DIR* dir = opendir(dpath);
   if (!dir)
   {
-    if (errno == ENOENT)
-    {
-      nv_raise_and_return(NV_ERROR_NO_EXIST, "Directory does not exist");
-    }
-    else if (errno == EPERM)
-    {
-      nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, "Insufficient permissions to delete directory");
-    }
+    if (errno == ENOENT) { nv_raise_and_return(NV_ERROR_NO_EXIST, "Directory does not exist"); }
+    else if (errno == EPERM) { nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, "Insufficient permissions to delete directory"); }
     else
     {
       /**
@@ -513,28 +428,19 @@ nvfs_dir_delete_recursive(const char* dpath)
   char*    fullpath = nv_zmalloc(NV_MAX(PATH_MAX, nv_strlen(dpath)));
   nv_error code     = NV_SUCCESS;
 
-  if (fullpath == NULL)
-  {
-    nv_raise_and_return(NV_ERROR_MALLOC_FAILED, "");
-  }
+  if (fullpath == NULL) { nv_raise_and_return(NV_ERROR_MALLOC_FAILED, ""); }
 
   struct dirent* entry = NULL;
   while ((entry = readdir(dir)) != NULL)
   {
-    if (nv_strcmp(entry->d_name, ".") == 0 || nv_strcmp(entry->d_name, "..") == 0)
-    {
-      continue;
-    }
+    if (nv_strcmp(entry->d_name, ".") == 0 || nv_strcmp(entry->d_name, "..") == 0) { continue; }
 
     nv_snprintf(fullpath, sizeof(fullpath), "%s/%s", dpath, entry->d_name);
 
     struct stat st;
     if (stat(fullpath, &st) == 0)
     {
-      if (S_ISDIR(st.st_mode))
-      {
-        code = nvfs_dir_delete_recursive(fullpath);
-      }
+      if (S_ISDIR(st.st_mode)) { code = nvfs_dir_delete_recursive(fullpath); }
       else
       {
         code = nvfs_file_delete(fullpath);
@@ -560,27 +466,18 @@ nvfs_dir_delete_recursive(const char* dpath)
 
   WIN32_FIND_DATAA fd;
   HANDLE           find_file = FindFirstFileA(pattern, &fd);
-  if (find_file == INVALID_HANDLE_VALUE)
-  {
-    return NV_ERROR_IO_ERROR;
-  }
+  if (find_file == INVALID_HANDLE_VALUE) { return NV_ERROR_IO_ERROR; }
 
   nv_error code = NV_SUCCESS;
 
   do
   {
-    if (nv_strcmp(fd.cFileName, ".") == 0 || nv_strcmp(fd.cFileName, "..") == 0)
-    {
-      continue;
-    }
+    if (nv_strcmp(fd.cFileName, ".") == 0 || nv_strcmp(fd.cFileName, "..") == 0) { continue; }
 
     char fullpath[MAX_PATH];
     nv_snprintf(fullpath, MAX_PATH, "%s\\%s", dpath, fd.cFileName);
 
-    if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
-    {
-      code = nvfs_dir_delete_recursive(fullpath);
-    }
+    if (fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) { code = nvfs_dir_delete_recursive(fullpath); }
     else
     {
       DeleteFileA(fullpath);
@@ -606,10 +503,7 @@ nvfs_dir_delete_recursive(const char* dpath)
 char*
 nvfs_file_extension(const char* path)
 {
-  if (!path)
-  {
-    return NULL;
-  }
+  if (!path) { return NULL; }
 
   const char* last_sep = NULL;
   const char* p        = path;
@@ -633,10 +527,7 @@ nvfs_file_extension(const char* path)
   const char* first_dot = nv_strchr(filename, '.');
 
   // hidden file (like .gitignore) or no dot at all
-  if (!first_dot || first_dot == filename || *(first_dot + 1) == '\0')
-  {
-    return NULL;
-  }
+  if (!first_dot || first_dot == filename || *(first_dot + 1) == '\0') { return NULL; }
 
   return nv_strdup(first_dot + 1); // everything after first dot
 }
@@ -665,18 +556,9 @@ nvfs_entry_type(const char* path)
   struct STAT st;
   if (STAT(path, &st) == 0)
   {
-    if (S_ISDIR(st.st_mode))
-    {
-      return NVFS_DIR;
-    }
-    else if (S_ISLNK(st.st_mode))
-    {
-      return NVFS_LINK;
-    }
-    else if (S_ISREG(st.st_mode))
-    {
-      return NVFS_FILE;
-    }
+    if (S_ISDIR(st.st_mode)) { return NVFS_DIR; }
+    else if (S_ISLNK(st.st_mode)) { return NVFS_LINK; }
+    else if (S_ISREG(st.st_mode)) { return NVFS_FILE; }
   }
   return NVFS_UNKNOWN;
 }
@@ -706,23 +588,14 @@ nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries)
   nv_assert_ptr(entries);
   nv_assert_ptr(nentries);
 
-  if (nvfs_is_directory(dpath) == false)
-  {
-    nv_raise_and_return(NV_ERROR_INVALID_ARG, "Argument dpath does not point to a directory");
-  }
+  if (nvfs_is_directory(dpath) == false) { nv_raise_and_return(NV_ERROR_INVALID_ARG, "Argument dpath does not point to a directory"); }
 
 #ifndef _WIN32
   DIR* dirp = opendir(dpath);
   if (dirp == NULL)
   {
-    if (errno == ENOENT)
-    {
-      nv_raise_and_return(NV_ERROR_NO_EXIST, "Directory does not exist");
-    }
-    else if (errno == EPERM)
-    {
-      nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, "Insufficient permissions to list directory");
-    }
+    if (errno == ENOENT) { nv_raise_and_return(NV_ERROR_NO_EXIST, "Directory does not exist"); }
+    else if (errno == EPERM) { nv_raise_and_return(NV_ERROR_INSUFFICIENT_PERMISSIONS, "Insufficient permissions to list directory"); }
     return NV_ERROR_IO_ERROR;
   }
 
@@ -732,22 +605,18 @@ nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries)
   size_t       capacity       = init_list_size;
 
   *entries = nv_zmalloc(sizeof(struct nvfs_entry) * init_list_size);
-  if (*entries == NULL)
-  {
-    nv_raise_and_return(NV_ERROR_MALLOC_FAILED, "malloc for entries of size %zu failed", capacity);
-  }
+  if (*entries == NULL) { nv_raise_and_return(NV_ERROR_MALLOC_FAILED, "malloc for entries of size %zu failed", capacity); }
 
   struct dirent* entry = NULL;
   while ((entry = readdir(dirp)) != NULL)
   {
+    if (nv_strcmp(entry->d_name, ".") == 0 || nv_strcmp(entry->d_name, "..") == 0) continue;
+
     if (*nentries >= capacity)
     {
       capacity *= 2;
       *entries = nv_realloc(*entries, sizeof(struct nvfs_entry) * capacity);
-      if (*entries == NULL)
-      {
-        nv_raise_and_return(NV_ERROR_MALLOC_FAILED, "malloc for entries of size %zu failed", capacity);
-      }
+      if (*entries == NULL) { nv_raise_and_return(NV_ERROR_MALLOC_FAILED, "malloc for entries of size %zu failed", capacity); }
     }
 
     struct nvfs_entry* write = &(*entries)[(*nentries)++];
@@ -782,8 +651,7 @@ nvfs_win_to_unix_path(const char* path)
   char* duped = nv_strdup(path);
   for (char* s = duped; *s; s++)
   {
-    if (*s == '\\')
-      *s = '/';
+    if (*s == '\\') *s = '/';
   }
   return duped;
 }

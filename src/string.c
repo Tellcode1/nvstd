@@ -1,15 +1,20 @@
 #include "../include/string.h"
+
 #include "../include/alloc.h"
 #include "../include/chrclass.h"
 #include "../include/stdafx.h"
 #include "../include/types.h"
+
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 void*
-nv_memset(void* dst, char to, size_t nbytes)
+nv_memset(void* dst, int to, size_t nbytes)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return memset(dst, to, nbytes);
+#endif
   nv_assert_else_return(dst != NULL, NULL);
   nv_assert_else_return(nbytes != 0, NULL);
 
@@ -19,14 +24,15 @@ nv_memset(void* dst, char to, size_t nbytes)
   //   // No matter what the foof I do, this instruction is always faster for some ungodly reason.
   //   // No, not even mixing stosq for quad word writes.
   //   // >:C
-  __asm__ __volatile__("rep stosb" : : "D"(dst), "a"((unsigned char)to), "c"(nbytes) : "memory");
+  __asm__ __volatile__("cld\n\t" // clear direction flag to move upwards
+                       "rep stosb"
+                       :
+                       : "D"(dst), "a"((unsigned char)to), "c"(nbytes)
+                       : "memory");
 #else
   // Pick a god and pray this optimizes to anything good
   char* bytep = dst;
-  for (size_t i = 0; i < nbytes; i++)
-  {
-    bytep[i] = to;
-  }
+  for (size_t i = 0; i < nbytes; i++) { bytep[i] = to; }
 #endif
 
   return dst;
@@ -35,6 +41,9 @@ nv_memset(void* dst, char to, size_t nbytes)
 void*
 nv_memmove(void* dst, const void* src, size_t nbytes)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return memmove(dst, src, nbytes);
+#endif
   nv_assert_else_return(dst != NULL, NULL);
   nv_assert_else_return(src != NULL, NULL);
   nv_assert_else_return(nbytes > 0, NULL);
@@ -71,7 +80,11 @@ nv_memmove(void* dst, const void* src, size_t nbytes)
   else
   {
 #if defined(__x86_64__) || defined(__i386__)
-    __asm__ __volatile__("rep movsb;" : : "D"(dstp), "S"(srcp), "c"(nbytes) : "memory");
+    __asm__ __volatile__("cld\n\t" // clear direction flag
+                         "rep movsb;"
+                         :
+                         : "D"(dstp), "S"(srcp), "c"(nbytes)
+                         : "memory");
 #else
     while ((nbytes--) > 0)
     {
@@ -100,10 +113,7 @@ nv_aligned_alloc(size_t size, size_t alignment)
   const size_t total_size = align_up(size + sizeof(void*) + sizeof(size_t), alignment);
 
   void* const orig = nv_zmalloc(total_size);
-  if (!orig)
-  {
-    return NULL;
-  }
+  if (!orig) { return NULL; }
 
   /**
    * We need to store the original pointer and the previous size just behind the
@@ -130,20 +140,14 @@ nv_aligned_realloc(void* orig, size_t size, size_t alignment)
   nv_assert_else_return(alignment != 0, NULL);
   nv_assert_else_return((alignment & (alignment - 1)) == 0, NULL);
 
-  if (orig == NULL)
-  {
-    return nv_aligned_alloc(size, alignment);
-  }
+  if (orig == NULL) { return nv_aligned_alloc(size, alignment); }
 
   void* absolute = nv_aligned_get_absolute_ptr(orig);
   if (NV_LIKELY(absolute))
   {
     size_t prev_size = nv_aligned_ptr_get_size(orig);
 
-    if (prev_size == size)
-    {
-      return orig;
-    }
+    if (prev_size == size) { return orig; }
 
     // size_t const new_aligned_size = align_up(size, alignment);
     // void*        new_block        = nv_realloc(absolute, new_aligned_size);
@@ -206,6 +210,9 @@ nv_aligned_free(void* aligned_block)
 void*
 nv_memchr(const void* p, int chr, size_t psize)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return memchr(p, chr, psize);
+#endif
   nv_assert_else_return(psize > 0, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memchr, p, chr, psize);
@@ -214,10 +221,7 @@ nv_memchr(const void* p, int chr, size_t psize)
   const uchar  chk  = chr;
   for (size_t i = 0; i < psize; i++)
   {
-    if (read[i] == chk)
-    {
-      return (void*)(read + i);
-    }
+    if (read[i] == chk) { return (void*)(read + i); }
   }
   return NULL;
 }
@@ -225,6 +229,9 @@ nv_memchr(const void* p, int chr, size_t psize)
 int
 nv_memcmp(const void* _p1, const void* _p2, size_t max)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return memcmp(_p1, _p2, max);
+#endif
   nv_assert_else_return(max > 0, -1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(memcmp, _p1, _p2, max);
@@ -234,10 +241,7 @@ nv_memcmp(const void* _p1, const void* _p2, size_t max)
 
   while ((max--) != 0)
   {
-    if (*p1 != *p2)
-    {
-      return *p1 - *p2;
-    }
+    if (*p1 != *p2) { return *p1 - *p2; }
     p1++;
     p2++;
   }
@@ -253,10 +257,7 @@ nv_strncpy2(char* dst, const char* src, size_t max)
   size_t slen         = nv_strlen(src);
   size_t original_max = max;
 
-  if (!dst)
-  {
-    return NV_MIN(slen, max);
-  }
+  if (!dst) { return NV_MIN(slen, max); }
 
 #if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strncpy)
   __builtin_strncpy(dst, src, max);
@@ -279,6 +280,9 @@ nv_strncpy2(char* dst, const char* src, size_t max)
 char*
 nv_strcpy(char* dst, const char* src)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strcpy(dst, src);
+#endif
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strcpy, dst, src); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
 
   char* const dst_orig = dst;
@@ -314,6 +318,9 @@ nv_stpcpy(char* dst, char* src)
 char*
 nv_strncpy(char* dst, const char* src, size_t max)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strncpy(dst, src, max);
+#endif
   nv_assert_else_return(max > 0, NULL);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strncpy, dst, src, max);
@@ -325,6 +332,9 @@ nv_strncpy(char* dst, const char* src, size_t max)
 char*
 nv_strcat(char* dst, const char* src)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strcat(dst, src);
+#endif
   char* end = dst + nv_strlen(dst);
 
   while (*src)
@@ -339,18 +349,34 @@ nv_strcat(char* dst, const char* src)
 }
 
 char*
+nv_strlpcat(char* dst, char* dst_absolute, const char* src, size_t dst_size)
+{
+  size_t consumed = dst_absolute - dst;
+  dst_size -= consumed;
+
+  while (*src)
+  {
+    *dst = *src;
+    dst++;
+    src++;
+  }
+  *dst = 0;
+
+  return dst;
+}
+
+char*
 nv_strncat(char* dst, const char* src, size_t max)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strncat(dst, src, max);
+#endif
   nv_assert_else_return(max > 0, NULL);
 
   char* original_dest = dst;
 
   dst = nv_strchr(dst, '\0');
-  if (!dst)
-  {
-    nv_assert(0);
-    return NULL;
-  }
+  if (!dst) { return NULL; }
 
   size_t i = 0;
   while (*src && i < max)
@@ -369,21 +395,12 @@ nv_strcat_max(char* dst, const char* src, size_t dest_size)
 {
   /* Optionally, memset the remaining part of dst to 0? */
 
-  if (dest_size == 0)
-  {
-    return nv_strlen(src);
-  }
+  if (dest_size == 0) { return nv_strlen(src); }
 
   size_t dst_len = 0;
-  while (dst_len < dest_size && dst[dst_len])
-  {
-    dst_len++;
-  }
+  while (dst_len < dest_size && dst[dst_len]) { dst_len++; }
 
-  if (dst_len == dest_size)
-  {
-    return dst_len + nv_strlen(src);
-  }
+  if (dst_len == dest_size) { return dst_len + nv_strlen(src); }
 
   size_t copy_len = dest_size - dst_len - 1;
   size_t i        = 0;
@@ -403,10 +420,7 @@ nv_strtrim(char* s)
 {
   char* begin = NULL;
   char* end   = NULL;
-  if (nv_strtrim_c(s, (const char**)&begin, (const char**)&end) == NULL)
-  {
-    return NULL;
-  }
+  if (nv_strtrim_c(s, (const char**)&begin, (const char**)&end) == NULL) { return NULL; }
 
   /* end *may* be a pointer to the NULL terminator but yeah, still works */
   *end = 0;
@@ -417,29 +431,17 @@ nv_strtrim(char* s)
 const char*
 nv_strtrim_c(const char* s, const char** begin, const char** end)
 {
-  while (*s && nv_isspace((uchar)*s))
-  {
-    s++;
-  }
+  while (*s && nv_isspace((uchar)*s)) { s++; }
 
-  if (begin)
-  {
-    *begin = (const char*)s;
-  }
+  if (begin) { *begin = (const char*)s; }
 
   const char* begin_copy = s;
 
   s += nv_strlen(s);
 
-  while (s > begin_copy && nv_isspace((uchar) * (s - 1)))
-  {
-    s--;
-  }
+  while (s > begin_copy && nv_isspace((uchar) * (s - 1))) { s--; }
 
-  if (end)
-  {
-    *end = (char*)s;
-  }
+  if (end) { *end = (char*)s; }
   return begin_copy;
 }
 
@@ -460,14 +462,14 @@ nv_strcmp(const char* s1, const char* s2)
 char*
 nv_strchr(const char* s, int chr)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strchr(s, chr);
+#endif
   uchar c = (uchar)chr;
 
   while (*s)
   {
-    if (*s == c)
-    {
-      return (char*)s;
-    }
+    if (*s == c) { return (char*)s; }
     s++;
   }
 
@@ -482,10 +484,7 @@ nv_strnchr(const char* s, size_t n, int chr)
 
   while (*s && i < n)
   {
-    if (*s == c)
-    {
-      return (char*)s;
-    }
+    if (*s == c) { return (char*)s; }
     s++;
     i++;
   }
@@ -501,10 +500,7 @@ nv_strchr_n(const char* s, int chr, int n)
     if (*s == chr)
     {
       n--;
-      if (n <= 0)
-      {
-        return (char*)s;
-      }
+      if (n <= 0) { return (char*)s; }
     }
   }
   return NULL;
@@ -513,23 +509,20 @@ nv_strchr_n(const char* s, int chr, int n)
 char*
 nv_strrchr(const char* s, int chr)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strrchr(s, chr);
+#endif
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strrchr, s, chr);
 
   const char* beg = s;
   char*       end = (char*)s + nv_strlen(s) - 1;
 
-  if (chr == 0)
-  {
-    return (char*)s + 1;
-  }
+  if (chr == 0) { return (char*)s + 1; }
 
   while (end > beg)
   {
     end--;
-    if (*end == (char)chr)
-    {
-      return (char*)end;
-    }
+    if (*end == (char)chr) { return (char*)end; }
   }
   return NULL;
 }
@@ -537,6 +530,9 @@ nv_strrchr(const char* s, int chr)
 int
 nv_strncmp(const char* s1, const char* s2, size_t max)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strncmp(s1, s2, max);
+#endif
   nv_assert_else_return(max > 0, -1);
 
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strncmp, s1, s2, max);
@@ -560,33 +556,27 @@ nv_strcasencmp(const char* s1, const char* s2, size_t max)
   {
     uchar c1 = nv_tolower(*(uchar*)s1);
     uchar c2 = nv_tolower(*(uchar*)s2);
-    if (c1 != c2)
-    {
-      return c1 - c2;
-    }
+    if (c1 != c2) { return c1 - c2; }
 
     s1++;
     s2++;
     i++;
   }
-  if (i == max)
-  {
-    return 0;
-  }
+  if (i == max) { return 0; }
   return nv_tolower(*(const uchar*)s1) - nv_tolower(*(const uchar*)s2);
 }
 
 int
 nv_strcasecmp(const char* s1, const char* s2)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strcasecmp(s1, s2);
+#endif
   while (*s1 && *s2)
   {
     uchar c1 = nv_tolower(*(uchar*)s1);
     uchar c2 = nv_tolower(*(uchar*)s2);
-    if (c1 != c2)
-    {
-      return c1 - c2;
-    }
+    if (c1 != c2) { return c1 - c2; }
     s1++;
     s2++;
   }
@@ -596,20 +586,22 @@ nv_strcasecmp(const char* s1, const char* s2)
 size_t
 nv_strlen(const char* s)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strlen(s);
+#endif
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strlen, s);
 
   const char* start = s;
-  while (*s)
-  {
-    s++;
-  }
-
+  while (*s) { s++; }
   return s - start;
 }
 
 size_t
 nv_strnlen(const char* s, size_t max)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strnlen(s, max);
+#endif
   nv_assert_else_return(max > 0, 0);
 
   const char* s_orig = s;
@@ -625,6 +617,9 @@ nv_strnlen(const char* s, size_t max)
 char*
 nv_strstr(const char* s, const char* sub)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strstr(s, sub);
+#endif
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strstr, s, sub);
 
   for (; *s; s++)
@@ -639,10 +634,7 @@ nv_strstr(const char* s, const char* sub)
     }
 
     /* If we reach the NULL terminator of the substring, it exists in str. */
-    if (!*sub_it)
-    {
-      return (char*)s;
-    }
+    if (!*sub_it) { return (char*)s; }
   }
 
   return NULL;
@@ -651,10 +643,7 @@ nv_strstr(const char* s, const char* sub)
 char*
 nv_strlcpy(char* dst, const char* src, size_t dst_size)
 {
-  if (dst_size == 0)
-  {
-    return dst;
-  }
+  if (dst_size == 0) { return dst; }
 
   char* dst_orig = dst;
 
@@ -676,10 +665,7 @@ size_t
 nv_strcpy2(char* dst, const char* src)
 {
   size_t slen = nv_strlen(src);
-  if (!dst)
-  {
-    return slen;
-  }
+  if (!dst) { return slen; }
 
 #if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin) && __has_builtin(__builtin_strcpy)
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strlen, __builtin_strcpy(dst, src)); // NOLINT(clang-analyzer-security.insecureAPI.strcpy)
@@ -699,6 +685,10 @@ nv_strcpy2(char* dst, const char* src)
 size_t
 nv_strspn(const char* s, const char* accept)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strspn(s, accept);
+#endif
+
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strspn, s, accept);
   size_t i = 0;
   while (*s && *accept && *s == *accept)
@@ -713,6 +703,10 @@ nv_strspn(const char* s, const char* accept)
 size_t
 nv_strcspn(const char* s, const char* reject)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strcspn(s, reject);
+#endif
+
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strcspn, s, reject);
 
   const char* base = reject;
@@ -721,14 +715,8 @@ nv_strcspn(const char* s, const char* reject)
   while (*s)
   {
     const char* j = base;
-    while (*j && *j != *s)
-    {
-      j++;
-    }
-    if (*j)
-    {
-      break;
-    }
+    while (*j && *j != *s) { j++; }
+    if (*j) { break; }
     i++;
     s++;
   }
@@ -738,6 +726,10 @@ nv_strcspn(const char* s, const char* reject)
 char*
 nv_strpbrk(const char* s1, const char* s2)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strpbrk(s1, s2);
+#endif
+
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strpbrk, s1, s2);
 
   while (*s1)
@@ -745,10 +737,7 @@ nv_strpbrk(const char* s1, const char* s2)
     const char* j = s2;
     while (*j)
     {
-      if (*j == *s1)
-      {
-        return (char*)s1;
-      }
+      if (*j == *s1) { return (char*)s1; }
       j++;
     }
     s1++;
@@ -759,10 +748,11 @@ nv_strpbrk(const char* s1, const char* s2)
 char*
 nv_strtok(char* s, const char* delim, char** context)
 {
-  if (!s)
-  {
-    s = *context;
-  }
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strtok_r(s, delim, context);
+#endif
+
+  if (!s) { s = *context; }
   char* p = NULL;
 
   s += nv_strspn(s, delim);
@@ -790,10 +780,7 @@ nv_strreplace(char* s, char to_replace, char replace_with)
 {
   while (*s)
   {
-    if (*s == to_replace)
-    {
-      *s = replace_with;
-    }
+    if (*s == to_replace) { *s = replace_with; }
   }
   return s;
 }
@@ -803,16 +790,16 @@ nv_basename(const char* path)
 {
   char* p         = (char*)path; // shut up C compiler
   char* backslash = nv_strrchr(path, '/');
-  if (backslash != NULL)
-  {
-    return backslash + 1;
-  }
+  if (backslash != NULL) { return backslash + 1; }
   return p;
 }
 
 char*
 nv_strdup(const char* s)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strdup(s);
+#endif
   NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(strdup, s);
 
   size_t slen  = nv_strlen(s);
@@ -825,6 +812,9 @@ nv_strdup(const char* s)
 char*
 nv_strndup(const char* s, size_t n)
 {
+#if !NV_NO_STDLIB_FUNCTIONS
+  return strndup(s, n);
+#endif
   size_t slen    = nv_strlen(s);
   size_t dup_len = NV_MIN(slen, n);
 
@@ -850,10 +840,7 @@ nv_substr(const char* s, size_t start, size_t len)
   nv_assert_else_return(len > 0, NULL);
 
   size_t slen = nv_strlen(s);
-  if (start + len > slen)
-  {
-    return NULL;
-  }
+  if (start + len > slen) { return NULL; }
 
   char* sub = nv_zmalloc(len + 1);
   nv_strncpy(sub, s + start, len);
@@ -880,10 +867,7 @@ nv_strnrev(char* str, size_t max)
   nv_assert_else_return(max != 0, NULL);
 
   size_t len = nv_strnlen(str, max);
-  if (len == 0)
-  {
-    return str;
-  }
+  if (len == 0) { return str; }
 
   char* fwrd = str;
   char* back = str + len - 1;
@@ -899,133 +883,4 @@ nv_strnrev(char* str, size_t max)
   }
 
   return str;
-}
-
-bool
-nv_isalpha(int chr)
-{
-  return (chr >= 'A' && chr <= 'Z') || (chr >= 'a' && chr <= 'z');
-}
-
-bool
-nv_isdigit(int chr)
-{
-  return (chr >= '0' && chr <= '9');
-}
-
-bool
-nv_isalnum(int chr)
-{
-  return nv_isalpha(chr) || nv_isdigit(chr);
-}
-
-bool
-nv_isblank(int chr)
-{
-  return (chr == ' ') || (chr == '\t');
-}
-
-/* https://en.wikipedia.org/wiki/Control_character */
-bool
-nv_iscntrl(int chr)
-{
-  switch (chr)
-  {
-    /* \e also exists. non standard. yep. */
-    case '\0':
-    case '\a':
-    case '\b':
-    case '\t':
-    case '\n':
-    case '\v':
-    case '\f':
-    case '\r': return true;
-    default: return false;
-  }
-  return false;
-}
-
-bool
-nv_islower(int chr)
-{
-  return (chr >= 'a' && chr <= 'z');
-}
-
-bool
-nv_isupper(int chr)
-{
-  return (chr >= 'A' && chr <= 'Z');
-}
-
-bool
-nv_isspace(int chr)
-{
-  return (chr == ' ' || chr == '\n' || chr == '\t');
-}
-
-bool
-nv_ispunct(int chr)
-{
-  /* Generated with
-    for (i = 0; i < 256; i++)
-    {
-      if (ispunct(i))
-      {
-        printf("%c ", i);
-      }
-    }
-  */
-  switch (chr)
-  {
-    case '!':
-    case '\"':
-    case '#':
-    case '$':
-    case '%':
-    case '&':
-    case '\'':
-    case '(':
-    case ')':
-    case '*':
-    case '+':
-    case ',':
-    case '-':
-    case '.':
-    case '/':
-    case ':':
-    case ';':
-    case '?':
-    case '@':
-    case '[':
-    case '\\':
-    case ']':
-    case '^':
-    case '_':
-    case '`':
-    case '{':
-    case '|':
-    case '}':
-    case '~': return true;
-    default: return false;
-  }
-}
-
-int
-nv_tolower(int chr)
-{
-  if (nv_isupper(chr))
-  {
-    return chr + 32;
-  }
-  return chr;
-}
-
-int
-nv_toupper(int chr)
-{
-  if (nv_islower(chr))
-  {
-    return chr - 32; /* chr - 32 */
-  }
-  return chr;
 }

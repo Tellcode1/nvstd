@@ -34,7 +34,7 @@
 #define NV_STD_CONTAINERS_RECTPACK_H
 
 #include "../attributes.h"
-#include "../errorcodes.h"
+#include "../error.h"
 #include "../stdafx.h"
 
 #include <stddef.h>

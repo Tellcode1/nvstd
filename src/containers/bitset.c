@@ -1,6 +1,6 @@
 #include "../../include/containers/bitset.h"
 
-#include "../../include/errorcodes.h"
+#include "../../include/error.h"
 #include "../../include/stdafx.h"
 #include "../../include/string.h"
 
