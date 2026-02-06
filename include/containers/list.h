@@ -27,7 +27,7 @@
 
 #include "../alloc.h"
 #include "../attributes.h"
-#include "../errorcodes.h"
+#include "../error.h"
 #include "../hash.h"
 #include "../stdafx.h"
 #include "../types.h"

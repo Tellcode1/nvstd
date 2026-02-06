@@ -27,7 +27,7 @@
 
 #include "../alloc.h"
 #include "../attributes.h"
-#include "../errorcodes.h"
+#include "../error.h"
 #include "../hash.h"
 #include "../stdafx.h"
 #include "../types.h"
@@ -68,6 +68,7 @@ struct nv_hashmap
   nv_hash_fn    hash_fn;
   nv_compare_fn comp_fn;
 
+  /* Passed to the hash and comparison function as user data argument. */
   void* user_data;
 };
 
@@ -102,7 +103,6 @@ extern nv_hashmap_node_t* nv_hashmap_root_node(const nv_hashmap_t* map);
  * WARNING: Doesn't replace the value if a key already exists!! Use nv_hashmap_insert_or_replace()
  *  also, if key or value is a string (const char *, not a nv_string_t or something),
  *  just pass in the const char *, not a pointer to it!!!
- * @param hash_fn_arg The argument provided to the hash function as "user_data"
  *   The hash function argument will be passed on to resize() too if it needs to be
  * @return A pointer to the value of the node that was inserted.
  */
@@ -115,14 +115,12 @@ extern void* nv_hashmap_insert(nv_hashmap_t* map, const void* NV_RESTRICT key, c
 extern bool nv_hashmap_delete(nv_hashmap_t* map, const void* key);
 
 /**
- * @param hash_fn_arg The argument provided to the hash function as "user_data"
  * @return A pointer to the value of the node that was inserted.
  */
 extern void* nv_hashmap_insert_or_replace(nv_hashmap_t* map, const void* NV_RESTRICT key, void* NV_RESTRICT value);
 
 /**
  * @return NULL on no find
- * @param hash_fn_arg The argument provided to the hash function as "user_data"
  */
 extern void* nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key);
 

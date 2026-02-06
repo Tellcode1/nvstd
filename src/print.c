@@ -1,16 +1,18 @@
 #include "../include/print.h"
-#include "../include/attributes.h"
+
 #include "../include/chrclass.h"
 #include "../include/stdafx.h"
 #include "../include/strconv.h"
+#include "../include/stream.h"
 #include "../include/string.h"
-#include <errno.h>
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 
 #define PADBUF_SIZE 64
+#define DEFAULTPREC 6
 
 // Moral of the story? FU@# SIZE_MAX
 // I spent an HOUR trying to figure out what's going wrong
@@ -22,12 +24,12 @@ nv_printf(const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  // size_t chars_written = nv_vnprintf(NOVA_WBUF_SIZE, args, fmt);
-  size_t chars_written = nv_vsfnprintf(args, stdout, 1, SIZE_MAX, fmt);
+  // size_t written = nv_vnprintf(NOVA_WBUF_SIZE, args, fmt);
+  size_t written = nv_vprintf(args, fmt);
 
   va_end(args);
 
-  return chars_written;
+  return written;
 }
 
 size_t
@@ -36,11 +38,16 @@ nv_fprintf(FILE* f, const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  size_t chars_written = nv_vsfnprintf(args, f, 1, SIZE_MAX, fmt);
+  size_t written = 0;
+  if (NV_LIKELY(f)) { written = nv_vfprintf(args, f, fmt); }
+  else
+  {
+    written = nv_sinkprintf(args, fmt);
+  }
 
   va_end(args);
 
-  return chars_written;
+  return written;
 }
 
 size_t
@@ -49,23 +56,49 @@ nv_sprintf(char* dst, const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  size_t chars_written = nv_vsfnprintf(args, dst, 0, SIZE_MAX, fmt);
+  size_t written = 0;
+  if (NV_LIKELY(dst)) { written = nv_vsnprintf(args, dst, SIZE_MAX, fmt); }
+  else
+  {
+    written = nv_sinkprintf(args, fmt);
+  }
 
   va_end(args);
 
-  return chars_written;
+  return written;
 }
 
 size_t
 nv_vprintf(va_list args, const char* fmt)
 {
-  return nv_vsfnprintf(args, stdout, 1, SIZE_MAX, fmt);
+  nv_stream_t* stm = NULL;
+  nv_error     e   = nv_open_pipestream(stdout, &stm);
+  if (e) return 0;
+
+  size_t wrote = nv_vssnprintf(stm, SIZE_MAX, fmt, args);
+
+  nv_close_stream(stm);
+
+  return wrote;
 }
 
 size_t
 nv_vfprintf(va_list args, FILE* f, const char* fmt)
 {
-  return nv_vsfnprintf(args, f, 1, SIZE_MAX, fmt);
+  nv_stream_t* stm = NULL;
+  nv_error     e   = nv_open_pipestream(f, &stm);
+  if (e) return 0;
+
+  size_t written = 0;
+  if (NV_LIKELY(f)) { written = nv_vssnprintf(stm, SIZE_MAX, fmt, args); }
+  else
+  {
+    written = nv_sinkprintf(args, fmt);
+  }
+
+  nv_close_stream(stm);
+
+  return written;
 }
 
 size_t
@@ -74,11 +107,16 @@ nv_snprintf(char* dst, size_t max_chars, const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  size_t chars_written = nv_vsnprintf(args, dst, max_chars, fmt);
+  size_t written = 0;
+  if (NV_LIKELY(dst)) { written = nv_vsnprintf(args, dst, max_chars, fmt); }
+  else
+  {
+    written = nv_sinkprintf(args, fmt);
+  }
 
   va_end(args);
 
-  return chars_written;
+  return written;
 }
 
 size_t
@@ -87,499 +125,415 @@ nv_nprintf(size_t max_chars, const char* fmt, ...)
   va_list args;
   va_start(args, fmt);
 
-  size_t chars_written = nv_vsfnprintf(args, stdout, 1, max_chars, fmt);
+  size_t written = nv_vnprintf(args, max_chars, fmt);
 
   va_end(args);
 
-  return chars_written;
+  return written;
 }
 
 size_t
 nv_vnprintf(va_list args, size_t max_chars, const char* fmt)
 {
-  return nv_vsfnprintf(args, stdout, 1, max_chars, fmt);
+  nv_stream_t* stm = NULL;
+  nv_error     e   = nv_open_pipestream(stdout, &stm);
+  if (e) return 0;
+
+  size_t wrote = nv_vssnprintf(stm, max_chars, fmt, args);
+
+  nv_close_stream(stm);
+
+  return wrote;
 }
 
 size_t
 nv_vsnprintf(va_list src, char* dst, size_t max_chars, const char* fmt)
 {
-  return nv_vsfnprintf(src, dst, 0, max_chars, fmt);
-}
+  nv_stream_t* stm = NULL;
+  nv_error     e   = nv_open_memstream(dst, max_chars, &stm);
+  if (e) return 0;
 
-#define NV_PRINTF_PEEK_FMT() ((info->itr < info->fmt_str_end) ? *info->itr : 0)
-#define NV_PRINTF_PEEK_NEXT_FMT() (((info->itr + 1) < info->fmt_str_end) ? *(info->itr + 1) : 0)
-#define NV_PRINTF_ADVANCE_FMT()                                                                                                                                               \
-  do                                                                                                                                                                          \
-  {                                                                                                                                                                           \
-    if ((info->itr + 1) < info->fmt_str_end)                                                                                                                                  \
-    {                                                                                                                                                                         \
-      info->itr++;                                                                                                                                                            \
-    }                                                                                                                                                                         \
-    else                                                                                                                                                                      \
-    {                                                                                                                                                                         \
-      info->itr = info->fmt_str_end;                                                                                                                                          \
-    }                                                                                                                                                                         \
-  } while (0);
-#define NV_PRINTF_ADVANCE_NUM_CHARACTERS_FMT(num_chars)                                                                                                                       \
-  do                                                                                                                                                                          \
-  {                                                                                                                                                                           \
-    if ((info->itr + (num_chars)) < info->fmt_str_end)                                                                                                                        \
-    {                                                                                                                                                                         \
-      info->itr += (num_chars);                                                                                                                                               \
-    }                                                                                                                                                                         \
-    else                                                                                                                                                                      \
-    {                                                                                                                                                                         \
-      info->itr = info->fmt_str_end;                                                                                                                                          \
-    }                                                                                                                                                                         \
-  } while (0);
-
-typedef struct nv_format_info_t
-{
-  va_list     args;
-  void*       dst_file;
-  char*       dst_string;
-  char*       tmp_writebuffer;
-  const char* fmt_str_end;
-  const char* itr;
-  size_t      chars_written;
-  size_t      written;
-  size_t      max_chars;
-  int         padding;
-  int         padding_w;
-  int         precision;
-  bool        pad_zero;
-  bool        left_align;
-  bool        file;
-  bool        wbuffer_used;
-  bool        precision_specified;
-  char*       pad_buf;
-} nv_format_info_t;
-
-static inline void
-nv_printf_write(nv_format_info_t* info, const char* write_buffer, size_t written)
-{
-  if (info->chars_written >= info->max_chars)
-  {
-    return;
-  }
-
-  size_t remaining = info->max_chars - info->chars_written;
-  size_t to_write  = (written > remaining) ? remaining : written;
-  info->chars_written += to_write;
-
-  /* As we need to return the number of characters printf would have returned, we can't exit before here. */
-  if (!write_buffer)
-  {
-    return;
-  }
-
-  if (info->file)
-  {
-    FILE* file = (FILE*)info->dst_file;
-    fwrite(write_buffer, 1, to_write, file);
-  }
-  else if (info->dst_string)
-  {
-    if (to_write > 0)
-    {
-      nv_memcpy(info->dst_string, write_buffer, to_write);
-      info->dst_string += to_write;
-    }
-  }
-}
-
-static inline void
-nv_printf_get_padding_and_precision_if_given(nv_format_info_t* info)
-{
-  if (!NV_PRINTF_PEEK_FMT())
-  {
-    return;
-  }
-
-  if (NV_PRINTF_PEEK_FMT() == '-')
-  {
-    info->left_align = true;
-    NV_PRINTF_ADVANCE_FMT();
-  }
-  if (NV_PRINTF_PEEK_FMT() == '0')
-  {
-    info->pad_zero = true;
-    NV_PRINTF_ADVANCE_FMT();
-  }
-
-  if (NV_PRINTF_PEEK_FMT() == '*')
-  {
-    info->padding_w = va_arg(info->args, int);
-    if (info->padding_w < 0)
-    {
-      // negative width means left align
-      info->left_align = true;
-      info->padding_w  = -info->padding_w;
-    }
-    else
-    {
-      /* Positive padding width means right padded */
-      info->left_align = false;
-    }
-    NV_PRINTF_ADVANCE_FMT();
-  }
+  size_t written = 0;
+  if (NV_LIKELY(dst)) { written = nv_vssnprintf(stm, max_chars, fmt, src); }
   else
   {
-    while (nv_isdigit(NV_PRINTF_PEEK_FMT()))
-    {
-      info->padding_w = info->padding_w * 10 + (NV_PRINTF_PEEK_FMT() - '0');
-      NV_PRINTF_ADVANCE_FMT();
-    }
+    written = nv_sinkprintf(src, fmt);
   }
 
-  if (NV_PRINTF_PEEK_FMT() == '.')
-  {
-    NV_PRINTF_ADVANCE_FMT();
-    info->precision_specified = 1;
-    if (NV_PRINTF_PEEK_FMT() == '*')
-    {
-      info->precision = va_arg(info->args, int);
-      if (info->precision < 0)
-      {
-        info->precision = 6;
-      }
-      NV_PRINTF_ADVANCE_FMT();
-    }
-    else
-    {
-      info->precision = 0;
-      while (nv_isdigit(NV_PRINTF_PEEK_FMT()))
-      {
-        info->precision = info->precision * 10 + (NV_PRINTF_PEEK_FMT() - '0');
-        NV_PRINTF_ADVANCE_FMT();
-      }
-    }
-  }
-}
+  nv_close_stream(stm);
 
-static inline void
-nv_printf_format_process_char(nv_format_info_t* info)
-{
-  if (info->chars_written >= info->max_chars - 1)
-  {
-    return;
-  }
-
-  // if user is asking for literal % sign, *iter will be the percent sign!!
-  int chr = (nv_tolower(NV_PRINTF_PEEK_FMT()) == 'c') ? va_arg(info->args, int) : NV_PRINTF_PEEK_FMT();
-  if (info->file)
-  {
-    fputc(chr, (FILE*)info->dst_file);
-  }
-  else if (info->dst_string)
-  {
-    *info->dst_string = (char)chr;
-    info->dst_string++;
-  }
-  info->wbuffer_used = false;
-  info->chars_written++;
-}
-
-static inline void
-nv_printf_handle_long_type(nv_format_info_t* info)
-{
-  if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != 'l')
-  {
-    return;
-  }
-
-  const bool type_is_long_long_integer = nv_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'l';
-  if (type_is_long_long_integer)
-  {
-    /* Move past the extra l */
-    NV_PRINTF_ADVANCE_FMT();
-    NV_PRINTF_ADVANCE_FMT();
-
-    /* long long integers */
-    switch (nv_tolower(NV_PRINTF_PEEK_FMT()))
-    {
-      case 'd':
-      case 'i': info->written = nv_itoa2(va_arg(info->args, long long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
-      case 'u':
-        info->written = nv_utoa2(va_arg(info->args, unsigned long long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
-        break;
-    }
-  }
-  else
-  {
-    NV_PRINTF_ADVANCE_FMT();
-    /* standard long integers */
-    /* %lF\f is non standard behaviour */
-    switch (nv_tolower(NV_PRINTF_PEEK_FMT()))
-    {
-      case 'd':
-      case 'i': info->written = nv_itoa2(va_arg(info->args, long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
-      case 'u': info->written = nv_utoa2(va_arg(info->args, unsigned long), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS); break;
-    }
-  }
-}
-
-static inline void
-nv_printf_handle_size_type(nv_format_info_t* info)
-{
-  if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != 'z')
-  {
-    return;
-  }
-
-  if ((nv_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'i' || nv_tolower(NV_PRINTF_PEEK_NEXT_FMT()) == 'u'))
-  {
-    NV_PRINTF_ADVANCE_FMT();
-  }
-
-  if (nv_tolower(NV_PRINTF_PEEK_FMT()) == 'i')
-  {
-    info->written = nv_itoa2(va_arg(info->args, ssize_t), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
-  }
-  else
-  {
-    info->written = nv_utoa2(va_arg(info->args, size_t), info->tmp_writebuffer, 10, info->max_chars - info->chars_written, NOVA_PRINTF_ADD_COMMAS);
-  }
-}
-
-static inline void
-nv_printf_handle_hash_prefix_and_children(nv_format_info_t* info)
-{
-  if (!NV_PRINTF_PEEK_NEXT_FMT() || NV_PRINTF_PEEK_FMT() != '#')
-  {
-    return;
-  }
-
-  info->tmp_writebuffer[0] = '0';
-
-  /* If the character is X, then the prefix needs to have X. If it is x, then teh prefix needs to have x */
-  info->tmp_writebuffer[1] = NV_PRINTF_PEEK_NEXT_FMT();
-
-  /* Move past x\X */
-  NV_PRINTF_ADVANCE_FMT();
-
-  /* The 0x\0X prefix */
-  info->written = 2;
-  info->written += nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer + 2, 16, info->max_chars - info->chars_written, false);
-}
-
-static inline void
-nv_printf_format_parse_string(nv_format_info_t* info)
-{
-  if (!NV_PRINTF_PEEK_FMT() || NV_PRINTF_PEEK_FMT() != 's')
-  {
-    return;
-  }
-
-  const char* string = va_arg(info->args, const char*);
-  /* strlen(NULL) is not ok */
-  if (!string)
-  {
-    string = "(null)";
-  }
-
-  size_t string_length = 0;
-  if (info->precision_specified)
-  {
-    string_length = info->precision;
-  }
-  else
-  {
-    string_length = nv_strlen(string);
-  }
-
-  nv_printf_write(info, string, string_length);
-  info->wbuffer_used = false;
-}
-
-static inline void
-nv_printf_format_parse_format(nv_format_info_t* info)
-{
-  if (!NV_PRINTF_PEEK_FMT())
-  {
-    return;
-  }
-
-  size_t remaining = info->max_chars - info->chars_written;
-
-  switch (nv_tolower(NV_PRINTF_PEEK_FMT()))
-  {
-    /* By default, ftoa should not trim trailing zeroes. */
-    case 'f': info->written = nv_ftoa2(va_arg(info->args, double), info->tmp_writebuffer, info->precision, remaining, false); break;
-    case 'l': nv_printf_handle_long_type(info); break;
-    case 'd':
-    case 'i': info->written = nv_itoa2(va_arg(info->args, int), info->tmp_writebuffer, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
-    case 'u': info->written = nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer, 10, remaining, NOVA_PRINTF_ADD_COMMAS); break;
-
-    /* size_t based formats. This is standard. */
-    case 'z': nv_printf_handle_size_type(info); break;
-
-    /* hash tells us that we need to have the 0x prefix (or the 0X prefix) */
-    case '#': nv_printf_handle_hash_prefix_and_children(info); break;
-
-    /* hex integer */
-    case 'x': info->written = nv_utoa2(va_arg(info->args, unsigned), info->tmp_writebuffer, 16, info->max_chars - info->chars_written, false); break;
-
-    /* pointer */
-    case 'p': info->written = nv_ptoa2(va_arg(info->args, void*), info->tmp_writebuffer, remaining); break;
-
-    /* bytes, custom */
-    case 'b': info->written = nv_btoa2(va_arg(info->args, size_t), 1, info->tmp_writebuffer, remaining); break;
-
-    case 's': nv_printf_format_parse_string(info); break;
-
-    case 'c':
-    /* If there are two % symbols in a row */
-    case '%':
-    default: nv_printf_format_process_char(info); break;
-  }
-}
-
-static inline void
-nv_printf_write_padding(nv_format_info_t* info)
-{
-  info->padding = info->padding_w - (int)info->written;
-  char pad_char = info->pad_zero ? '0' : ' ';
-  if (info->left_align && info->padding <= 0)
-  {
-    return;
-  }
-
-  /* No, we cannot run out of padding buffer space, because we write it in chunks. */
-
-  nv_memset(info->pad_buf, pad_char, PADBUF_SIZE);
-  while (info->padding > 0)
-  {
-    int chunk = (info->padding > PADBUF_SIZE) ? PADBUF_SIZE : info->padding;
-    nv_printf_write(info, info->pad_buf, chunk);
-    info->padding -= chunk;
-  }
-}
-
-static inline void
-nv_printf_format_upload_to_destination(nv_format_info_t* info)
-{
-  if (!info->wbuffer_used)
-  {
-    return;
-  }
-
-  nv_printf_write_padding(info);
-
-  nv_printf_write(info, info->tmp_writebuffer, info->written);
-
-  nv_printf_write_padding(info);
-}
-
-static inline void
-nv_printf_format_parse_format_specifier(nv_format_info_t* info)
-{
-  info->wbuffer_used        = true;
-  info->padding_w           = 0;
-  info->precision           = 6;
-  info->precision_specified = 0;
-
-  nv_printf_get_padding_and_precision_if_given(info);
-
-  nv_printf_format_parse_format(info);
-
-  nv_printf_format_upload_to_destination(info);
-}
-
-static inline void
-nv_printf_write_iterated_char(nv_format_info_t* info)
-{
-  if (info->chars_written >= info->max_chars - 1)
-  {
-    return;
-  }
-
-  if (NV_PRINTF_PEEK_FMT() == '\b')
-  {
-    if (info->chars_written == 0)
-    {
-      return;
-    }
-
-    if (info->file)
-    {
-      fputc('\b', (FILE*)info->dst_file);
-    }
-    else if (info->dst_string)
-    {
-      info->dst_string--;
-      info->chars_written--;
-    }
-  }
-  else if (info->file)
-  {
-    if (fputc(NV_PRINTF_PEEK_FMT(), (FILE*)info->dst_file) != NV_PRINTF_PEEK_FMT())
-    {
-      /* we can't use nv_printf here to avoid recursion */
-      puts(strerror(errno));
-    }
-  }
-  else if (info->dst_string)
-  {
-    *info->dst_string = NV_PRINTF_PEEK_FMT();
-    info->dst_string++;
-  }
-  info->chars_written++;
-}
-
-static inline void
-nv_printf_loop(nv_format_info_t* info)
-{
-  for (; NV_PRINTF_PEEK_FMT() && info->chars_written < info->max_chars; info->itr++)
-  {
-    if (NV_PRINTF_PEEK_FMT() == '%')
-    {
-      NV_PRINTF_ADVANCE_FMT();
-      nv_printf_format_parse_format_specifier(info);
-    }
-    else
-    {
-      nv_printf_write_iterated_char(info);
-    }
-  }
+  return written;
 }
 
 size_t
-nv_vsfnprintf(va_list args, void* dst, bool is_file, size_t max_chars, const char* fmt)
+nv_sinkprintf(va_list args, const char* fmt)
 {
-  if (max_chars == 0)
+  nv_stream_t* sink;
+
+  nv_error e = nv_open_sinkstream(&sink);
+  if (e) return 0;
+
+  size_t wrote = nv_vssnprintf(sink, SIZE_MAX, fmt, args);
+
+  nv_close_stream(sink);
+
+  return wrote;
+}
+
+enum p_length
+{
+  LENGTH_UNSPEC,
+  LENGTH_HH,
+  LENGTH_H,
+  LENGTH_L,
+  LENGTH_LL,
+  LENGTH_Z, // size_t length
+};
+
+struct printf_info
+{
+  nv_stream_t* s;
+  va_list*     argp;
+
+  size_t written; /* characters written until now. */
+  // size_t      remaining; /* max - written */
+  size_t      max; /* max number of characters we're allowed to write. */
+  const char* fmt;
+  const char* head; /* Format string iterator */
+
+  /* width.prec */
+  int           width;          /* width, 0 if unspecified */
+  int           prec;           /* precision, 6 if unspecified (general default) */
+  int           prec_specified; /* Precision specified? */
+  enum p_length length;         /* length, 0 if unspecified */
+};
+
+static inline int
+peek(const struct printf_info* inf)
+{
+  return *inf->head;
+}
+
+static inline int
+next(struct printf_info* inf)
+{
+  /* If already at null term then don't continue.  */
+  if (!*inf->head) return 0;
+  return *inf->head++;
+}
+
+/**
+ * Conversion function is called with the head at the format specifier.
+ * See the dispatch table for each function and it's invoking character.
+ * Notably, precision, width and length (l, ll, h, z) are parsed before the invoking character.
+ *  Those values are readily available in info struct.
+ */
+typedef size_t (*p_conv_fn)(struct printf_info* inf);
+struct p_conv_entry
+{
+  char      ch;
+  p_conv_fn fn;
+};
+
+int
+p_readint(struct printf_info* inf)
+{
+  int neg = 0;
+  int c   = 0;
+
+  if (*inf->head == '-')
   {
-    return 0;
+    next(inf);
+    neg = true;
+  }
+  else if (*inf->head == '+') { next(inf); }
+
+  while (nv_isdigit(*inf->head))
+  {
+    c = c * 10 + (*inf->head - '0');
+    next(inf);
   }
 
-  nv_format_info_t info = nv_zinit(nv_format_info_t);
+  return neg ? -c : c;
+}
 
-  /* Aligned to 64 bytes for fast writing and reading access */
-  NV_ALIGN_TO(64) char pad_buf[PADBUF_SIZE];
+/**
+ * Parse width and length info from format and deposit them in the inf struct.
+ * values for width and length will be reset, even if unspecified.
+ * Must be called immediately after the % format specifier
+ */
+static inline void
+p_parsewidlen(struct printf_info* inf)
+{
+  inf->prec_specified = false;
 
-  char wbuf[NOVA_WBUF_SIZE];
-
-  info.dst_file        = is_file ? (FILE*)dst : NULL;
-  info.dst_string      = is_file ? NULL : (char*)dst;
-  info.max_chars       = max_chars;
-  info.precision       = 6;
-  info.fmt_str_end     = fmt + nv_strlen(fmt);
-  info.itr             = fmt;
-  info.file            = is_file;
-  info.pad_buf         = pad_buf;
-  info.tmp_writebuffer = wbuf;
-
-  va_copy(info.args, args);
-
-  nv_printf_loop(&info);
-
-  if (!is_file && info.dst_string && max_chars > 0)
+  int width = 0;
+  if (NV_UNLIKELY(*inf->head == '*')) { width = va_arg(*inf->argp, int); }
+  else
   {
-    size_t width        = (info.chars_written < max_chars) ? info.chars_written : max_chars - 1;
-    ((char*)dst)[width] = 0;
+    width = p_readint(inf);
   }
 
-  va_end(info.args);
+  int prec = DEFAULTPREC;
+  if (*inf->head == '.')
+  {
+    next(inf);
+    if (NV_UNLIKELY(*inf->head == '*')) { prec = va_arg(*inf->argp, int); }
+    else
+    {
+      prec = p_readint(inf);
+    }
+    inf->prec_specified = true;
+  }
+  inf->prec  = prec;
+  inf->width = width;
+}
 
-  return info.chars_written;
+/**
+ * Parse the length if specified. Otherwise do nothing.
+ * Must be called after precision and width collection.
+ */
+static inline void
+p_parseintlen(struct printf_info* inf)
+{
+  if (peek(inf) == 'h' && inf->head[1] == 'h')
+  {
+    inf->length = LENGTH_HH; // OHHH yes the bytes I'll save from using HH!!!!!!!!111!!!!!!!!JLK@#JL!Q:KEJ:LKSFS:DJ
+    next(inf);
+    next(inf);
+  }
+  else if (peek(inf) == 'h')
+  {
+    inf->length = LENGTH_H;
+    next(inf);
+  }
+  else if (peek(inf) == 'l' && inf->head[1] == 'l')
+  {
+    inf->length = LENGTH_LL;
+    next(inf);
+    next(inf);
+  }
+  else if (peek(inf) == 'l')
+  {
+    inf->length = LENGTH_L;
+    next(inf);
+  }
+  else if (peek(inf) == 'z' || peek(inf) == 'Z')
+  {
+    inf->length = LENGTH_Z;
+    next(inf);
+  }
+  else
+  {
+    inf->length = LENGTH_UNSPEC;
+    // inf->head++; why the fuck would you move head if no length specifier
+  }
+}
+
+/**
+ * Write no more than n characters of s to inf->s.
+ * Limits of inf will be respected.
+ */
+size_t
+p_lwrite(struct printf_info* inf, const char* s, size_t n)
+{
+  if (inf->written >= inf->max) return 0;
+
+  size_t len = strlen(s);
+  size_t rem = inf->max - inf->written;
+  size_t cpy = NV_MIN(len, NV_MIN(rem, n)); // The minimum of string length, n and remaining characters
+
+  return (inf->written += nv_stream_write(s, cpy, inf->s));
+}
+
+size_t
+p_lputc(struct printf_info* inf, int c)
+{
+  if (inf->written >= inf->max) return 0;
+
+  size_t rem = inf->max - inf->written;
+  if (rem == 0) return 0;
+
+  return (inf->written += nv_stream_putc(c, inf->s));
+}
+
+size_t
+p_chr_dispatch(struct printf_info* inf)
+{
+  next(inf);
+  int c = (char)va_arg(*inf->argp, int);
+  return p_lputc(inf, c);
+}
+
+size_t
+p_int_dispatch(struct printf_info* inf)
+{
+  inf->head++; // skip i/I/d/D
+
+  intmax_t val = 0;
+  switch (inf->length)
+  {
+    case LENGTH_UNSPEC: val = (int)va_arg(*inf->argp, int); break;
+    case LENGTH_H: val = (short)va_arg(*inf->argp, int); break;
+    case LENGTH_HH: val = (signed char)va_arg(*inf->argp, int); break;
+    case LENGTH_L: val = (long)va_arg(*inf->argp, long); break;
+    case LENGTH_LL: val = (long long)va_arg(*inf->argp, long long int); break;
+    case LENGTH_Z: val = (ssize_t)va_arg(*inf->argp, ssize_t); break;
+  }
+
+  char   scratch[256];
+  size_t write = nv_itoa2(val, scratch, 10, sizeof(scratch), false);
+
+  return p_lwrite(inf, scratch, write);
+}
+
+size_t
+p_unt_dispatch(struct printf_info* inf)
+{
+  inf->head++; // skip u/U
+
+  uintmax_t val = 0;
+  switch (inf->length)
+  {
+    case LENGTH_UNSPEC: val = (unsigned)va_arg(*inf->argp, unsigned); break;
+    case LENGTH_H: val = (unsigned short)va_arg(*inf->argp, unsigned); break;
+    case LENGTH_HH: val = (unsigned char)va_arg(*inf->argp, unsigned); break;
+    case LENGTH_L: val = (unsigned long)va_arg(*inf->argp, unsigned long int); break;
+    case LENGTH_LL: val = (unsigned long long)va_arg(*inf->argp, unsigned long long int); break;
+    case LENGTH_Z: val = (size_t)va_arg(*inf->argp, size_t); break;
+  }
+
+  char   scratch[256];
+  size_t write = nv_utoa2(val, scratch, 10, sizeof(scratch), false);
+
+  return p_lwrite(inf, scratch, write);
+}
+
+size_t
+p_flt_dispatch(struct printf_info* inf)
+{
+  inf->head++;
+
+  char   scratch[256];
+  size_t write = nv_ftoa2(va_arg(*inf->argp, double), scratch, inf->prec, sizeof(scratch), true);
+  return p_lwrite(inf, scratch, write);
+}
+
+/* https://stackoverflow.com/a/75644188 */
+static inline char*
+__hex_conv_helper(unsigned int a, char* out, const char* help)
+{
+  out[8] = '\0';
+  for (int i = 0; i < 8; i++)
+  {
+    out[7 - i] = help[a & 0xF];
+    a          = a >> 4;
+  }
+  return out;
+}
+
+size_t
+p_hex_dispatch(struct printf_info* inf)
+{
+  char        scratch[256];
+  const char* tbl = *inf->head == 'x' ? "0123456789abcdef" : "0123456789ABCDEF";
+  inf->head++;
+  __hex_conv_helper(va_arg(*inf->argp, unsigned), scratch, tbl);
+  return p_lwrite(inf, scratch, strlen(scratch)); /* on success, p_lwrite would just return strlen(scratch) */
+}
+
+size_t
+p_bin_dispatch(struct printf_info* inf)
+{
+  inf->head++;
+  char   scratch[256];
+  size_t write = nv_utoa2(va_arg(*inf->argp, unsigned), scratch, 2, sizeof(scratch), false);
+  return p_lwrite(inf, scratch, write);
+}
+
+size_t
+p_ptr_dispatch(struct printf_info* inf)
+{
+  inf->head++;
+  char   scratch[256];
+  size_t write = nv_ptoa2(va_arg(*inf->argp, void*), scratch, sizeof(scratch));
+  return p_lwrite(inf, scratch, write);
+}
+
+size_t
+p_str_dispatch(struct printf_info* inf)
+{
+  inf->head++;
+  const char* s = va_arg(*inf->argp, const char*);
+  if (!s) s = "(null)";
+
+  size_t cpy = strlen(s);
+  if (inf->prec_specified) cpy = NV_MIN(cpy, inf->prec); /* If precision specified, min it to the lower of cpy or prec */
+
+  return p_lwrite(inf, s, cpy);
+}
+
+size_t
+nv_vssnprintf(nv_stream_t* s, size_t max_chars, const char* fmt, va_list args)
+{
+  va_list argsc;
+  va_copy(argsc, args);
+
+  struct printf_info inf = {
+    .s       = s,
+    .argp    = &argsc,
+    .written = 0,
+    .max     = max_chars,
+    .fmt     = fmt,
+    .head    = fmt,
+    .prec    = 6,
+    .width   = 0,
+    .length  = LENGTH_UNSPEC,
+  };
+
+  const char* dispatch_s    = "iduxbpsfc";
+  p_conv_fn   dispatch_fn[] = {
+    p_int_dispatch, p_int_dispatch, p_unt_dispatch, p_hex_dispatch, p_bin_dispatch, p_ptr_dispatch, p_str_dispatch, p_flt_dispatch, p_chr_dispatch,
+  };
+
+  while (peek(&inf))
+  {
+    inf.prec   = DEFAULTPREC;
+    inf.width  = 0;
+    inf.length = LENGTH_UNSPEC;
+
+    // Out of space?
+    // if (inf.written >= inf.max) break;
+
+    /* oo yummy optimizations oo */
+    if (NV_LIKELY(*inf.head != '%')) { p_lwrite(&inf, inf.head, 1); }
+    else // *inf.head == '%
+    {
+      // character after %
+      next(&inf);
+      if (NV_UNLIKELY(*inf.head == '%'))
+      {
+        p_lputc(&inf, '%');
+        continue;
+      }
+
+      p_parsewidlen(&inf);
+      p_parseintlen(&inf);
+      if (NV_UNLIKELY(peek(&inf) == 0)) { break; }
+
+      // search for format specifier
+      // It's the functions job to move the head forwards!
+      char* search = strchr(dispatch_s, *inf.head);
+      if (!search) { return 0; } /* error out or something? */
+
+      // Call the conversion function
+      size_t idx = search - dispatch_s;
+      dispatch_fn[idx](&inf); // yeah it looks ugly but it's good...
+    }
+
+    next(&inf);
+  }
+
+  va_end(argsc);
+  return inf.written;
 }

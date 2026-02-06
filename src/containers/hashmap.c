@@ -1,7 +1,7 @@
 #include "../../include/containers/hashmap.h"
 
 #include "../../include/alloc.h"
-#include "../../include/errorcodes.h"
+#include "../../include/error.h"
 #include "../../include/stdafx.h"
 #include "../../include/string.h"
 #include "../../include/types.h"
@@ -44,7 +44,8 @@ nv_hashmap_init(size_t key_size, size_t value_size, nv_hash_fn hash_fn, nv_compa
 
   *dst = nv_zinit(nv_hashmap_t);
 
-  dst->nodes = init_capacity == 0 ? NULL : (nv_hashmap_node_t*)nv_zmalloc(init_capacity * sizeof(nv_hashmap_node_t));
+  init_capacity = next_power_of_two(init_capacity);
+  dst->nodes    = init_capacity == 0 ? NULL : (nv_hashmap_node_t*)nv_zmalloc(init_capacity * sizeof(nv_hashmap_node_t));
   nv_assert_else_return(dst->nodes != NULL, NV_ERROR_MALLOC_FAILED);
 
   if (key_size != 0) { dst->hash_fn = hash_fn ? hash_fn : nv_hash_fnv1a; }
@@ -159,45 +160,33 @@ nv_hashmap_clear(nv_hashmap_t* map)
 size_t
 nv_hashmap_size(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
-
-  size_t size = map->size;
-
-  return size;
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), SIZE_MAX);
+  return map->size;
 }
 
 size_t
 nv_hashmap_capacity(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
-
-  size_t capacity = map->capacity;
-
-  return capacity;
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), SIZE_MAX);
+  return map->capacity;
 }
 
 size_t
 nv_hashmap_key_size(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
-
-  size_t key_size = map->key_size;
-
-  return key_size;
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), SIZE_MAX);
+  return map->key_size;
 }
 
 size_t
 nv_hashmap_value_size(const nv_hashmap_t* map)
 {
-  nv_assert_else_return(NOVA_CONT_IS_VALID(map), 0);
-
-  size_t value_size = map->value_size;
-
-  return value_size;
+  nv_assert_else_return(NOVA_CONT_IS_VALID(map), SIZE_MAX);
+  return map->value_size;
 }
 
 nv_hashmap_node_t*
-nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* _i)
+nv_hashmap_iterate(const nv_hashmap_t* map, size_t* _i)
 {
   nv_assert_else_return(NOVA_CONT_IS_VALID(map), NULL);
 
@@ -213,7 +202,7 @@ nv_hashmap_iterate_unsafe(const nv_hashmap_t* map, size_t* _i)
 }
 
 static inline nv_hashmap_node_t*
-nv_hashmap_find_node_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key)
+find_node(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key)
 {
   nv_assert(NOVA_CONT_IS_VALID(map));
 
@@ -239,7 +228,7 @@ nv_hashmap_find_node_unsafe(const nv_hashmap_t* NV_RESTRICT map, const void* NV_
 
     if (map->nodes[index].hash == hash && map->comp_fn(node_key, key, actual_key_size, map->user_data) == 0) { return &map->nodes[index]; }
 
-    probe++;
+    if (++probe >= map->capacity) break;
     index = (hash + probe + probe * probe) & (map->capacity - 1);
   }
 
@@ -251,7 +240,7 @@ nv_hashmap_find(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key
 {
   void* found = NULL;
 
-  nv_hashmap_node_t* node = nv_hashmap_find_node_unsafe(map, key);
+  nv_hashmap_node_t* node = find_node(map, key);
   if (node) found = node->value;
 
   return found;
@@ -469,7 +458,7 @@ nv_hashmap_delete(nv_hashmap_t* map, const void* key)
   bool deleted = false;
 
   // Find the node, free its key and value and then bzero it.
-  nv_hashmap_node_t* node = nv_hashmap_find_node_unsafe(map, key);
+  nv_hashmap_node_t* node = find_node(map, key);
   if (node)
   {
     if (map->key_size == 0 && node->key != NULL) nv_free(node->key);       // key is string, free key

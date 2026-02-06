@@ -34,59 +34,160 @@
 NOVA_HEADER_START
 
 /**
- * @brief Alphabet?
- */
-extern bool nv_isalpha(int chr) NOVA_ATTR_CONST;
-
-/**
  * @brief Digit of a number?
  */
-extern bool nv_isdigit(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline bool
+nv_isdigit(int chr)
+{
+  return (chr >= '0' && chr <= '9');
+}
+
+/**
+ * @brief Alphabet?
+ */
+NOVA_ATTR_CONST static inline bool
+nv_isalpha(int chr)
+{
+  return (chr >= 'a' && chr <= 'z') || (chr >= 'A' && chr <= 'Z');
+}
 
 /**
  * @brief Alphabetical/Numerical?
  */
-extern bool nv_isalnum(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline bool
+nv_isalnum(int chr)
+{
+  return nv_isalpha(chr) || nv_isdigit(chr);
+}
 
 /**
  * @brief Space/Tab?
  */
-extern bool nv_isblank(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline bool
+nv_isblank(int chr)
+{
+  return (chr == ' ') || (chr == '\t');
+}
 
 /**
  * @brief Backslash control sequence?
  */
-extern bool nv_iscntrl(int chr) NOVA_ATTR_CONST;
+/* https://en.wikipedia.org/wiki/Control_character */
+NOVA_ATTR_CONST static inline bool
+nv_iscntrl(int chr)
+{
+  switch (chr)
+  {
+    /* \e also exists. non standard. yep. */
+    case '\0':
+    case '\a':
+    case '\b':
+    case '\t':
+    case '\n':
+    case '\v':
+    case '\f':
+    case '\r': return true;
+    default: return false;
+  }
+  return false;
+}
 
 /**
  * @brief Lowercase alphabet?
  */
-extern bool nv_islower(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline bool
+nv_islower(int chr)
+{
+  return (chr >= 'a' && chr <= 'z');
+}
 
 /**
  * @brief Uppercase alphabet?
  */
-extern bool nv_isupper(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline bool
+nv_isupper(int chr)
+{
+  return (chr >= 'A' && chr <= 'Z');
+}
 
 /**
  * @brief Space, newline or tab?
  */
-extern bool nv_isspace(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline bool
+nv_isspace(int chr)
+{
+  return (chr == ' ' || chr == '\n' || chr == '\t');
+}
 
 /**
  * @brief Punctuation?
  */
-extern bool nv_ispunct(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline bool
+nv_ispunct(int chr)
+{
+  /* Generated with
+    for (i = 0; i < 256; i++)
+    {
+      if (ispunct(i))
+      {
+        printf("%c ", i);
+      }
+    }
+  */
+  switch (chr)
+  {
+    case '!':
+    case '\"':
+    case '#':
+    case '$':
+    case '%':
+    case '&':
+    case '\'':
+    case '(':
+    case ')':
+    case '*':
+    case '+':
+    case ',':
+    case '-':
+    case '.':
+    case '/':
+    case ':':
+    case ';':
+    case '?':
+    case '@':
+    case '[':
+    case '\\':
+    case ']':
+    case '^':
+    case '_':
+    case '`':
+    case '{':
+    case '|':
+    case '}':
+    case '~': return true;
+    default: return false;
+  }
+}
 
 /**
  * @brief Convert a character to lower. Will return the character if it does not have a lower representation.
  */
-extern int nv_tolower(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline int
+nv_tolower(int chr)
+{
+  if (nv_isupper(chr)) { return chr + 32; }
+  return chr;
+}
 
 /**
  * @brief Convert a character to upper. Will return the character if it does not have a lower representation.
  */
-extern int nv_toupper(int chr) NOVA_ATTR_CONST;
+NOVA_ATTR_CONST static inline int
+nv_toupper(int chr)
+{
+  if (nv_islower(chr)) { return chr - 32; /* chr - 32 */ }
+  return chr;
+}
 
 NOVA_HEADER_END
 

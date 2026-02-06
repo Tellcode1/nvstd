@@ -34,6 +34,8 @@
 
 NOVA_HEADER_START
 
+#define nv_stalloc(p) (nv_zmalloc(sizeof(*p)))
+
 typedef struct nv_allocator nv_allocator_t;
 
 // allocate memory initialized to zero

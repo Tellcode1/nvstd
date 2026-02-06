@@ -44,6 +44,7 @@ extern "C"
   do                                                                                                                                                                          \
   {                                                                                                                                                                           \
     _NV_LOG_EXPAND_PARAMETERS(" **fatal**: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__));                                                        \
+    fflush(stderr);                                                                                                                                                           \
     abort();                                                                                                                                                                  \
   } while (0)
 #define nv_log_warning(...) _NV_LOG_EXPAND_PARAMETERS(" warning: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))

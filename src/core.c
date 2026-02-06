@@ -22,7 +22,7 @@
   SOFTWARE.
   */
 
-#include "../include/errorcodes.h"
+#include "../include/error.h"
 #include "../include/print.h"
 #include "../include/props.h"
 #include "../include/strconv.h"
@@ -41,13 +41,13 @@
 nv_error
 nv_default_error_handler(nv_error error, const char* fn, const char* file, size_t line, const char* supplementary, va_list args)
 {
-  nv_printf("[%s:%zu] function %s raised %s", file, line, fn, nv_error_str(error));
-  if (nv_strcmp(supplementary, "") != 0) { nv_printf("\n"); }
+  printf("[%s:%zu] function %s raised %s", file, line, fn, nv_error_str(error));
+  if (nv_strcmp(supplementary, "") != 0) { printf("\n"); }
   else
   {
-    nv_printf(": ");
+    printf(": ");
   }
-  nv_vprintf(args, supplementary);
+  vprintf(supplementary, args);
   fputc('\n', stdout);
 
   return error;
@@ -78,9 +78,8 @@ nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, b
 
   /* Two fprintf calls, good. */
 
-  nv_fprintf(out, "[%s:%zu]%s%s(): ", nv_basename(file), line, preceder, fn);
-
-  nv_vfprintf(args, out, fmt);
+  fprintf(out, "[%s:%zu]%s%s(): ", nv_basename(file), line, preceder, fn);
+  vfprintf(out, fmt, args);
 }
 
 static inline const nv_option_desc_t*

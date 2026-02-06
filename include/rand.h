@@ -26,7 +26,7 @@
 #define NV_STD_RAND_H
 
 #include "attributes.h"
-#include "errorcodes.h"
+#include "error.h"
 #include "stdafx.h"
 #include "types.h"
 
