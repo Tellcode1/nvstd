@@ -33,26 +33,18 @@
 
 NOVA_HEADER_START
 
-#ifndef NOVA_MAX_IGNORE
-#  define NOVA_MAX_IGNORE SIZE_MAX
-#endif
-
-#ifndef NOVA_SEPERATOR_CHAR
-#  define NOVA_SEPERATOR_CHAR ','
-#endif
-
 /**
  * @brief Converts an integer to ASCII.
  *
  * @param max Maximum number of characters to write.
  * @return The number of characters written (excluding null terminator).
  */
-size_t nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas);
+size_t nv_itoa2(intmax_t num, char out[], int base, size_t max);
 
 /**
  * @brief Converts an unsigned integer to ASCII.
  */
-size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas);
+size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max);
 
 /**
  * @brief Converts a double to ASCII.
@@ -61,7 +53,7 @@ size_t nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas
  * @param remove_zeroes If true, trailing zeroes are removed.
  * @return number of characters written. (excluding null terminator)
  */
-size_t nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros);
+size_t nv_ftoa2(double num, char out[], int precision, size_t max);
 
 /**
  * @brief Convert a long double to ASCII.
@@ -70,7 +62,7 @@ size_t nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_z
  * @param remove_zeroes If true, trailing zeroes are removed.
  * @return number of characters written. (excluding null terminator)
  */
-size_t nv_fltoa2(long double num, char out[], int precision, size_t max, bool remove_zeros);
+size_t nv_fltoa2(long double num, char out[], int precision, size_t max);
 
 /**
  * @brief Converts a pointer to ASCII.
@@ -126,21 +118,21 @@ bool nv_atobool(const char in_string[], size_t max);
 static inline char*
 nv_itoa(int x, char out[], int base)
 {
-  nv_itoa2((intmax_t)x, out, base, SIZE_MAX, false);
+  nv_itoa2((intmax_t)x, out, base, SIZE_MAX);
   return out;
 }
 
 static inline char*
 nv_utoa(unsigned x, char out[], int base)
 {
-  nv_utoa2((uintmax_t)x, out, base, SIZE_MAX, false);
+  nv_utoa2((uintmax_t)x, out, base, SIZE_MAX);
   return out;
 }
 
 static inline char*
 nv_ftoa(double x, char out[], int precision)
 {
-  nv_ftoa2(x, out, precision, SIZE_MAX, false);
+  nv_ftoa2(x, out, precision, SIZE_MAX);
   return out;
 }
 

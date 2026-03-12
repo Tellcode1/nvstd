@@ -33,18 +33,12 @@
 NOVA_HEADER_START
 
 /**
- * NOTE: For strings, the 'size' passed will be the length + 1!
- * This generally shouldn't matter, as they ignore the size but that should be
- * something to keep in mind.
- */
-
-/**
  * Return: the hash computed from the input
  * A modulus will be performed if needed on the returned hash, you need not concern yourself with that
  */
-typedef u32 (*nv_hash_fn)(const void* input, size_t input_size, void* user_data) NOVA_ATTR_CONST;
+typedef u32 (*nv_hash_fn)(const void* input, size_t input_size, void* user_data);
 
-typedef int (*nv_compare_fn)(const void* key1, const void* key2, size_t size, void* user_data) NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1, 2);
+typedef int (*nv_compare_fn)(const void* key1, const void* key2, size_t size, void* user_data) NOVA_ATTR_NONNULL(1, 2);
 
 static inline u32 NOVA_ATTR_CONST NOVA_ATTR_NONNULL(1) nv_hash_fnv1a(const void* input, size_t input_size, void* user_data)
 {
@@ -141,7 +135,7 @@ nv_compare_default(const void* key1, const void* key2, size_t size, void* user_d
 {
   (void)user_data;
   if (key1 == key2) return 0;
-  return nv_memcmp(key1, key2, size);
+  return memcmp(key1, key2, size);
 }
 
 static inline int
@@ -150,7 +144,7 @@ nv_compare_string(const void* key1, const void* key2, size_t size, void* user_da
   (void)user_data;
   (void)size;
   if (key1 == key2) return 0;
-  return nv_strcmp((const char*)key1, (const char*)key2);
+  return strcmp((const char*)key1, (const char*)key2);
 }
 
 NOVA_HEADER_END

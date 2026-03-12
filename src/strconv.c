@@ -1,6 +1,6 @@
 #include "../include/strconv.h"
 
-#include "../include/chrclass.h"
+#include "../include/ctype.h"
 #include "../include/stdafx.h"
 #include "../include/string.h"
 #include "../include/types.h"
@@ -9,7 +9,7 @@
 #include <stdint.h>
 
 size_t
-nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas)
+nv_itoa2(intmax_t num, char out[], int base, size_t max)
 {
   nv_assert(base >= 2 && base <= 36);
   nv_assert(out != NULL);
@@ -74,19 +74,6 @@ nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas)
   {
     if (i >= max) { break; }
 
-    if (add_commas && NOVA_SEPERATOR_CHAR && dig_count > 3 && loop_digits_written > 0 && (dig_count - loop_digits_written) % 3 == 0)
-    {
-      if (i < max)
-      {
-        out[i] = NOVA_SEPERATOR_CHAR;
-        i++;
-      }
-      else
-      {
-        break;
-      }
-    }
-
     intmax_t dig = num / highest_power_of_base;
 
     if (dig < 10) { out[i] = (char)('0' + dig); }
@@ -106,7 +93,7 @@ nv_itoa2(intmax_t num, char out[], int base, size_t max, bool add_commas)
 }
 
 size_t
-nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
+nv_utoa2(uintmax_t num, char out[], int base, size_t max)
 {
   nv_assert(base >= 2 && base <= 36);
   nv_assert(out != NULL);
@@ -157,19 +144,6 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
   {
     if (i >= max) { break; }
 
-    if (add_commas && NOVA_SEPERATOR_CHAR && dig_count > 3 && loop_digits_written > 0 && (dig_count - loop_digits_written) % 3 == 0)
-    {
-      if (i < max)
-      {
-        out[i] = NOVA_SEPERATOR_CHAR;
-        i++;
-      }
-      else
-      {
-        break;
-      }
-    }
-
     uintmax_t dig = num / highest_power_of_base;
 
     if (dig < 10) { out[i] = (char)('0' + dig); }
@@ -196,7 +170,7 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max, bool add_commas)
   }
 
 size_t
-nv_fltoa2(long double num, char out[], int precision, size_t max, bool remove_zeros)
+nv_fltoa2(long double num, char out[], int precision, size_t max)
 {
   if (max == 0) { return 0; }
   if (max == 1)
@@ -232,7 +206,7 @@ nv_fltoa2(long double num, char out[], int precision, size_t max, bool remove_ze
   // int part is now floored
   long double frac_part = num - (long double)int_part;
 
-  itr += nv_utoa2(int_part, itr, 10, max - 1, false);
+  itr += nv_utoa2(int_part, itr, 10, max - 1);
 
   if (precision > 0 && (size_t)(itr - out) < max - 2)
   {
@@ -247,12 +221,6 @@ nv_fltoa2(long double num, char out[], int precision, size_t max, bool remove_ze
       itr++;
       frac_part -= digit;
     }
-  }
-
-  if (remove_zeros && precision > 0)
-  {
-    while (*(itr - 1) == '0') { itr--; }
-    if (*(itr - 1) == '.') { itr--; }
   }
 
   if (to_use_exponent && (size_t)(itr - out) < max - 4)
@@ -286,9 +254,9 @@ nv_fltoa2(long double num, char out[], int precision, size_t max, bool remove_ze
 // if it explodes your computer its your fault!!!
 // Well.. its safe :3 you have my word
 size_t
-nv_ftoa2(double num, char out[], int precision, size_t max, bool remove_zeros)
+nv_ftoa2(double num, char out[], int precision, size_t max)
 {
-  return nv_fltoa2((long double)num, out, precision, max, remove_zeros);
+  return nv_fltoa2((long double)num, out, precision, max);
 }
 
 #define NV_SKIP_WHITSPACE(s) nv_strtrim_c(s, &(s), NULL);
@@ -463,7 +431,7 @@ nv_atobool(const char in_string[], size_t max)
   size_t i = 0;
   NV_SKIP_WHITSPACE(in_string);
   if (i > max) { return true; }
-  if (nv_strcasencmp(in_string, "false", max - i) == 0 || nv_strncmp(in_string, "0", max - i) == 0) { return false; }
+  if (nv_strcasencmp(in_string, "false", max - i) == 0 || strncmp(in_string, "0", max - i) == 0) { return false; }
   return true;
 }
 
@@ -507,14 +475,14 @@ nv_btoa2(size_t num_bytes, bool upgrade, char out[], size_t max)
       b /= 1000.0;
     }
 
-    written = nv_ftoa2(b, out, 3, max, 1);
-    nv_strcat_max(out, stages[stagei], max);
-    written += nv_strlen(stages[stagei]);
+    written = nv_ftoa2(b, out, 3, max);
+    strlcat(out, stages[stagei], max);
+    written += strlen(stages[stagei]);
     written = NV_MIN(written, max);
   }
   else
   {
-    written = nv_utoa2(num_bytes, out, 10, max, true);
+    written = nv_utoa2(num_bytes, out, 10, max);
   }
   return written;
 }

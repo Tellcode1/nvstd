@@ -3,7 +3,6 @@
 #include "../../include/alloc.h"
 #include "../../include/error.h"
 #include "../../include/stdafx.h"
-#include "../../include/string.h"
 #include "../../include/types.h"
 
 #include <limits.h>
@@ -56,7 +55,7 @@ nv_list_duplicate_data(const nv_list_t* list)
 
   size_t byte_size = list->size * list->type_size;
   void*  dup       = nv_zmalloc(byte_size);
-  nv_memcpy(dup, list->data, byte_size);
+  memcpy(dup, list->data, byte_size);
 
   return dup;
 }
@@ -153,7 +152,7 @@ nv_list_copy_from(const nv_list_t* NV_RESTRICT src, nv_list_t* NV_RESTRICT dst)
   nv_assert(src->type_size == dst->type_size);
   if (src->size >= dst->capacity) { nv_list_reserve(dst, src->size); }
   dst->size = src->size;
-  nv_memcpy(dst->data, src->data, src->size * src->type_size);
+  memcpy(dst->data, src->data, src->size * src->type_size);
 }
 
 void
@@ -191,7 +190,7 @@ nv_list_equal(const nv_list_t* list1, const nv_list_t* list2)
   nv_assert(NOVA_CONT_IS_VALID(list2));
 
   bool equal = 1;
-  if ((list1->size != list2->size || list1->type_size != list2->type_size) || (nv_memcmp(list1->data, list2->data, list1->size * list1->type_size) != 0)) { equal = 0; }
+  if ((list1->size != list2->size || list1->type_size != list2->type_size) || (memcmp(list1->data, list2->data, list1->size * list1->type_size) != 0)) { equal = 0; }
 
   return equal;
 }
@@ -240,7 +239,7 @@ nv_list_push_back(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
 
   nv_assert(list->data != NULL);
   nv_assert(!(elem >= list->data && (unsigned char*)elem <= ((unsigned char*)list->data + list->size))); // breaks restriction rules
-  nv_memcpy((uchar*)list->data + (list->size * list->type_size), elem, list->type_size);
+  memcpy((uchar*)list->data + (list->size * list->type_size), elem, list->type_size);
   list->size++;
 }
 
@@ -253,7 +252,7 @@ nv_list_push_empty(nv_list_t* __restrict list)
 
   nv_assert(list->data != NULL);
   void* p = (uchar*)list->data + (list->size * list->type_size);
-  nv_memset(p, 0, list->type_size);
+  memset(p, 0, list->type_size);
   list->size++;
 
   return p;
@@ -266,7 +265,7 @@ nv_list_push_set(nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT arr, size_
 
   size_t required_capacity = list->size + count;
   if (required_capacity >= list->capacity) { nv_list_reserve(list, required_capacity); }
-  nv_memcpy((uchar*)list->data + (list->size * list->type_size), arr, count * list->type_size);
+  memcpy((uchar*)list->data + (list->size * list->type_size), arr, count * list->type_size);
   list->size += count;
 }
 
@@ -286,7 +285,7 @@ nv_list_pop_front(nv_list_t* list)
   if (list->size > 0)
   {
     list->size--;
-    nv_memcpy(list->data, (uchar*)list->data + list->type_size, list->size * list->type_size);
+    memcpy(list->data, (uchar*)list->data + list->type_size, list->size * list->type_size);
   }
 }
 
@@ -305,7 +304,7 @@ nv_list_insert(nv_list_t* NV_RESTRICT list, size_t index, const void* NV_RESTRIC
   if (index >= list->size) { list->size = index + 1; }
 
   // copy element
-  nv_memcpy((uchar*)list->data + (list->type_size * index), elem, list->type_size);
+  memcpy((uchar*)list->data + (list->type_size * index), elem, list->type_size);
 }
 
 void
@@ -322,7 +321,7 @@ nv_list_remove(nv_list_t* list, size_t index)
     uchar* src           = (uchar*)list->data + ((index + 1) * list->type_size);
     size_t bytes_to_move = elements_to_move * list->type_size;
 
-    nv_memcpy(dest, src, bytes_to_move);
+    memcpy(dest, src, bytes_to_move);
   }
 
   list->size--;
@@ -336,7 +335,7 @@ nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
   if (list->size == 0) { return SIZE_MAX; }
   if (list->size == 1)
   {
-    if (nv_memcmp(list->data, elem, list->type_size) == 0) { return 0; }
+    if (memcmp(list->data, elem, list->type_size) == 0) { return 0; }
 
     return SIZE_MAX;
   }
@@ -350,8 +349,8 @@ nv_list_find(const nv_list_t* NV_RESTRICT list, const void* NV_RESTRICT elem)
     const void* fwd = (unsigned char*)list->data + (fwd_index * list->type_size);
     const void* bck = (unsigned char*)list->data + (bck_index * list->type_size);
 
-    if (nv_memcmp(fwd, elem, list->type_size) == 0) { return fwd_index; }
-    if (nv_memcmp(bck, elem, list->type_size) == 0) { return bck_index; }
+    if (memcmp(fwd, elem, list->type_size) == 0) { return fwd_index; }
+    if (memcmp(bck, elem, list->type_size) == 0) { return bck_index; }
   }
 
   return (size_t)-1;

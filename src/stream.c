@@ -464,7 +464,7 @@ nv_stream_putc(int chr, struct nv_stream* stm)
 size_t
 nv_stream_puts(const char* string, struct nv_stream* stm)
 {
-  return stm->write(stm, string, nv_strlen(string));
+  return stm->write(stm, string, strlen(string));
 }
 
 int

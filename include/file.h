@@ -63,6 +63,10 @@ typedef enum nvfs_type
   NVFS_UNKNOWN,
 } nvfs_type;
 
+/**
+ * File system object entry.
+ * An opaque object describing a file or entry.
+ */
 typedef struct nvfs_entry
 {
   nvfs_type type;
@@ -167,12 +171,14 @@ nv_error nvfs_get_modified_time(const char* fpath, size_t* out_mtime);
  * On error, *buffer is set to NULL and *buffer_size is set to 0.
  */
 nv_error nvfs_file_read_all(const char* fpath, char** buffer, size_t* buffer_size);
+#define nvfs_read_file nvfs_file_read_all
 
 /**
  * If the user has passed in a directory that does not exist, this function will fail
  * and return NV_ERROR_INVALID_OPERATION. You need to create all parent directories before writing.
  */
 nv_error nvfs_file_write_all(const char* fpath, const void* data, size_t data_size);
+#define nvfs_write_file nvfs_write_read_all
 
 /**
  * Create an empty file.

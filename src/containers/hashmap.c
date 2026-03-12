@@ -3,7 +3,6 @@
 #include "../../include/alloc.h"
 #include "../../include/error.h"
 #include "../../include/stdafx.h"
-#include "../../include/string.h"
 #include "../../include/types.h"
 
 #include <limits.h>
@@ -212,7 +211,7 @@ find_node(const nv_hashmap_t* NV_RESTRICT map, const void* NV_RESTRICT key)
    * Handle strings. If key_size = 0, key is string so we compute its length.
    */
   size_t actual_key_size = map->key_size;
-  if (map->key_size == 0) { actual_key_size = nv_strlen((const char*)key) + 1; }
+  if (map->key_size == 0) { actual_key_size = strlen((const char*)key) + 1; }
 
   const u32 hash  = map->hash_fn(key, actual_key_size, map->user_data);
   const u32 begin = hash & (map->capacity - 1);
@@ -261,8 +260,8 @@ nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key
 
   size_t actual_key_size   = map->key_size;
   size_t actual_value_size = map->value_size;
-  if (map->key_size == 0) { actual_key_size = nv_strlen((const char*)key) + 1; }
-  if (map->value_size == 0) { actual_value_size = nv_strlen((const char*)value) + 1; }
+  if (map->key_size == 0) { actual_key_size = strlen((const char*)key) + 1; }
+  if (map->value_size == 0) { actual_value_size = strlen((const char*)value) + 1; }
 
   u32 hash  = map->hash_fn(key, actual_key_size, map->user_data);
   u32 index = hash & (map->capacity - 1);
@@ -278,11 +277,11 @@ nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key
         if (map->value_size == 0) // is the value a string?
         {
           if (node->value) { nv_free(node->value); }
-          node->value = nv_strdup((const char*)value);
+          node->value = strdup((const char*)value);
         }
         else
         {
-          nv_memcpy(node->value, value, map->value_size);
+          memcpy(node->value, value, map->value_size);
         }
       }
       return node->value;
@@ -300,18 +299,18 @@ nv_hashmap_insert_internal_unsafe(nv_hashmap_t* map, const void* NV_RESTRICT key
   node->value = nv_zmalloc(actual_value_size);
   node->hash  = hash;
 
-  if (map->key_size != NV_HASHMAP_SIZE_STRING) { nv_memcpy(node->key, key, map->key_size); }
+  if (map->key_size != NV_HASHMAP_SIZE_STRING) { memcpy(node->key, key, map->key_size); }
   else
   {
     if (node->key) { nv_free(node->key); }
-    node->key = nv_strdup((const char*)key);
+    node->key = strdup((const char*)key);
   }
 
-  if (map->value_size != NV_HASHMAP_SIZE_STRING) { nv_memcpy(node->value, value, map->value_size); }
+  if (map->value_size != NV_HASHMAP_SIZE_STRING) { memcpy(node->value, value, map->value_size); }
   else
   {
     if (node->value) { nv_free(node->value); }
-    node->value = nv_strdup((const char*)value);
+    node->value = strdup((const char*)value);
   }
 
   map->size++;
@@ -359,7 +358,7 @@ nv_hashmap_serialize(const nv_hashmap_t* map, FILE* f)
 
       if (key_size == NV_HASHMAP_SIZE_STRING)
       {
-        size_t len = nv_strlen((const char*)node_key);
+        size_t len = strlen((const char*)node_key);
         fwrite(&len, sizeof(len), 1, f);
         fwrite(node_key, sizeof(char), len, f);
       }
@@ -370,7 +369,7 @@ nv_hashmap_serialize(const nv_hashmap_t* map, FILE* f)
 
       if (val_size == NV_HASHMAP_SIZE_STRING)
       {
-        size_t len = nv_strlen((const char*)node_value);
+        size_t len = strlen((const char*)node_value);
         fwrite(&len, sizeof(len), 1, f);
         fwrite(node_value, sizeof(char), len, f);
       }

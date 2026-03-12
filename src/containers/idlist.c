@@ -42,16 +42,13 @@ nv_id_list_destroy(nv_id_list_t* idlist)
   nv_free(idlist->index_to_id);
   nv_free(idlist->data);
 
-  nv_memset(idlist, 0, sizeof(*idlist));
+  memset(idlist, 0, sizeof(*idlist));
 }
 
 void
 nv_id_list_resize(size_t new_capacity, nv_id_list_t* idlist)
 {
   nv_assert_else_return(idlist && idlist->canary == 0xFEF6324, );
-
-  size_t old_size = idlist->capacity * (idlist->type_size + sizeof(size_t));
-  size_t new_size = new_capacity * (idlist->type_size + sizeof(size_t));
 
   void*   new_data        = nv_realloc(idlist->data, new_capacity * idlist->type_size);
   size_t* new_id_to_index = (size_t*)nv_realloc(idlist->id_to_index, new_capacity * sizeof(size_t));
@@ -98,7 +95,7 @@ nv_id_list_push(const void* elem, nv_id_list_t* idlist)
 
   size_t id       = idlist->size;
   uchar* offseted = (uchar*)idlist->data + (idlist->size * idlist->type_size);
-  nv_memcpy(offseted, elem, idlist->type_size);
+  memcpy(offseted, elem, idlist->type_size);
 
   idlist->id_to_index[id]           = idlist->size;
   idlist->index_to_id[idlist->size] = id;

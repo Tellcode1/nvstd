@@ -22,8 +22,7 @@
   SOFTWARE.
 */
 
-/* Utilities to classify characters in strings. */
-/* An implementation to ctype.h, Notably missing isgraph and ishex(or whatever its called) */
+/* Utilities to classify characters in strings without respecting the locale. */
 
 #ifndef NV_STD_CHRCLASS_H
 #define NV_STD_CHRCLASS_H
@@ -167,6 +166,34 @@ nv_ispunct(int chr)
     case '~': return true;
     default: return false;
   }
+}
+
+NOVA_ATTR_CONST static inline bool
+nv_isxdigit(int chr)
+{
+  return (chr >= 'a' && chr <= 'f') || (chr >= 'A' && chr <= 'F') || (chr >= '0' && chr <= '9');
+}
+
+NOVA_ATTR_CONST static inline bool
+nv_isprint(int chr)
+{
+  const char s[] = " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  for (int i = 0; i < sizeof(s) - 1; i++)
+  {
+    if (s[i] == chr) return true;
+  }
+  return false;
+}
+
+NOVA_ATTR_CONST static inline bool
+nv_isgraph(int chr)
+{
+  const char s[] = "!\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~";
+  for (int i = 0; i < sizeof(s) - 1; i++)
+  {
+    if (s[i] == chr) return true;
+  }
+  return false;
 }
 
 /**

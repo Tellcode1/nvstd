@@ -32,12 +32,13 @@ extern "C"
 
 #include <stdint.h>
 
+  typedef int8_t  sbyte;
+  typedef uint8_t ubyte;
+
   typedef uint64_t u64;
   typedef uint32_t u32;
   typedef uint16_t u16;
   typedef uint8_t  u8;
-  typedef int8_t   sbyte;
-  typedef uint8_t  ubyte;
 
   typedef unsigned char uchar;
 
@@ -48,11 +49,11 @@ extern "C"
 
   // They ARE 32 and 64 bits by IEEE-754 but aren't set by the standard
   // But there is a 99.9% chance that they will be
-  // We perform a static assert on stdafx.h so you need not worry.
   typedef float  f32;
   typedef double f64;
 
 #ifdef __cplusplus
 }
 #endif
-#endif // NV_STD_TYPES_HS_H
+
+#endif // NV_STD_TYPES_H

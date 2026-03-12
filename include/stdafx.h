@@ -37,9 +37,9 @@
 #include <stdio.h>
 #include <time.h>
 
-#define NOVA_STD_VERSION_MAJOR_ 0
-#define NOVA_STD_VERSION_MINOR_ 2
-#define NOVA_STD_VERSION_PATCH_ 0
+#define NV_STD_VERSION_MAJOR 0
+#define NV_STD_VERSION_MINOR 2
+#define NV_STD_VERSION_PATCH 1
 
 #ifdef __cplusplus
 #  define NOVA_HEADER_START                                                                                                                                                   \
@@ -155,28 +155,6 @@ NOVA_HEADER_START
       (TYPE) {}
 #  endif
 #endif
-
-static inline struct tm*
-nv_get_time(void)
-{
-  time_t     now = 0;
-  struct tm* tm  = NULL;
-
-  now = time(NULL);
-  if ((tm = localtime(&now)) == NULL)
-  {
-    nv_log_error("Error extracting time stuff\n");
-    return NULL;
-  }
-
-  return tm;
-}
-
-#define NOVA_CALL_FILE_FN(fn)                                                                                                                                                 \
-  if (NV_UNLIKELY((fn) != 0)) { nv_log_error("%s() => %i\n", #fn, errno); }
-
-NV_STATIC_ASSERT(sizeof(float) == 4, sizeof_float_must_be_32_bits);
-NV_STATIC_ASSERT(sizeof(double) == 8, sizeof_float_must_be_64_bits);
 
 NOVA_HEADER_END
 

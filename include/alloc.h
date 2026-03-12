@@ -100,7 +100,7 @@ nv_stack_zmalloc(nv_allocator_t* self, size_t size)
   /// because if the user frees memory once (we don't want to zero out memory every free)
   /// Then the state of the memory is left undefined.
   ///
-  nv_memset(ptr, 0, size);
+  memset(ptr, 0, size);
 
   return ptr;
 }
@@ -178,8 +178,8 @@ static inline void*
 nv_memdup(void* ptr, size_t size)
 {
   void* allocd = nv_alloc_current->alloc(nv_alloc_current, size);
-  if (!allocd) return allocd;
-  return nv_memmove(allocd, ptr, size);
+  if (allocd == NULL) return allocd;
+  return memcpy(allocd, ptr, size);
 }
 static inline void*
 nv_realloc(void* ptr, size_t size)

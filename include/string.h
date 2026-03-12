@@ -39,13 +39,6 @@
 
 NOVA_HEADER_START
 
-// Whether to use the __builtin functions provided by GNU C
-// They are generally faster, so no reason not to?
-// Can only work if the program is compiling with GNU C
-#ifndef NOVA_STRING_USE_BUILTIN
-#  define NOVA_STRING_USE_BUILTIN false
-#endif
-
 /**
  * Do not let nvstd serve as passthrough to Cstd.
  */
@@ -54,53 +47,15 @@ NOVA_HEADER_START
 #endif
 
 #define nv_alloc_struct(struc) ((struc*)nv_zmalloc(sizeof(struc)))
-#define nv_zero_structp(struc) (nv_memset(struc, 0, sizeof(*(struc))))
+#define nv_zero_structp(struc) (memset(struc, 0, sizeof(*(struc))))
 
-#if NOVA_STRING_USE_BUILTIN && defined(__GNUC__) && defined(__has_builtin)
-#  define NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(fn, ...)                                                                                                               \
-    do                                                                                                                                                                        \
-    {                                                                                                                                                                         \
-      if (__has_builtin(__builtin_##fn)) { return __builtin_##fn(__VA_ARGS__); }                                                                                              \
-    } while (0);
-#else
-#  define NOVA_STRING_RETURN_WITH_BUILTIN_IF_AVAILABLE(fn, ...)
-#endif
-
-/**
- * @brief sets 'sz' bytes of 'dst' to 'to'
- * Can not fail.
- */
-void* nv_memset(void* dst, int to, size_t dst_size) NOVA_ATTR_RETURNS_NONNULL NOVA_ATTR_NONNULL(1) NOVA_ATTR_WRITE_ONLY(1);
-
-#define nv_bzero(dst, sz) nv_memset((dst), 0, (sz))
-
-/**
- *  @brief copy memory from src to dst
- */
-void* nv_memmove(void* dst, const void* src, size_t sz) NOVA_ATTR_NONNULL(1, 2) NOVA_ATTR_WRITE_ONLY(1) NOVA_ATTR_READ_ONLY(2);
-
-/**
- * memcpy is marginally faster than memmove, but also has issues on overlapping regions of memory
- * So, we ditch memcpy for memmove for the sake of safety.
- */
-#define nv_memcpy nv_memmove
+#define nv_bzero(dst, sz) memset((dst), 0, (sz))
 
 /**
  * Swap nbyte of memory between ptr1 and ptr2.
  * Returns the number of bytes swapped. Always nbyte unless you did something catostrophically wrong.
  */
 size_t nv_memswp(void* ptr1, void* ptr2, size_t nbyte) NOVA_ATTR_NONNULL(1, 2);
-
-/**
- *  @return a pointer to the first occurance of chr in p
- *  searches at most psize bytes of p
- */
-void* nv_memchr(const void* ptr, int chr, size_t psize) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
-
-/**
- *  @return non zero if p1 is not equal to p2
- */
-int nv_memcmp(const void* ptr1, const void* ptr2, size_t max) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
 
 /**
  * Free aligned block of memory.
@@ -128,70 +83,12 @@ void* nv_aligned_get_absolute_ptr(void* aligned_ptr);
  */
 size_t nv_aligned_ptr_get_size(void* aligned_ptr);
 
-/**
- *  get the size of the string
- *  the size is determined by the position of the null terminator.
- */
-size_t nv_strlen(const char* s) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
-
-/**
- * @brief Get the length of the string, reading no more than max characters
- * @return size_t The length of the string
- */
-size_t nv_strnlen(const char* s, size_t max) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
-
-/**
- * Copy from src to dst ensuring NULL termination using the length of the dst buffer.
- *  Will copy not more than dst_size - 1 characters from source.
- */
-char* nv_strlcpy(char* dst, const char* src, size_t dst_size) NOVA_ATTR_NONNULL(1, 2) NOVA_ATTR_WRITE_ONLY(1);
-
-/**
- *  copy from src to dst, stopping once it hits the null terminator in src
- */
-char* nv_strcpy(char* dst, const char* src) NOVA_ATTR_NONNULL(1, 2) NOVA_ATTR_WRITE_ONLY(1);
-
-/**
- *  copies min(strlen(dst), min(strlen(src), max)) chars.
- *  ie. the least of the lengths and the max chars
- */
-char* nv_strncpy(char* dst, const char* src, size_t max) NOVA_ATTR_NONNULL(1, 2) NOVA_ATTR_WRITE_ONLY(1);
-
-/* https://manpages.debian.org/testing/linux-manual-4.8/strscpy.9.en.html */
-#define nv_strscpy nv_strncpy
-
-/**
- *  concatenate src to dst
- */
-char* nv_strcat(char* dst, const char* src) NOVA_ATTR_NONNULL(1, 2);
-
-/**
- *  concatenate src to dst while copying no more than max characters.
- */
-char* nv_strncat(char* dst, const char* src, size_t max) NOVA_ATTR_NONNULL(1, 2);
-
-/**
- *  copy from src to dst while ensuring that there are no more than dest_size characters in dst
- *  if nv_strlen(dst) > dest_size, this function will return and do nothing.
- *  @return the length of the string it TRIED to create.
- */
-size_t nv_strcat_max(char* dst, const char* src, size_t dest_size) NOVA_ATTR_NONNULL(1, 2);
-
-/* nv_strcat_max is functionally equivalent to strlcat */
-#define nv_strlcat nv_strcat_max
-
 char* nv_strlpcat(char* dst, char* dst_absolute, const char* src, size_t dst_size) NOVA_ATTR_NONNULL(1, 2, 3);
 
 /**
  *  @return the number of characters copied.
  */
 size_t nv_strncpy2(char* dst, const char* src, size_t max) NOVA_ATTR_NONNULL(1, 2) NOVA_ATTR_WRITE_ONLY(1);
-
-/**
- * @brief Copy characters from src to dst
- * @return The pointer to the NULL terminator of dst
- */
-char* nv_stpcpy(char* dst, char* src) NOVA_ATTR_NONNULL(1, 2) NOVA_ATTR_WRITE_ONLY(1);
 
 /**
  * @brief Remove leading and trailing whitspaces from string
@@ -208,33 +105,15 @@ char* nv_strtrim(char* s) NOVA_ATTR_NONNULL(1);
 const char* nv_strtrim_c(const char* s, const char** begin, const char** end) NOVA_ATTR_NONNULL(1);
 
 /**
- *  @brief compare two strings, stopping at either s1 or s2's null terminator or at max.
- *  it will stop when it reaches the null terminator, no segv
- */
-int nv_strncmp(const char* s1, const char* s2, size_t max) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
-
-/**
  *  @brief compare two strings case insensitively
  *  does not care whether s1 or s2 has 'a' or 'A', they're the same thing
  */
 int nv_strcasencmp(const char* s1, const char* s2, size_t max) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
 
 /**
- *  @brief case insensitively compare no more than max chars
+ * @brief Search for chr in n characters of s.
  */
-int nv_strcasecmp(const char* s1, const char* s2) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
-
-/**
- *  @brief find the first occurence of a character in a string
- *  @return NULL if chr is not in s
- */
-char* nv_strchr(const char* s, int chr) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
-
-/**
- *  @brief find the first occurence of a character in a string within n characters
- *  @return NULL if chr is not in s within n characters
- */
-char* nv_strnchr(const char* s, size_t n, int chr) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
+char* nv_strnchr(const char* s, size_t n, int chr);
 
 /**
  *  @brief Find the n-th occurence of a character in a string.
@@ -243,55 +122,21 @@ char* nv_strnchr(const char* s, size_t n, int chr) NOVA_ATTR_PURE NOVA_ATTR_NONN
 char* nv_strchr_n(const char* s, int chr, int n) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
 
 /**
- *  @brief find the last occurence of a character in a string
- *  @sa use nv_strstr if you want to find earliest occurence of a string in a string
- */
-char* nv_strrchr(const char* s, int chr) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
-
-/**
- *  strchr() but string
- *  @brief find the earlier occurence of a (sub)string in a string.
- *  eg. for s baller and sub ll
- *  @return a pointer to the first l
- */
-char* nv_strstr(const char* s, const char* sub) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1);
-
-/**
  *  @brief copy two strings, ensuring null termination
  *  WARNING: use strlcpy, noob.
  */
 size_t nv_strcpy2(char* dst, const char* src) NOVA_ATTR_NONNULL(1, 2);
 
 /**
- *  @return 0 when they are equal,
- *  positive number if the first non equal character of s1 is greater than lc of s2
- *  negative number if the first non equal character of s1 is less than lc of s2
+ * Concatenate src to dst, ensuring it does not go over size bytes.
  */
-int nv_strcmp(const char* s1, const char* s2) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
+size_t nv_strlcat(char* dst, const char* src, size_t size);
 
 /**
- *  @brief return the number of characters after which 's' contains a character in 'reject'
- *  for example,
- *  s is balling, reject is hello
- *  so, strcspn will return 2 because after b and a,
- *  l is in both s and reject.
+ * Copy src to dst, ensuring it does not run over size bytes.
+ * Ensures NULL termination.
  */
-size_t nv_strcspn(const char* s, const char* reject) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
-
-/**
- *  @brief return the number of characters after which s does not contain a character in accept
- *  ie. the number of similar characters they have.
- *  for example,
- *  s is balling and accept is ball
- *  strspn will return 4 because ball is found in both s and accept and it is of 4 characters.
- */
-size_t nv_strspn(const char* s, const char* accept) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
-
-/**
- * @brief return a pointer ot the first character in s1 that is also in s2.
- *
- */
-char* nv_strpbrk(const char* s1, const char* s2) NOVA_ATTR_PURE NOVA_ATTR_NONNULL(1, 2);
+size_t nv_strlcpy(char* dst, const char* src, size_t size);
 
 /**
  *  warning: modifies s directly.
@@ -308,8 +153,6 @@ char* nv_strpbrk(const char* s1, const char* s2) NOVA_ATTR_PURE NOVA_ATTR_NONNUL
  *  context must be declared typically on the stack that the string is declared, as a char *
  *  You must pass the address of the char * to this function.
  */
-char* nv_strtok(char* s, const char* delim) NOVA_ATTR_NONNULL(2);
-
 char* nv_strtok_r(char* s, const char* delim, char** context) NOVA_ATTR_NONNULL(2, 3);
 
 /**
@@ -323,12 +166,6 @@ char* nv_strreplace(char* s, char to_replace, char replace_with) NOVA_ATTR_NONNU
  *  basically, ../../pdf/nuclearlaunchcodes.pdf would give you nuclearlaunchcodes.pdf in return.
  */
 char* nv_basename(const char* path) NOVA_ATTR_NONNULL(1);
-
-/**
- *  @brief duplicate a string (using nv_zmalloc)
- *  and return it
- */
-char* nv_strdup(const char* s) NOVA_ATTR_NONNULL(1);
 
 /**
  * @brief Duplicate no more than n characters of a string 's'

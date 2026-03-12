@@ -35,6 +35,27 @@ extern "C"
 #include <stdio.h>
 #include <stdlib.h>
 
+#define nv_log_warning(...) _NV_LOG_EXPAND_PARAMETERS(" warning: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_info(...) _NV_LOG_EXPAND_PARAMETERS(" info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_debug(...) _NV_LOG_EXPAND_PARAMETERS(" debug: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_verbose(...) _NV_LOG_EXPAND_PARAMETERS(" verbose: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_error(...) _NV_LOG_EXPAND_PARAMETERS(" err: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#define nv_log_and_abort(...)                                                                                                                                                 \
+  do                                                                                                                                                                          \
+  {                                                                                                                                                                           \
+    _NV_LOG_EXPAND_PARAMETERS(" **fatal**: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__));                                                        \
+    fflush(stderr);                                                                                                                                                           \
+    abort();                                                                                                                                                                  \
+  } while (0)
+
+#if defined(JUST_LOG_EVERYTHING_MAN) && JUST_LOG_EVERYTHING_MAN
+#  define nv_log_too_much_info(...) _NV_LOG_EXPAND_PARAMETERS(" +info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+#else
+#  define nv_log_too_much_info(...) ((void)(__VA_ARGS__))
+#endif
+
+#define nv_log_custom(...) _NV_LOG_EXPAND_PARAMETERS(preceder, false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
+
 /**
  * https://stackoverflow.com/a/11172679
  * Stupid fix to , ##__VA_ARGS__ being a GNU extension
@@ -63,27 +84,6 @@ extern "C"
 #define _NV_LOG_EXPAND_PARAMETERS(preceder, is_error, ...)                                                                                                                    \
   _nv_core_log(__FILE__, __LINE__, __func__, preceder, is_error, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
 
-#define nv_log_error(...) _NV_LOG_EXPAND_PARAMETERS(" err: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-#define nv_log_and_abort(...)                                                                                                                                                 \
-  do                                                                                                                                                                          \
-  {                                                                                                                                                                           \
-    _NV_LOG_EXPAND_PARAMETERS(" **fatal**: ", true, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__));                                                        \
-    fflush(stderr);                                                                                                                                                           \
-    abort();                                                                                                                                                                  \
-  } while (0)
-#define nv_log_warning(...) _NV_LOG_EXPAND_PARAMETERS(" warning: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-#define nv_log_info(...) _NV_LOG_EXPAND_PARAMETERS(" info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-#define nv_log_debug(...) _NV_LOG_EXPAND_PARAMETERS(" debug: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-#define nv_log_verbose(...) _NV_LOG_EXPAND_PARAMETERS(" verbose: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-
-#if JUST_LOG_EVERYTHING_MAN
-#  define nv_log_too_much_info(...) _NV_LOG_EXPAND_PARAMETERS(" +info: ", false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-#else
-#  define nv_log_too_much_info(...) ((void)(__VA_ARGS__))
-#endif
-
-#define nv_log_custom(...) _NV_LOG_EXPAND_PARAMETERS(preceder, false, NV_COMMA_ARGS_FIRST(__VA_ARGS__) NV_COMMA_ARGS_REST(__VA_ARGS__))
-
 #if defined(__has_attribute) && __has_attribute(format)
 #  define NV_FORMAT_ATTR(...) __attribute__((format(__VA_ARGS__)))
 #else
@@ -92,9 +92,6 @@ extern "C"
 
   void _nv_core_log(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, ...) NV_FORMAT_ATTR(printf, 6, 7);
   void nv_log_va(const char* file, size_t line, const char* fn, const char* preceder, bool err, const char* fmt, va_list args);
-
-  /* printf's the time to stdout. yep. [hour:minute:second]*/
-  void nv_print_time_as_string(FILE* stream);
 
 #ifdef __cplusplus
 }

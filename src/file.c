@@ -2,7 +2,6 @@
 
 #include "../include/alloc.h"
 #include "../include/error.h"
-#include "../include/print.h"
 #include "../include/stdafx.h"
 #include "../include/string.h"
 
@@ -296,7 +295,7 @@ nvfs_dir_create_recursive(const char* dpath, nvfs_permission perms)
 {
   nv_error check = NV_SUCCESS;
 
-  const size_t dirlen    = nv_strlen(dpath);
+  const size_t dirlen    = strlen(dpath);
   char*        path_copy = nv_zmalloc(dirlen + 1);
   char*        buffer    = nv_zmalloc(dirlen + 1);
   if (path_copy == NULL || buffer == NULL)
@@ -309,13 +308,13 @@ nvfs_dir_create_recursive(const char* dpath, nvfs_permission perms)
 
   nv_strlcpy(path_copy, dpath, dirlen + 1);
 
-  char* last_separator = nv_strrchr(path_copy, '/');
+  char* last_separator = strrchr(path_copy, '/');
   if (last_separator != NULL)
   {
     *last_separator = '\0';
 
     nv_strlcpy(buffer, path_copy, dirlen + 1);
-    size_t len = nv_strlen(buffer);
+    size_t len = strlen(buffer);
 
     if (buffer[len - 1] == '/') { buffer[len - 1] = 0; }
 
@@ -350,7 +349,7 @@ nvfs_dir_create_recursive_for_file(const char* fpath, nvfs_permission perms)
 {
   nv_error check = NV_SUCCESS;
 
-  const size_t pathlen   = nv_strlen(fpath);
+  const size_t pathlen   = strlen(fpath);
   char*        path_copy = nv_zmalloc(pathlen + 1);
   char*        buffer    = nv_zmalloc(pathlen + 1);
   if (path_copy == NULL || buffer == NULL)
@@ -363,13 +362,13 @@ nvfs_dir_create_recursive_for_file(const char* fpath, nvfs_permission perms)
 
   nv_strlcpy(path_copy, fpath, pathlen + 1);
 
-  char* last_separator = nv_strrchr(path_copy, '/');
+  char* last_separator = strrchr(path_copy, '/');
   if (last_separator != NULL)
   {
     *last_separator = '\0';
 
     nv_strlcpy(buffer, path_copy, pathlen + 1);
-    size_t len = nv_strlen(buffer);
+    size_t len = strlen(buffer);
 
     if (buffer[len - 1] == '/') { buffer[len - 1] = 0; }
 
@@ -425,7 +424,7 @@ nvfs_dir_delete_recursive(const char* dpath)
     }
   }
 
-  char*    fullpath = nv_zmalloc(NV_MAX(PATH_MAX, nv_strlen(dpath)));
+  char*    fullpath = nv_zmalloc(NV_MAX(PATH_MAX, strlen(dpath)));
   nv_error code     = NV_SUCCESS;
 
   if (fullpath == NULL) { nv_raise_and_return(NV_ERROR_MALLOC_FAILED, ""); }
@@ -433,9 +432,9 @@ nvfs_dir_delete_recursive(const char* dpath)
   struct dirent* entry = NULL;
   while ((entry = readdir(dir)) != NULL)
   {
-    if (nv_strcmp(entry->d_name, ".") == 0 || nv_strcmp(entry->d_name, "..") == 0) { continue; }
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) { continue; }
 
-    nv_snprintf(fullpath, sizeof(fullpath), "%s/%s", dpath, entry->d_name);
+    snprintf(fullpath, sizeof(fullpath), "%s/%s", dpath, entry->d_name);
 
     struct stat st;
     if (stat(fullpath, &st) == 0)
@@ -524,19 +523,19 @@ nvfs_file_extension(const char* path)
 
   // start scanning after the last separator
   const char* filename  = (last_sep) ? last_sep + 1 : path;
-  const char* first_dot = nv_strchr(filename, '.');
+  const char* first_dot = strchr(filename, '.');
 
   // hidden file (like .gitignore) or no dot at all
   if (!first_dot || first_dot == filename || *(first_dot + 1) == '\0') { return NULL; }
 
-  return nv_strdup(first_dot + 1); // everything after first dot
+  return strdup(first_dot + 1); // everything after first dot
 }
 
 char*
 nvfs_file_dir(const char* fpath)
 {
-  const char* last_slash     = nv_strrchr(fpath, '/');
-  const char* last_backslash = nv_strrchr(fpath, '\\');
+  const char* last_slash     = strrchr(fpath, '/');
+  const char* last_backslash = strrchr(fpath, '\\');
   const char* separator      = (last_slash > last_backslash) ? last_slash : last_backslash;
 
   if (separator != NULL)
@@ -547,7 +546,7 @@ nvfs_file_dir(const char* fpath)
   }
 
   // no directory separator, must be in the same directory
-  return nv_strdup(".");
+  return strdup(".");
 }
 
 nvfs_type
@@ -610,7 +609,7 @@ nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries)
   struct dirent* entry = NULL;
   while ((entry = readdir(dirp)) != NULL)
   {
-    if (nv_strcmp(entry->d_name, ".") == 0 || nv_strcmp(entry->d_name, "..") == 0) continue;
+    if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) continue;
 
     if (*nentries >= capacity)
     {
@@ -622,7 +621,7 @@ nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries)
     struct nvfs_entry* write = &(*entries)[(*nentries)++];
 
     // duplicate the string and add it to the list.
-    write->relpath = nv_strdup(entry->d_name);
+    write->relpath = strdup(entry->d_name);
 
     nvfs_type type = NVFS_UNKNOWN;
 
@@ -648,7 +647,7 @@ nvfs_dir_list(const char* dpath, struct nvfs_entry** entries, size_t* nentries)
 char*
 nvfs_win_to_unix_path(const char* path)
 {
-  char* duped = nv_strdup(path);
+  char* duped = strdup(path);
   for (char* s = duped; *s; s++)
   {
     if (*s == '\\') *s = '/';
