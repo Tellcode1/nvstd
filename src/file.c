@@ -424,8 +424,9 @@ nvfs_dir_delete_recursive(const char* dpath)
     }
   }
 
-  char*    fullpath = nv_zmalloc(NV_MAX(PATH_MAX, strlen(dpath)));
-  nv_error code     = NV_SUCCESS;
+  size_t   fullpath_size = NV_MAX(PATH_MAX, strlen(dpath));
+  char*    fullpath      = nv_zmalloc(fullpath_size);
+  nv_error code          = NV_SUCCESS;
 
   if (fullpath == NULL) { nv_raise_and_return(NV_ERROR_MALLOC_FAILED, ""); }
 
@@ -434,7 +435,7 @@ nvfs_dir_delete_recursive(const char* dpath)
   {
     if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0) { continue; }
 
-    snprintf(fullpath, sizeof(fullpath), "%s/%s", dpath, entry->d_name);
+    snprintf(fullpath, fullpath_size, "%s/%s", dpath, entry->d_name);
 
     struct stat st;
     if (stat(fullpath, &st) == 0)

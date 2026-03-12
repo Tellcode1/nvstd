@@ -108,7 +108,7 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max)
     return 0;
   }
 
-  /* The second parameter should always evaluate to true, left for brevity */
+  /* The second parameter should always evaluate to true, left in for brevity */
   if (num == 0 && max >= 2)
   {
     out[0] = '0';
@@ -139,7 +139,6 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max)
   uintmax_t highest_power_of_base = 1;
   while (highest_power_of_base <= num / (uintmax_t)base) { highest_power_of_base *= base; }
 
-  size_t loop_digits_written = 0;
   do
   {
     if (i >= max) { break; }
@@ -155,7 +154,6 @@ nv_utoa2(uintmax_t num, char out[], int base, size_t max)
 
     num %= highest_power_of_base;
     highest_power_of_base /= base;
-    loop_digits_written++;
   } while (highest_power_of_base > 0);
 
   out[i] = 0;
